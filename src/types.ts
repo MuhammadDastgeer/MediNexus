@@ -25,6 +25,14 @@ export interface Patient {
   phone: string;
   registeredAt: string;
   status: 'New' | 'Follow-up';
+  wardId?: string | null;
+  roomId?: string | null;
+  bedNumber?: string | null;
+  dob?: string;
+  bloodGroup?: string;
+  address?: string;
+  email?: string;
+  password?: string;
 }
 
 export interface Appointment {
@@ -74,6 +82,18 @@ export interface Staff {
   role: string;
   department: string;
   status: 'Active' | 'Inactive';
+  email?: string;
+  phone?: string;
+  joinDate?: string;
+  dob?: string;
+  workingDays?: string | number;
+  address?: string;
+  monthlySalary?: string | number;
+  bankName?: string;
+  bankAccountNo?: string;
+  panNo?: string;
+  pfAccountNo?: string;
+  pfUan?: string;
 }
 
 export interface Bill {
@@ -145,4 +165,25 @@ export interface DeptTransfer {
   status: 'Completed' | 'Pending';
   priority?: 'Low' | 'Normal' | 'High' | 'Urgent';
   notes?: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  type: string;
+  location: string;
+  status: 'Active' | 'Inactive';
+}
+
+export interface SubDepartment {
+  id: string;
+  departmentId: string;
+  name: string;
+  code: string;
+  description: string;
+  type: string;
+  location: string;
+  status: 'Active' | 'Inactive';
 }

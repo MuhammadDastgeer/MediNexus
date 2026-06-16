@@ -22,6 +22,7 @@ import {
   Printer
 } from 'lucide-react';
 import { Bill, Patient } from '../types';
+import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface BillingViewProps {
   bills: Bill[];
@@ -42,6 +43,29 @@ export default function BillingView({
 }: BillingViewProps) {
   // Modal & Wizard State
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+
+  const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
+    setShowExportDropdown(false);
+    if (filtered.length === 0) {
+      alert("No bills to export.");
+      return;
+    }
+    const headers = ['Bill ID', 'Patient Name', 'Date', 'Type', 'Amount', 'Discount', 'Tax', 'Paid', 'Pending', 'Status'];
+    const keys = ['id', 'patientName', 'date', 'type', 'amount', 'discount', 'tax', 'collectedAmount', 'pendingAmount', 'status'];
+    const filename = `bills_invoices_export_${new Date().toISOString().slice(0, 10)}`;
+
+    if (format === 'CSV') {
+      downloadCSV(filtered, headers, keys, filename);
+    } else if (format === 'Excel') {
+      downloadExcel(filtered, headers, keys, filename);
+    } else if (format === 'Word') {
+      downloadWord(filtered, headers, keys, filename, 'Hospital Financial Billings Portfolio');
+    } else if (format === 'PDF') {
+      downloadPDFFile(filtered, headers, keys, filename, 'Hospital Audit Financial Statements Ledger');
+    }
+  };
+
   const [wizardStep, setWizardStep] = useState(1);
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [customPatientName, setCustomPatientName] = useState('');
@@ -310,7 +334,7 @@ export default function BillingView({
           <div className="relative">
             <button
               onClick={() => {
-                alert('Invoices exported successfully as spreadsheet report.');
+                setShowExportDropdown(!showExportDropdown);
               }}
               className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             >
@@ -318,6 +342,14 @@ export default function BillingView({
               <span>Export</span>
               <ChevronDown size={11} />
             </button>
+            {showExportDropdown && (
+              <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-100 rounded-xl shadow-lg z-20 py-1 divide-y divide-slate-50 text-[11px] text-slate-700">
+                <button onClick={() => handleExport('CSV')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-705 font-medium block cursor-pointer">CSV format</button>
+                <button onClick={() => handleExport('Excel')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-emerald-600 font-medium block cursor-pointer">Excel sheet</button>
+                <button onClick={() => handleExport('Word')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-blue-600 font-medium block cursor-pointer">Word document</button>
+                <button onClick={() => handleExport('PDF')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-rose-600 font-medium block cursor-pointer">PDF file</button>
+              </div>
+            )}
           </div>
         </div>
       </div>

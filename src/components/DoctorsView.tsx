@@ -33,6 +33,7 @@ import {
   Building
 } from 'lucide-react';
 import { Doctor } from '../types';
+import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface DoctorsViewProps {
   doctors: Doctor[];
@@ -40,6 +41,7 @@ interface DoctorsViewProps {
   onToggleStatus: (id: string) => void;
   onUpdateDoctor: (id: string, fields: Partial<Doctor>) => void;
   onDeleteDoctor: (id: string) => void;
+  onNavigate?: (view: any) => void;
 }
 
 export default function DoctorsView({ 
@@ -47,9 +49,11 @@ export default function DoctorsView({
   onAddDoctor, 
   onToggleStatus,
   onUpdateDoctor,
-  onDeleteDoctor
+  onDeleteDoctor,
+  onNavigate
 }: DoctorsViewProps) {
   const [activeTab, setActiveTab] = useState<'roster' | 'overview'>('overview');
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isEditingId, setIsEditingId] = useState<string | null>(null);
   const [viewingDoctor, setViewingDoctor] = useState<Doctor | null>(null);
@@ -236,32 +240,29 @@ export default function DoctorsView({
     return matchesSearch && matchesDept && matchesDuty;
   });
 
-  const handleExportCSV = () => {
-    if (doctors.length === 0) {
+  const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
+    setShowExportDropdown(false);
+    if (filteredDoctors.length === 0) {
       triggerToast('No doctor profiles to export.');
       return;
     }
     const headers = ['ID', 'Name', 'Specialization', 'Dept', 'Contact', 'Email', 'Consultation Fee', 'Status'];
-    const rows = doctors.map(d => [
-      d.id,
-      `"${d.name}"`,
-      d.specialization,
-      d.department || d.specialization || 'OPD',
-      d.phone || 'N/A',
-      d.email || 'N/A',
-      d.consultationFee || d.fee || 500,
-      d.status
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Hospital_Specialists_Roster_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    triggerToast('Specialist Roster exported smoothly as CSV.');
+    const keys = ['id', 'name', 'specialization', 'department', 'phone', 'email', 'consultationFee', 'status'];
+    const filename = `doctors_specialists_export_${new Date().toISOString().slice(0, 10)}`;
+
+    if (format === 'CSV') {
+      downloadCSV(filteredDoctors, headers, keys, filename);
+      triggerToast('Specialist Roster exported smoothly as CSV.');
+    } else if (format === 'Excel') {
+      downloadExcel(filteredDoctors, headers, keys, filename);
+      triggerToast('Specialist Roster exported smoothly as Excel.');
+    } else if (format === 'Word') {
+      downloadWord(filteredDoctors, headers, keys, filename, 'Hospital Medical Board');
+      triggerToast('Specialist Roster exported smoothly as Word document.');
+    } else if (format === 'PDF') {
+      downloadPDFFile(filteredDoctors, headers, keys, filename, 'Hospital Specialist Roll');
+      triggerToast('Specialist Roster exported smoothly as PDF / HTML.');
+    }
   };
 
   const handleSendAllInvites = () => {
@@ -1020,8 +1021,8 @@ export default function DoctorsView({
                     </div>
                   </div>
                   <button 
-                    onClick={handleSendAllInvites}
-                    className="w-full bg-white hover:bg-slate-50 text-slate-800 rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm"
+                    onClick={() => onNavigate?.('staff')}
+                    className="w-full bg-white hover:bg-slate-50 text-[#115e59] rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
                   >
                     <span>Go to Staff</span>
                     <ArrowRight size={13} />
@@ -1039,9 +1040,13 @@ export default function DoctorsView({
                       <span className="text-[10px] text-emerald-100 mt-0.5 block">Check today's appointments and doctor schedules</span>
                     </div>
                   </div>
-                  <div className="text-center font-bold text-xs bg-white text-[#059669] rounded-lg py-2 mt-4 shadow-sm w-full block">
-                     Appointments List Linked
-                  </div>
+                  <button 
+                    onClick={() => onNavigate?.('appointments')}
+                    className="w-full bg-white hover:bg-slate-50 text-[#059669] rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                  >
+                    <span>View Appointments</span>
+                    <ArrowRight size={13} />
+                  </button>
                 </div>
 
               </div>
@@ -1104,14 +1109,24 @@ export default function DoctorsView({
                   </div>
 
                   {/* Export and invite action triggers */}
-                  <button
-                    onClick={handleExportCSV}
-                    className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-2 rounded-xl border border-slate-150 font-bold text-xs transition-colors"
-                    title="Export all profiles to CSV spreadsheet"
-                  >
-                    <Download size={13} />
-                    <span>Export</span>
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowExportDropdown(!showExportDropdown)}
+                      className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-2 rounded-xl border border-slate-150 font-bold text-xs transition-colors cursor-pointer"
+                      title="Export filtered doctor profiles list"
+                    >
+                      <Download size={13} />
+                      <span>Export</span>
+                    </button>
+                    {showExportDropdown && (
+                      <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-100 rounded-xl shadow-lg z-20 py-1 divide-y divide-slate-50 text-[11px]">
+                        <button onClick={() => handleExport('CSV')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-705 font-medium block cursor-pointer">CSV format</button>
+                        <button onClick={() => handleExport('Excel')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-emerald-600 font-medium block cursor-pointer">Excel sheet</button>
+                        <button onClick={() => handleExport('Word')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-blue-600 font-medium block cursor-pointer">Word document</button>
+                        <button onClick={() => handleExport('PDF')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-rose-600 font-medium block cursor-pointer">PDF file</button>
+                      </div>
+                    )}
+                  </div>
 
                   <button
                     onClick={handleSendAllInvites}

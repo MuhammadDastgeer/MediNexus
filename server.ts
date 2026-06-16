@@ -74,66 +74,7 @@ db.exec(`
     collectedAmount REAL,
     items TEXT
   );
-`);
 
-// Safety column upgrades for existing SQLite tables
-const addColumnSafely = (table: string, column: string, type: string) => {
-  try {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
-    console.log(`Upgraded ${table} table: added ${column}`);
-  } catch (err) {
-    // Column already exists, safe to ignore
-  }
-};
-
-addColumnSafely('bills', 'items', 'TEXT');
-addColumnSafely('bills', 'discount', 'REAL');
-addColumnSafely('bills', 'pendingAmount', 'REAL');
-addColumnSafely('bills', 'collectedAmount', 'REAL');
-
-addColumnSafely('inventory', 'unit', 'TEXT');
-addColumnSafely('inventory', 'hsnCode', 'TEXT');
-addColumnSafely('inventory', 'mrp', 'REAL');
-addColumnSafely('inventory', 'gst', 'REAL');
-addColumnSafely('inventory', 'status', 'TEXT');
-addColumnSafely('inventory', 'genericName', 'TEXT');
-addColumnSafely('inventory', 'brandName', 'TEXT');
-addColumnSafely('inventory', 'subCategory', 'TEXT');
-addColumnSafely('inventory', 'preferredSupplier', 'TEXT');
-addColumnSafely('inventory', 'purchasePrice', 'REAL');
-addColumnSafely('inventory', 'sellingPrice', 'REAL');
-addColumnSafely('inventory', 'barcode', 'TEXT');
-addColumnSafely('inventory', 'description', 'TEXT');
-
-addColumnSafely('purchases', 'invoiceNo', 'TEXT');
-addColumnSafely('purchases', 'remarks', 'TEXT');
-
-addColumnSafely('transfers', 'priority', 'TEXT');
-addColumnSafely('transfers', 'notes', 'TEXT');
-
-addColumnSafely('appointments', 'patientEmail', 'TEXT');
-addColumnSafely('appointments', 'patientPassword', 'TEXT');
-addColumnSafely('appointments', 'patientPhone', 'TEXT');
-addColumnSafely('appointments', 'patientWhatsapp', 'TEXT');
-addColumnSafely('appointments', 'patientGender', 'TEXT');
-addColumnSafely('appointments', 'age', 'INTEGER');
-
-addColumnSafely('doctors', 'gender', 'TEXT');
-addColumnSafely('doctors', 'dob', 'TEXT');
-addColumnSafely('doctors', 'bloodGroup', 'TEXT');
-addColumnSafely('doctors', 'address', 'TEXT');
-addColumnSafely('doctors', 'qualification', 'TEXT');
-addColumnSafely('doctors', 'experience', 'INTEGER');
-addColumnSafely('doctors', 'medicalRegNo', 'TEXT');
-addColumnSafely('doctors', 'licenseNumber', 'TEXT');
-addColumnSafely('doctors', 'department', 'TEXT');
-addColumnSafely('doctors', 'consultationFee', 'INTEGER');
-addColumnSafely('doctors', 'followUpFee', 'INTEGER');
-addColumnSafely('doctors', 'isActive', 'INTEGER');
-addColumnSafely('doctors', 'availableForBooking', 'INTEGER');
-addColumnSafely('doctors', 'password', 'TEXT');
-
-db.exec(`
   CREATE TABLE IF NOT EXISTS inventory (
     id TEXT PRIMARY KEY,
     name TEXT,
@@ -195,6 +136,19 @@ db.exec(`
     date TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS medical_tourism (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    country TEXT,
+    treatment TEXT,
+    status TEXT,
+    phone TEXT,
+    email TEXT,
+    passportNumber TEXT,
+    notes TEXT,
+    date TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS finance (
     id TEXT PRIMARY KEY,
     type TEXT,
@@ -209,6 +163,27 @@ db.exec(`
     value TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS departments (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    code TEXT,
+    description TEXT,
+    type TEXT,
+    location TEXT,
+    status TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS sub_departments (
+    id TEXT PRIMARY KEY,
+    departmentId TEXT,
+    name TEXT,
+    code TEXT,
+    description TEXT,
+    type TEXT,
+    location TEXT,
+    status TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS wards (
     id TEXT PRIMARY KEY,
     name TEXT,
@@ -219,6 +194,87 @@ db.exec(`
     bedsMaintenance INTEGER
   );
 `);
+
+// Safety column upgrades for existing SQLite tables
+const addColumnSafely = (table: string, column: string, type: string) => {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    console.log(`Upgraded ${table} table: added ${column}`);
+  } catch (err) {
+    // Column already exists, safe to ignore
+  }
+};
+
+addColumnSafely('bills', 'items', 'TEXT');
+addColumnSafely('bills', 'discount', 'REAL');
+addColumnSafely('bills', 'pendingAmount', 'REAL');
+addColumnSafely('bills', 'collectedAmount', 'REAL');
+
+addColumnSafely('inventory', 'unit', 'TEXT');
+addColumnSafely('inventory', 'hsnCode', 'TEXT');
+addColumnSafely('inventory', 'mrp', 'REAL');
+addColumnSafely('inventory', 'gst', 'REAL');
+addColumnSafely('inventory', 'status', 'TEXT');
+addColumnSafely('inventory', 'genericName', 'TEXT');
+addColumnSafely('inventory', 'brandName', 'TEXT');
+addColumnSafely('inventory', 'subCategory', 'TEXT');
+addColumnSafely('inventory', 'preferredSupplier', 'TEXT');
+addColumnSafely('inventory', 'purchasePrice', 'REAL');
+addColumnSafely('inventory', 'sellingPrice', 'REAL');
+addColumnSafely('inventory', 'barcode', 'TEXT');
+addColumnSafely('inventory', 'description', 'TEXT');
+
+addColumnSafely('purchases', 'invoiceNo', 'TEXT');
+addColumnSafely('purchases', 'remarks', 'TEXT');
+
+addColumnSafely('transfers', 'priority', 'TEXT');
+addColumnSafely('transfers', 'notes', 'TEXT');
+
+addColumnSafely('appointments', 'patientEmail', 'TEXT');
+addColumnSafely('appointments', 'patientPassword', 'TEXT');
+addColumnSafely('appointments', 'patientPhone', 'TEXT');
+addColumnSafely('appointments', 'patientWhatsapp', 'TEXT');
+addColumnSafely('appointments', 'patientGender', 'TEXT');
+addColumnSafely('appointments', 'age', 'INTEGER');
+
+addColumnSafely('doctors', 'gender', 'TEXT');
+addColumnSafely('doctors', 'dob', 'TEXT');
+addColumnSafely('doctors', 'bloodGroup', 'TEXT');
+addColumnSafely('doctors', 'address', 'TEXT');
+addColumnSafely('doctors', 'qualification', 'TEXT');
+addColumnSafely('doctors', 'experience', 'INTEGER');
+addColumnSafely('doctors', 'medicalRegNo', 'TEXT');
+addColumnSafely('doctors', 'licenseNumber', 'TEXT');
+addColumnSafely('doctors', 'department', 'TEXT');
+addColumnSafely('doctors', 'consultationFee', 'INTEGER');
+addColumnSafely('doctors', 'followUpFee', 'INTEGER');
+addColumnSafely('doctors', 'isActive', 'INTEGER');
+addColumnSafely('doctors', 'availableForBooking', 'INTEGER');
+addColumnSafely('doctors', 'password', 'TEXT');
+
+addColumnSafely('wards', 'roomsData', 'TEXT');
+addColumnSafely('patients', 'wardId', 'TEXT');
+addColumnSafely('patients', 'roomId', 'TEXT');
+addColumnSafely('patients', 'bedNumber', 'TEXT');
+addColumnSafely('patients', 'dob', 'TEXT');
+addColumnSafely('patients', 'bloodGroup', 'TEXT');
+addColumnSafely('patients', 'address', 'TEXT');
+addColumnSafely('patients', 'email', 'TEXT');
+addColumnSafely('patients', 'password', 'TEXT');
+
+addColumnSafely('staff', 'email', 'TEXT');
+addColumnSafely('staff', 'phone', 'TEXT');
+addColumnSafely('staff', 'joinDate', 'TEXT');
+addColumnSafely('staff', 'dob', 'TEXT');
+addColumnSafely('staff', 'workingDays', 'TEXT');
+addColumnSafely('staff', 'address', 'TEXT');
+addColumnSafely('staff', 'monthlySalary', 'REAL');
+addColumnSafely('staff', 'bankName', 'TEXT');
+addColumnSafely('staff', 'bankAccountNo', 'TEXT');
+addColumnSafely('staff', 'panNo', 'TEXT');
+addColumnSafely('staff', 'pfAccountNo', 'TEXT');
+addColumnSafely('staff', 'pfUan', 'TEXT');
+addColumnSafely('blogs', 'description', 'TEXT');
 
 // Prepopulate tables if empty
 const prepopulate = () => {
@@ -309,6 +365,52 @@ const prepopulate = () => {
       'ramzan@gmail.com', 'pass123', '+92 300 1234567', '+92 300 1234567', 'Male', 45
     );
   }
+
+  // Prep Departments
+  const deptCount = db.prepare('SELECT COUNT(*) as count FROM departments').get() as { count: number };
+  if (deptCount.count === 0) {
+    const insertDept = db.prepare('INSERT INTO departments (id, name, code, description, type, location, status) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    insertDept.run('dept-1', 'Cardiology', 'CARD', 'Heart health and cardiovascular disorders', 'Clinical', 'Ground Floor, Room 101-105', 'Active');
+    insertDept.run('dept-2', 'Pediatrics', 'PED', 'Medical care of infants, children, and adolescents', 'Clinical', 'First Floor, Room 201-208', 'Active');
+    insertDept.run('dept-3', 'Neurology', 'NEUR', 'Brain and nervous system disorders treatment', 'Clinical', 'Second Floor, Room 301-304', 'Active');
+    insertDept.run('dept-4', 'Orthopedics', 'ORTH', 'Musculoskeletal system, spine and joints care', 'Clinical', 'Ground Floor, Room 110-115', 'Active');
+    insertDept.run('dept-5', 'Emergency & Trauma Care', 'TRAU', 'Immediate critical and trauma medical response', 'Clinical', 'Ground Floor, Red Zone', 'Active');
+
+    // Prep Sub-departments
+    const insertSub = db.prepare('INSERT INTO sub_departments (id, departmentId, name, code, description, type, location, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    insertSub.run('sub-1', 'dept-1', 'Eco-Cardiography', 'ECO', 'Ultrasound imaging of the heart chambers', 'Lab Testing', 'Room 103', 'Active');
+    insertSub.run('sub-2', 'dept-1', 'Cardiac ICU', 'CICU', 'Intensive monitoring for heart attack patients', 'Emergency', 'Wing A-1', 'Active');
+    insertSub.run('sub-3', 'dept-2', 'Neonatology Unit', 'NEO', 'Specialized care for premature newborn infants', 'Critical ICU', 'Room 205', 'Active');
+    insertSub.run('sub-4', 'dept-2', 'Immunization Center', 'IMM', 'Routine and specialized pediatric vaccinations', 'Outpatient', 'Room 208', 'Active');
+    insertSub.run('sub-5', 'dept-3', 'EEG Labs', 'EEG', 'Electrophysiological testing for brain signals', 'Lab Testing', 'Room 304', 'Active');
+  }
+
+  // Prep Enquiries
+  const enquiriesCount = db.prepare('SELECT COUNT(*) as count FROM enquiries').get() as { count: number };
+  if (enquiriesCount.count === 0) {
+    const insertEnquiry = db.prepare('INSERT INTO enquiries (id, name, phone, email, query, status, department, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    insertEnquiry.run('enq-1', 'Amit Patel', '+91 99223 34455', 'amit.patel@gmail.com', 'I want to ask about bypass surgery costing and recovery protocols.', 'Pending', 'Cardiology', '2026-06-16T04:00:00Z');
+    insertEnquiry.run('enq-2', 'Sana Mir', '+92 321 4455667', 'sana.mir@yahoo.com', 'Are newborn vaccinations available on weekends?', 'Resolved', 'Pediatrics', '2026-06-15T09:30:00Z');
+    insertEnquiry.run('enq-3', 'John Doe', '+1 415 555 2671', 'john.doe@gmail.com', 'Do you provide EEG testing facilities for seizure patients?', 'Pending', 'Neurology', '2026-06-14T11:20:00Z');
+  }
+
+  // Prep Blogs
+  const blogsCount = db.prepare('SELECT COUNT(*) as count FROM blogs').get() as { count: number };
+  if (blogsCount.count === 0) {
+    const insertBlog = db.prepare('INSERT INTO blogs (id, title, status, category, date) VALUES (?, ?, ?, ?, ?)');
+    insertBlog.run('blog-1', 'Understanding Cardiac Bypass: What Patients Should Know', 'Published', 'Medical Breakthroughs', '2026-06-10T12:00:00Z');
+    insertBlog.run('blog-2', 'Routine Vaccine Calendars: Protecting Your Toddler', 'Published', 'Wellness & Lifestyle', '2026-06-12T14:30:00Z');
+    insertBlog.run('blog-3', 'Advancements in Non-Invasive Brain Analysis (EEG/EMG)', 'Draft', 'Research & Clinical', '2026-06-15T08:00:00Z');
+  }
+
+  // Prep Medical Tourism
+  const tourismCount = db.prepare('SELECT COUNT(*) as count FROM medical_tourism').get() as { count: number };
+  if (tourismCount.count === 0) {
+    const insertTourism = db.prepare('INSERT INTO medical_tourism (id, name, country, treatment, status, phone, email, passportNumber, notes, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    insertTourism.run('mt-1', 'Al-Mamun', 'Bangladesh', 'Coronary Angioplasty', 'Received', '+880 1711-223344', 'mamun@gmail.com', 'A8839401', 'Patient requires letter for fast-track medical visa.', '2026-06-15T10:00:00Z');
+    insertTourism.run('mt-2', 'Abdul Rahman', 'Oman', 'Hip Replacement', 'VISA Assistance', '+968 9912 3456', 'rahman.oman@hotmail.com', 'OM293847', 'Needs airport pickup and single private deluxe room ward.', '2026-06-14T08:15:00Z');
+    insertTourism.run('mt-3', 'Michael Davies', 'United Kingdom', 'Spine Rehabilitation', 'Scheduled', '+44 7911 123456', 'michael.dav@gmail.com', 'UK930491', 'Tentative date of arrival scheduled for June 28th.', '2026-06-13T16:45:00Z');
+  }
 };
 
 prepopulate();
@@ -342,6 +444,74 @@ app.post('/api/settings', (req, res) => {
   }
 });
 
+// Departments & Sub-departments APIs
+app.get('/api/departments', (req, res) => {
+  try {
+    const list = db.prepare('SELECT * FROM departments').all();
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/departments', (req, res) => {
+  try {
+    const { id, name, code, description, type, location, status } = req.body;
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO departments (id, name, code, description, type, location, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(id, name, code, description, type, location, status);
+    res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/departments/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM departments WHERE id = ?').run(id);
+    db.prepare('DELETE FROM sub_departments WHERE departmentId = ?').run(id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/sub-departments', (req, res) => {
+  try {
+    const list = db.prepare('SELECT * FROM sub_departments').all();
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/sub-departments', (req, res) => {
+  try {
+    const { id, departmentId, name, code, description, type, location, status } = req.body;
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO sub_departments (id, departmentId, name, code, description, type, location, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(id, departmentId, name, code, description, type, location, status);
+    res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/sub-departments/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM sub_departments WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Patients
 app.get('/api/patients', (req, res) => {
   try {
@@ -354,10 +524,33 @@ app.get('/api/patients', (req, res) => {
 
 app.post('/api/patients', (req, res) => {
   try {
-    const { id, name, age, gender, phone, registeredAt, status } = req.body;
-    const stmt = db.prepare('INSERT INTO patients (id, name, age, gender, phone, registeredAt, status) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    stmt.run(id, name, Number(age), gender, phone, registeredAt, status);
+    const { 
+      id, name, age, gender, phone, registeredAt, status, 
+      wardId, roomId, bedNumber, dob, bloodGroup, address, email, password 
+    } = req.body;
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO patients (
+        id, name, age, gender, phone, registeredAt, status, 
+        wardId, roomId, bedNumber, dob, bloodGroup, address, email, password
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      id, name, Number(age || 0), gender, phone, registeredAt, status, 
+      wardId || null, roomId || null, bedNumber || null,
+      dob || null, bloodGroup || null, address || null, email || null, password || null
+    );
     res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/patients/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const stmt = db.prepare('DELETE FROM patients WHERE id = ?');
+    stmt.run(id);
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -573,10 +766,37 @@ app.get('/api/staff', (req, res) => {
 
 app.post('/api/staff', (req, res) => {
   try {
-    const { id, name, role, department, status } = req.body;
-    const stmt = db.prepare('INSERT OR REPLACE INTO staff (id, name, role, department, status) VALUES (?, ?, ?, ?, ?)');
-    stmt.run(id, name, role, department, status);
+    const { 
+      id, name, role, department, status,
+      email, phone, joinDate, dob, workingDays, address, 
+      monthlySalary, bankName, bankAccountNo, panNo, pfAccountNo, pfUan
+    } = req.body;
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO staff (
+        id, name, role, department, status,
+        email, phone, joinDate, dob, workingDays, address,
+        monthlySalary, bankName, bankAccountNo, panNo, pfAccountNo, pfUan
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      id, name, role, department, status,
+      email || null, phone || null, joinDate || null, dob || null, 
+      workingDays !== undefined ? String(workingDays) : null, address || null, 
+      monthlySalary !== undefined ? Number(monthlySalary) : null, 
+      bankName || null, bankAccountNo || null, panNo || null, pfAccountNo || null, pfUan || null
+    );
     res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/staff/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const stmt = db.prepare('DELETE FROM staff WHERE id = ?');
+    stmt.run(id);
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -836,8 +1056,11 @@ app.get('/api/enquiries', (req, res) => {
 app.post('/api/enquiries', (req, res) => {
   try {
     const { id, name, phone, email, query, status, department, date } = req.body;
-    const stmt = db.prepare('INSERT INTO enquiries (id, name, phone, email, query, status, department, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-    stmt.run(id, name, phone, email, query, status, department, date);
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO enquiries (id, name, phone, email, query, status, department, date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(id, name, phone, email, query, status || 'Pending', department, date || new Date().toISOString());
     res.json({ success: true, id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -856,6 +1079,61 @@ app.patch('/api/enquiries/:id', (req, res) => {
   }
 });
 
+app.delete('/api/enquiries/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM enquiries WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Medical Tourism Enquiries
+app.get('/api/medical-tourism', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM medical_tourism ORDER BY date DESC').all();
+    res.json(rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/medical-tourism', (req, res) => {
+  try {
+    const { id, name, country, treatment, status, phone, email, passportNumber, notes, date } = req.body;
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO medical_tourism (id, name, country, treatment, status, phone, email, passportNumber, notes, date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      id,
+      name,
+      country,
+      treatment,
+      status || 'Received',
+      phone || '',
+      email || '',
+      passportNumber || '',
+      notes || '',
+      date || new Date().toISOString()
+    );
+    res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/medical-tourism/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM medical_tourism WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Blogs
 app.get('/api/blogs', (req, res) => {
   try {
@@ -868,10 +1146,23 @@ app.get('/api/blogs', (req, res) => {
 
 app.post('/api/blogs', (req, res) => {
   try {
-    const { id, title, status, category, date } = req.body;
-    const stmt = db.prepare('INSERT INTO blogs (id, title, status, category, date) VALUES (?, ?, ?, ?, ?)');
-    stmt.run(id, title, status, category, date);
+    const { id, title, status, category, date, description } = req.body;
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO blogs (id, title, status, category, date, description)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(id, title, status || 'Published', category, date || new Date().toISOString(), description || '');
     res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/blogs/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM blogs WHERE id = ?').run(id);
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -890,9 +1181,19 @@ app.get('/api/finance', (req, res) => {
 app.post('/api/finance', (req, res) => {
   try {
     const { id, type, category, amount, date, description } = req.body;
-    const stmt = db.prepare('INSERT INTO finance (id, type, category, amount, date, description) VALUES (?, ?, ?, ?, ?, ?)');
+    const stmt = db.prepare('INSERT OR REPLACE INTO finance (id, type, category, amount, date, description) VALUES (?, ?, ?, ?, ?, ?)');
     stmt.run(id, type, category, Number(amount), date, description);
     res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/finance/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM finance WHERE id = ?').run(id);
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -910,10 +1211,21 @@ app.get('/api/wards', (req, res) => {
 
 app.post('/api/wards', (req, res) => {
   try {
-    const { id, name, type, bedsTotal, bedsOccupied, bedsAvailable, bedsMaintenance } = req.body;
-    const stmt = db.prepare('INSERT OR REPLACE INTO wards (id, name, type, bedsTotal, bedsOccupied, bedsAvailable, bedsMaintenance) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    stmt.run(id, name, type, Number(bedsTotal), Number(bedsOccupied), Number(bedsAvailable), Number(bedsMaintenance));
+    const { id, name, type, bedsTotal, bedsOccupied, bedsAvailable, bedsMaintenance, roomsData } = req.body;
+    const stmt = db.prepare('INSERT OR REPLACE INTO wards (id, name, type, bedsTotal, bedsOccupied, bedsAvailable, bedsMaintenance, roomsData) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    stmt.run(id, name, type, Number(bedsTotal), Number(bedsOccupied), Number(bedsAvailable), Number(bedsMaintenance), roomsData || '');
     res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/wards/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const stmt = db.prepare('DELETE FROM wards WHERE id = ?');
+    stmt.run(id);
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

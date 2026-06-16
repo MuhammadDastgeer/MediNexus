@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ActiveView, Patient, Appointment, Doctor, Staff, Bill, InventoryItem } from './types';
+import { ActiveView, Patient, Appointment, Doctor, Staff, Bill, InventoryItem, Department, SubDepartment } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import RightSidebar from './components/RightSidebar';
@@ -35,10 +35,13 @@ export default function App() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [enquiries, setEnquiries] = useState<any[]>([]);
+  const [medicalTourismEnquiries, setMedicalTourismEnquiries] = useState<any[]>([]);
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
   const [hospitalSettings, setHospitalSettings] = useState<Record<string, string>>({});
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [subDepartments, setSubDepartments] = useState<SubDepartment[]>([]);
 
   // Global Refresh Routine
   const handleRefreshAll = async () => {
@@ -92,6 +95,13 @@ export default function App() {
         setEnquiries(data);
       }
 
+      // Medical Tourism Enquiries
+      const mtRes = await fetch('/api/medical-tourism');
+      if (mtRes.ok) {
+        const data = await mtRes.json();
+        setMedicalTourismEnquiries(data);
+      }
+
       // Blogs
       const blogsRes = await fetch('/api/blogs');
       if (blogsRes.ok) {
@@ -119,6 +129,16 @@ export default function App() {
         const data = await settingsRes.json();
         setHospitalSettings(data);
       }
+
+      // Departments & Sub-departments
+      const deptRes = await fetch('/api/departments');
+      if (deptRes.ok) {
+        setDepartments(await deptRes.json());
+      }
+      const subRes = await fetch('/api/sub-departments');
+      if (subRes.ok) {
+        setSubDepartments(await subRes.json());
+      }
     } catch (err) {
       console.warn('Backend REST server is preparing container...', err);
     }
@@ -129,13 +149,15 @@ export default function App() {
     handleRefreshAll();
   }, []);
 
-  // Post Patient
-  const handleAddPatient = async (patientInput: Omit<Patient, 'id' | 'registeredAt'>) => {
+  // Post Patient / Edit
+  const handleAddPatient = async (patientInput: Omit<Patient, 'id' | 'registeredAt'> & { id?: string }) => {
+    const isEdit = !!patientInput.id;
+    const existing = isEdit ? patients.find(p => p.id === patientInput.id) : null;
     const newPatient: Patient = {
       ...patientInput,
-      id: `pat-${Date.now().toString().slice(-4)}`,
-      registeredAt: new Date().toISOString(),
-    };
+      id: patientInput.id || `pat-${Date.now().toString().slice(-4)}`,
+      registeredAt: existing ? existing.registeredAt : new Date().toISOString(),
+    } as Patient;
 
     try {
       const res = await fetch('/api/patients', {
@@ -146,10 +168,25 @@ export default function App() {
       if (res.ok) {
         handleRefreshAll();
       } else {
-        setPatients((prev) => [newPatient, ...prev]);
+        setPatients((prev) => isEdit ? prev.map(p => p.id === newPatient.id ? newPatient : p) : [newPatient, ...prev]);
       }
     } catch {
-      setPatients((prev) => [newPatient, ...prev]);
+      setPatients((prev) => isEdit ? prev.map(p => p.id === newPatient.id ? newPatient : p) : [newPatient, ...prev]);
+    }
+  };
+
+  const handleDeletePatient = async (id: string) => {
+    try {
+      const res = await fetch(`/api/patients/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setPatients((prev) => prev.filter((p) => p.id !== id));
+      }
+    } catch {
+      setPatients((prev) => prev.filter((p) => p.id !== id));
     }
   };
 
@@ -233,6 +270,50 @@ export default function App() {
       }
     } catch {
       setAppointments((prev) => prev.filter((a) => a.id !== id));
+    }
+  };
+
+  // Ward handlers
+  const handleAddWard = async (ward: any) => {
+    try {
+      const res = await fetch('/api/wards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ward),
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteWard = async (id: string) => {
+    try {
+      const res = await fetch(`/api/wards/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdatePatient = async (patient: any) => {
+    try {
+      const res = await fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patient),
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -468,11 +549,12 @@ export default function App() {
   };
 
   // Post Staff member
-  const handleAddStaff = async (staffInput: Omit<Staff, 'id'>) => {
+  const handleAddStaff = async (staffInput: Omit<Staff, 'id'> & { id?: string }) => {
+    const isEdit = !!staffInput.id;
     const newS: Staff = {
       ...staffInput,
-      id: `st-${Date.now().toString().slice(-4)}`,
-    };
+      id: staffInput.id || `st-${Date.now().toString().slice(-4)}`,
+    } as Staff;
 
     try {
       const res = await fetch('/api/staff', {
@@ -483,10 +565,25 @@ export default function App() {
       if (res.ok) {
         handleRefreshAll();
       } else {
-        setStaffList((prev) => [...prev, newS]);
+        setStaffList((prev) => isEdit ? prev.map(s => s.id === newS.id ? newS : s) : [...prev, newS]);
       }
     } catch {
-      setStaffList((prev) => [...prev, newS]);
+      setStaffList((prev) => isEdit ? prev.map(s => s.id === newS.id ? newS : s) : [...prev, newS]);
+    }
+  };
+
+  const handleDeleteStaff = async (id: string) => {
+    try {
+      const res = await fetch(`/api/staff/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setStaffList((prev) => prev.filter((s) => s.id !== id));
+      }
+    } catch {
+      setStaffList((prev) => prev.filter((s) => s.id !== id));
     }
   };
 
@@ -567,11 +664,153 @@ export default function App() {
     }
   };
 
-  // Post Transaction
-  const handleAddTransaction = async (txInput: { type: 'income' | 'expense'; category: string; amount: number; date: string; description: string }) => {
+  // FULL CRUD HANDLERS
+  const handleSaveEnquiry = async (enquiry: any) => {
+    const freshEnq = {
+      ...enquiry,
+      id: enquiry.id || `enq-${Date.now().toString().slice(-4)}`,
+      date: enquiry.date || new Date().toISOString()
+    };
+    try {
+      const res = await fetch('/api/enquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(freshEnq),
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setEnquiries((prev) => {
+          const exists = prev.find(e => e.id === freshEnq.id);
+          if (exists) {
+            return prev.map(e => e.id === freshEnq.id ? freshEnq : e);
+          }
+          return [freshEnq, ...prev];
+        });
+      }
+    } catch {
+      setEnquiries((prev) => {
+        const exists = prev.find(e => e.id === freshEnq.id);
+        if (exists) {
+          return prev.map(e => e.id === freshEnq.id ? freshEnq : e);
+        }
+        return [freshEnq, ...prev];
+      });
+    }
+  };
+
+  const handleDeleteEnquiry = async (id: string) => {
+    try {
+      const res = await fetch(`/api/enquiries/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setEnquiries((prev) => prev.filter(e => e.id !== id));
+      }
+    } catch {
+      setEnquiries((prev) => prev.filter(e => e.id !== id));
+    }
+  };
+
+  const handleSaveTourismEnquiry = async (enquiry: any) => {
+    const freshTourism = {
+      ...enquiry,
+      id: enquiry.id || `mt-${Date.now().toString().slice(-4)}`,
+      date: enquiry.date || new Date().toISOString()
+    };
+    try {
+      const res = await fetch('/api/medical-tourism', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(freshTourism),
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setMedicalTourismEnquiries((prev) => {
+          const exists = prev.find(e => e.id === freshTourism.id);
+          if (exists) {
+            return prev.map(e => e.id === freshTourism.id ? freshTourism : e);
+          }
+          return [freshTourism, ...prev];
+        });
+      }
+    } catch {
+      setMedicalTourismEnquiries((prev) => {
+        const exists = prev.find(e => e.id === freshTourism.id);
+        if (exists) {
+          return prev.map(e => e.id === freshTourism.id ? freshTourism : e);
+        }
+        return [freshTourism, ...prev];
+      });
+    }
+  };
+
+  const handleDeleteTourismEnquiry = async (id: string) => {
+    try {
+      const res = await fetch(`/api/medical-tourism/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setMedicalTourismEnquiries((prev) => prev.filter(e => e.id !== id));
+      }
+    } catch {
+      setMedicalTourismEnquiries((prev) => prev.filter(e => e.id !== id));
+    }
+  };
+
+  const handleSaveBlog = async (blog: any) => {
+    const freshBlog = {
+      ...blog,
+      id: blog.id || `blog-${Date.now().toString().slice(-4)}`,
+      date: blog.date || new Date().toISOString()
+    };
+    try {
+      const res = await fetch('/api/blogs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(freshBlog),
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setBlogPosts((prev) => {
+          const exists = prev.find(b => b.id === freshBlog.id);
+          if (exists) {
+            return prev.map(b => b.id === freshBlog.id ? freshBlog : b);
+          }
+          return [freshBlog, ...prev];
+        });
+      }
+    } catch {
+      setBlogPosts((prev) => {
+        const exists = prev.find(b => b.id === freshBlog.id);
+        if (exists) {
+          return prev.map(b => b.id === freshBlog.id ? freshBlog : b);
+        }
+        return [freshBlog, ...prev];
+      });
+    }
+  };
+
+  const handleDeleteBlog = async (id: string) => {
+    try {
+      const res = await fetch(`/api/blogs/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setBlogPosts((prev) => prev.filter(b => b.id !== id));
+      }
+    } catch {
+      setBlogPosts((prev) => prev.filter(b => b.id !== id));
+    }
+  };
+
+  // Post / Save Transaction
+  const handleSaveTransaction = async (txInput: { id?: string; type: 'income' | 'expense'; category: string; amount: number; date: string; description: string }) => {
     const newTx = {
       ...txInput,
-      id: `tx-${Date.now().toString().slice(-4)}`,
+      id: txInput.id || `tx-${Date.now().toString().slice(-4)}`,
     };
 
     try {
@@ -583,10 +822,36 @@ export default function App() {
       if (res.ok) {
         handleRefreshAll();
       } else {
-        setTransactions((prev) => [newTx, ...prev]);
+        setTransactions((prev) => {
+          const exists = prev.find(t => t.id === newTx.id);
+          if (exists) {
+            return prev.map(t => t.id === newTx.id ? newTx : t);
+          }
+          return [newTx, ...prev];
+        });
       }
     } catch {
-      setTransactions((prev) => [newTx, ...prev]);
+      setTransactions((prev) => {
+        const exists = prev.find(t => t.id === newTx.id);
+        if (exists) {
+          return prev.map(t => t.id === newTx.id ? newTx : t);
+        }
+        return [newTx, ...prev];
+      });
+    }
+  };
+
+  // Delete Transaction
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      const res = await fetch(`/api/finance/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setTransactions((prev) => prev.filter(t => t.id !== id));
+      }
+    } catch {
+      setTransactions((prev) => prev.filter(t => t.id !== id));
     }
   };
 
@@ -605,6 +870,81 @@ export default function App() {
       }
     } catch {
       setHospitalSettings((prev) => ({ ...prev, ...settings }));
+    }
+  };
+
+  // Departments CRUD
+  const handleAddDepartment = async (deptInput: Omit<Department, 'id'> & { id?: string }) => {
+    const isEdit = !!deptInput.id;
+    const newDept: Department = {
+      ...deptInput,
+      id: deptInput.id || `dept-${Date.now().toString().slice(-4)}`
+    } as Department;
+
+    try {
+      const res = await fetch('/api/departments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newDept),
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setDepartments(prev => isEdit ? prev.map(d => d.id === newDept.id ? newDept : d) : [newDept, ...prev]);
+      }
+    } catch {
+      setDepartments(prev => isEdit ? prev.map(d => d.id === newDept.id ? newDept : d) : [newDept, ...prev]);
+    }
+  };
+
+  const handleDeleteDepartment = async (id: string) => {
+    try {
+      const res = await fetch(`/api/departments/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setDepartments(prev => prev.filter(d => d.id !== id));
+        setSubDepartments(prev => prev.filter(s => s.departmentId !== id));
+      }
+    } catch {
+      setDepartments(prev => prev.filter(d => d.id !== id));
+      setSubDepartments(prev => prev.filter(s => s.departmentId !== id));
+    }
+  };
+
+  const handleAddSubDepartment = async (subInput: Omit<SubDepartment, 'id'> & { id?: string }) => {
+    const isEdit = !!subInput.id;
+    const newSub: SubDepartment = {
+      ...subInput,
+      id: subInput.id || `sub-${Date.now().toString().slice(-4)}`
+    } as SubDepartment;
+
+    try {
+      const res = await fetch('/api/sub-departments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSub),
+      });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setSubDepartments(prev => isEdit ? prev.map(s => s.id === newSub.id ? newSub : s) : [newSub, ...prev]);
+      }
+    } catch {
+      setSubDepartments(prev => isEdit ? prev.map(s => s.id === newSub.id ? newSub : s) : [newSub, ...prev]);
+    }
+  };
+
+  const handleDeleteSubDepartment = async (id: string) => {
+    try {
+      const res = await fetch(`/api/sub-departments/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        handleRefreshAll();
+      } else {
+        setSubDepartments(prev => prev.filter(s => s.id !== id));
+      }
+    } catch {
+      setSubDepartments(prev => prev.filter(s => s.id !== id));
     }
   };
 
@@ -627,7 +967,13 @@ export default function App() {
         return (
           <PatientsView
             patients={patients}
+            doctors={doctors}
+            wards={wards}
+            bills={bills}
+            appointments={appointments}
             onAddPatient={handleAddPatient}
+            onDeletePatient={handleDeletePatient}
+            onAddAppointment={handleAddAppointment}
             onRefresh={handleRefreshAll}
           />
         );
@@ -673,6 +1019,7 @@ export default function App() {
             onToggleStatus={handleToggleDoctorStatus}
             onUpdateDoctor={handleUpdateDoctor}
             onDeleteDoctor={handleDeleteDoctor}
+            onNavigate={setActiveView}
           />
         );
       case 'staff':
@@ -680,11 +1027,24 @@ export default function App() {
           <StaffView
             staffList={staffList}
             onAddStaff={handleAddStaff}
+            onDeleteStaff={handleDeleteStaff}
             onRefresh={handleRefreshAll}
+            onNavigate={setActiveView}
           />
         );
       case 'departments':
-        return <DepartmentsView />;
+        return (
+          <DepartmentsView
+            departments={departments}
+            subDepartments={subDepartments}
+            doctors={doctors}
+            onAddDepartment={handleAddDepartment}
+            onDeleteDepartment={handleDeleteDepartment}
+            onAddSubDepartment={handleAddSubDepartment}
+            onDeleteSubDepartment={handleDeleteSubDepartment}
+            onRefresh={handleRefreshAll}
+          />
+        );
       case 'consultation':
         return (
           <ConsultationView
@@ -701,8 +1061,12 @@ export default function App() {
         return (
           <IpdWardsView
             patients={patients}
+            wards={wards}
             onAdmitPatient={() => setActiveView('appointments')}
             onRefresh={handleRefreshAll}
+            onAddWard={handleAddWard}
+            onDeleteWard={handleDeleteWard}
+            onUpdatePatient={handleUpdatePatient}
           />
         );
       case 'enquiries':
@@ -710,16 +1074,26 @@ export default function App() {
           <EnquiriesView
             enquiries={enquiries}
             onUpdateStatus={handleUpdateEnquiryStatus}
+            onSaveEnquiry={handleSaveEnquiry}
+            onDeleteEnquiry={handleDeleteEnquiry}
             onRefresh={handleRefreshAll}
           />
         );
       case 'medical-tourism':
-        return <MedicalTourismView enquiries={[]} onRefresh={handleRefreshAll} />;
+        return (
+          <MedicalTourismView
+            enquiries={medicalTourismEnquiries}
+            onSaveEnquiry={handleSaveTourismEnquiry}
+            onDeleteEnquiry={handleDeleteTourismEnquiry}
+            onRefresh={handleRefreshAll}
+          />
+        );
       case 'blogs':
         return (
           <BlogsView
             posts={blogPosts}
-            onAddBlog={handleAddBlog}
+            onSaveBlog={handleSaveBlog}
+            onDeleteBlog={handleDeleteBlog}
             onRefresh={handleRefreshAll}
           />
         );
@@ -727,7 +1101,8 @@ export default function App() {
         return (
           <FinanceView
             transactions={transactions}
-            onAddTransaction={handleAddTransaction}
+            onSaveTransaction={handleSaveTransaction}
+            onDeleteTransaction={handleDeleteTransaction}
             onRefresh={handleRefreshAll}
           />
         );
@@ -736,10 +1111,23 @@ export default function App() {
           <ConfigureHospitalView
             settings={hospitalSettings}
             onSaveSettings={handleSaveSettings}
+            onNavigate={setActiveView}
           />
         );
       case 'reports':
-        return <ReportsView />;
+        return (
+          <ReportsView
+            appointments={appointments}
+            bills={bills}
+            staffList={staffList}
+            doctors={doctors}
+            patients={patients}
+            departments={departments}
+            subDepartments={subDepartments}
+            inventory={inventory}
+            onRefresh={handleRefreshAll}
+          />
+        );
       case 'support':
         return <SupportView />;
       default:

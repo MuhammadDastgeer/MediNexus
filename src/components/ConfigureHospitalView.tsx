@@ -4,9 +4,10 @@ import { Settings, Check, HelpCircle, Save, Info, QrCode } from 'lucide-react';
 interface ConfigureHospitalViewProps {
   settings: Record<string, string>;
   onSaveSettings: (settings: Record<string, string>) => void;
+  onNavigate?: (view: any) => void;
 }
 
-export default function ConfigureHospitalView({ settings, onSaveSettings }: ConfigureHospitalViewProps) {
+export default function ConfigureHospitalView({ settings, onSaveSettings, onNavigate }: ConfigureHospitalViewProps) {
   const [activeTab, setActiveTab] = useState('general');
 
   // Fields state (automatically mapped from database configuration parameters)
@@ -73,7 +74,19 @@ export default function ConfigureHospitalView({ settings, onSaveSettings }: Conf
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => {
+              if (t.id === 'departments') {
+                onNavigate?.('departments');
+              } else if (t.id === 'wards') {
+                onNavigate?.('ipd-wards');
+              } else if (t.id === 'services') {
+                onNavigate?.('billing');
+              } else if (t.id === 'permissions') {
+                onNavigate?.('staff');
+              } else {
+                setActiveTab(t.id);
+              }
+            }}
             className={`px-5 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === t.id
                 ? 'border-[#007f6e] text-[#007f6e]'

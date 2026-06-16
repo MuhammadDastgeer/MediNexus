@@ -31,6 +31,7 @@ import {
   Building
 } from 'lucide-react';
 import { Appointment, Doctor } from '../types';
+import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface AppointmentsViewProps {
   appointments: Appointment[];
@@ -219,10 +220,32 @@ export default function AppointmentsView({
     showToast('Filters cleared successfully.');
   };
 
-  // Export Simulations
-  const handleExport = (format: 'PDF' | 'Excel' | 'Word') => {
+  // Fully Functional Data Export (Filtered accordingly)
+  const handleExport = (format: 'CSV' | 'PDF' | 'Excel' | 'Word') => {
     setShowExportDropdown(false);
-    showToast(`Successfully preparing download process: ${format} document structured.`);
+    
+    if (filteredAppointments.length === 0) {
+      showToast('No filtered appointments encountered to export.');
+      return;
+    }
+
+    const headers = ['Appointment ID', 'Patient Name', 'Patient Email', 'Phone', 'Doctor Name', 'Specialization', 'Date', 'Time', 'Status'];
+    const keys = ['id', 'patientName', 'patientEmail', 'patientPhone', 'doctorName', 'specialization', 'date', 'time', 'status'];
+    const filename = `appointments_ledger_export_${new Date().toISOString().slice(0, 10)}`;
+
+    if (format === 'CSV') {
+      downloadCSV(filteredAppointments, headers, keys, filename);
+      showToast('Successfully downloaded Appointments CSV Spreadsheet.');
+    } else if (format === 'Excel') {
+      downloadExcel(filteredAppointments, headers, keys, filename);
+      showToast('Successfully downloaded Appointments Excel Tabular Sheet.');
+    } else if (format === 'Word') {
+      downloadWord(filteredAppointments, headers, keys, filename, 'Hospital Appointments Portfolio');
+      showToast('Successfully downloaded Appointments Word Document.');
+    } else if (format === 'PDF') {
+      downloadPDFFile(filteredAppointments, headers, keys, filename, 'Hospital Appointments Roster');
+      showToast('Successfully downloaded Appointments Audit Ledger PDF.');
+    }
   };
 
   // Open booking wizard for new slot
@@ -698,6 +721,13 @@ export default function AppointmentsView({
                   </button>
                   {showExportDropdown && (
                     <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-100 rounded-xl shadow-lg z-20 py-1.5 divide-y divide-slate-50">
+                      <button
+                        onClick={() => handleExport('CSV')}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <FileText size={13} className="text-[#007f6e]" />
+                        <span>Export as CSV</span>
+                      </button>
                       <button
                         onClick={() => handleExport('PDF')}
                         className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
