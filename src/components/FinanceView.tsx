@@ -19,6 +19,7 @@ import {
   HelpCircle,
   TrendingDown
 } from 'lucide-react';
+import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface Transaction {
   id: string;
@@ -261,6 +262,29 @@ export default function FinanceView({
     return matchesTab && matchesMonth && matchesSearch;
   });
 
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+
+  const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
+    setShowExportDropdown(false);
+    if (filteredByMonthAndTab.length === 0) {
+      alert("No matching financial ledger transactions to export.");
+      return;
+    }
+    const headers = ['Transaction ID', 'Flow Type', 'Category Head', 'Description', 'Transaction Date', 'Amount (₹)'];
+    const keys = ['id', 'type', 'category', 'description', 'date', 'amount'];
+    const filename = `finance_transactions_export_${new Date().toISOString().slice(0, 10)}`;
+
+    if (format === 'CSV') {
+      downloadCSV(filteredByMonthAndTab, headers, keys, filename);
+    } else if (format === 'Excel') {
+      downloadExcel(filteredByMonthAndTab, headers, keys, filename);
+    } else if (format === 'Word') {
+      downloadWord(filteredByMonthAndTab, headers, keys, filename, 'Hospital Financial Ledger Statement');
+    } else if (format === 'PDF') {
+      downloadPDFFile(filteredByMonthAndTab, headers, keys, filename, 'Hospital Audit Financial Transactions Roll');
+    }
+  };
+
   // Calculate stats based on Tab and Month filter
   const statsIncome = transactions
     .filter((t) => {
@@ -465,26 +489,45 @@ export default function FinanceView({
       <div className="bg-white border border-slate-100 rounded-xl shadow-xs overflow-hidden" id="finance-table-card">
         {/* Table Search & Status */}
         <div className="p-4 border-b border-slate-50 bg-[#fafbfc] flex items-center justify-between flex-wrap gap-4">
-          <div className="text-xs font-bold text-slate-450 flex items-center gap-1.5">
+          <div className="text-xs font-bold text-slate-450 flex items-center gap-2 flex-wrap">
             <span>Showing {filteredByMonthAndTab.length} operations</span>
             {selectedMonth !== 'All' && (
-              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded">
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px]">
                 Filtered: Month Range Mode
               </span>
             )}
           </div>
 
-          <div className="relative w-full sm:w-80">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-              <Search size={14} />
-            </span>
-            <input
-              type="text"
-              placeholder="Search category, custom type, description..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-4 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[#007f6e] text-slate-700"
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <Search size={14} />
+              </span>
+              <input
+                type="text"
+                placeholder="Search category, custom type, description..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-4 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[#007f6e] text-slate-700"
+              />
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setShowExportDropdown(!showExportDropdown)}
+                className="flex items-center gap-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap"
+              >
+                <span>Export Ledger</span>
+              </button>
+              {showExportDropdown && (
+                <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-100 rounded-lg shadow-lg z-20 py-1 divide-y divide-slate-50 text-[11px] text-slate-700">
+                  <button onClick={() => handleExport('CSV')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-705 font-medium block cursor-pointer">CSV format</button>
+                  <button onClick={() => handleExport('Excel')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-emerald-600 font-medium block cursor-pointer">Excel sheet</button>
+                  <button onClick={() => handleExport('Word')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-blue-600 font-medium block cursor-pointer">Word document</button>
+                  <button onClick={() => handleExport('PDF')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-rose-600 font-medium block cursor-pointer">PDF file</button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

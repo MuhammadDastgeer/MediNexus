@@ -4,6 +4,7 @@ import {
   X, Check, AlertCircle, Shield, Home, Users, CheckCircle2, UserCheck
 } from 'lucide-react';
 import { Patient } from '../types';
+import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface IpdWardsViewProps {
   patients: Patient[];
@@ -35,6 +36,7 @@ export default function IpdWardsView({
   
   // Modals / forms state
   const [showWardModal, setShowWardModal] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [editingWard, setEditingWard] = useState<any | null>(null);
 
   // Ward Form States
@@ -262,24 +264,41 @@ export default function IpdWardsView({
     }
   };
 
-  // CSV Export
-  const handleExportCSV = () => {
+  // Dynamic, Multi-Format Admitted Patients Export
+  const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
+    setShowExportDropdown(false);
     if (admittedPatients.length === 0) {
-      alert('No active student/patient admissions recorded to export.');
+      alert('No active patient admissions recorded to export.');
       return;
     }
-    let csvContent = 'data:text/csv;charset=utf-8,Patient ID,Name,Age,Gender,Phone,Ward,Room,Bed\n';
-    admittedPatients.forEach(p => {
+
+    const mappedAdmitted = admittedPatients.map(p => {
       const wardNameStr = wards.find(w => w.id === p.wardId)?.name || 'Unknown Ward';
-      csvContent += `"${p.id}","${p.name}",${p.age},"${p.gender}","${p.phone}","${wardNameStr}","${p.roomId}","Bed ${p.bedNumber}"\n`;
+      return {
+        id: p.id,
+        name: p.name,
+        age: p.age,
+        gender: p.gender,
+        phone: p.phone,
+        ward: wardNameStr,
+        room: p.roomId,
+        bed: p.bedNumber ? `Bed ${p.bedNumber}` : 'N/A'
+      };
     });
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `IPD_Admissions_Report_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    const headers = ['Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Ward Name', 'Room', 'Bed Number'];
+    const keys = ['id', 'name', 'age', 'gender', 'phone', 'ward', 'room', 'bed'];
+    const filename = `ipd_admissions_export_${new Date().toISOString().slice(0, 10)}`;
+
+    if (format === 'CSV') {
+      downloadCSV(mappedAdmitted, headers, keys, filename);
+    } else if (format === 'Excel') {
+      downloadExcel(mappedAdmitted, headers, keys, filename);
+    } else if (format === 'Word') {
+      downloadWord(mappedAdmitted, headers, keys, filename, 'IPD Active Ward Admissions Ledger');
+    } else if (format === 'PDF') {
+      downloadPDFFile(mappedAdmitted, headers, keys, filename, 'IPD Ward Bed Admissions Ledger');
+    }
   };
 
   return (
@@ -313,13 +332,23 @@ export default function IpdWardsView({
             <span>Add IPD Ward Bed</span>
           </button>
 
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 border border-slate-150 bg-white hover:bg-slate-50 text-slate-600 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-          >
-            <FileSpreadsheet size={14} />
-            <span>Export CSV</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              className="flex items-center gap-1.5 border border-slate-150 bg-white hover:bg-slate-50 text-slate-600 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <FileSpreadsheet size={14} />
+              <span>Export</span>
+            </button>
+            {showExportDropdown && (
+              <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-100 rounded-xl shadow-lg z-25 py-1 divide-y divide-slate-50 text-[11px] text-slate-700">
+                <button onClick={() => handleExport('CSV')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-705 font-medium block cursor-pointer">CSV format</button>
+                <button onClick={() => handleExport('Excel')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-emerald-600 font-medium block cursor-pointer">Excel sheet</button>
+                <button onClick={() => handleExport('Word')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-blue-600 font-medium block cursor-pointer">Word document</button>
+                <button onClick={() => handleExport('PDF')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-rose-600 font-medium block cursor-pointer">PDF file</button>
+              </div>
+            )}
+          </div>
           <button
             onClick={onRefresh}
             className="flex items-center justify-center p-2 border border-slate-150 bg-white hover:bg-slate-50 text-[#007f6e] rounded-xl transition-colors cursor-pointer"

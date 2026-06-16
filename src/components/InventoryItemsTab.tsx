@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, FileText, Plus, Pencil, Trash2, Eye, X, BookOpen, AlertTriangle, Upload, CheckCircle2 } from 'lucide-react';
 import { InventoryItem, Supplier } from '../types';
+import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface InventoryItemsTabProps {
   inventory: InventoryItem[];
@@ -59,6 +60,29 @@ export default function InventoryItemsTab({
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+
+  const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
+    setShowExportDropdown(false);
+    if (filteredItems.length === 0) {
+      alert("No inventory items found to export.");
+      return;
+    }
+    const headers = ['Item ID', 'Name', 'Generic Name', 'Brand Name', 'Category', 'Unit', 'Price', 'MRP', 'Selling Price', 'GST Rate', 'Min Stock', 'Barcode', 'Status'];
+    const keys = ['id', 'name', 'genericName', 'brandName', 'category', 'unit', 'purchasePrice', 'mrp', 'price', 'gst', 'minStock', 'barcode', 'status'];
+    const filename = `inventory_items_export_${new Date().toISOString().slice(0, 10)}`;
+
+    if (format === 'CSV') {
+      downloadCSV(filteredItems, headers, keys, filename);
+    } else if (format === 'Excel') {
+      downloadExcel(filteredItems, headers, keys, filename);
+    } else if (format === 'Word') {
+      downloadWord(filteredItems, headers, keys, filename, 'Hospital Inventory Stock Register');
+    } else if (format === 'PDF') {
+      downloadPDFFile(filteredItems, headers, keys, filename, 'Hospital Inventory Stock Ledger');
+    }
+  };
 
   const categoriesCount = Array.from(new Set(inventory.map((i) => i.category))).length;
   const withGstCount = inventory.filter((i) => (i.gst && i.gst > 0)).length;
@@ -206,13 +230,23 @@ export default function InventoryItemsTab({
             <Upload size={13} />
             <span>AI Bulk Import</span>
           </button>
-          <button
-            onClick={() => alert('Feature of downloading data has been triggered.')}
-            className="flex items-center gap-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-          >
-            <FileText size={13} />
-            <span>Export</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              className="flex items-center gap-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer animate-fade-in"
+            >
+              <FileText size={13} />
+              <span>Export</span>
+            </button>
+            {showExportDropdown && (
+              <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-100 rounded-xl shadow-lg z-20 py-1 divide-y divide-slate-50 text-[11px] text-slate-700">
+                <button onClick={() => handleExport('CSV')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-705 font-medium block cursor-pointer">CSV format</button>
+                <button onClick={() => handleExport('Excel')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-emerald-600 font-medium block cursor-pointer">Excel sheet</button>
+                <button onClick={() => handleExport('Word')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-blue-600 font-medium block cursor-pointer">Word document</button>
+                <button onClick={() => handleExport('PDF')} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-rose-600 font-medium block cursor-pointer">PDF file</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
