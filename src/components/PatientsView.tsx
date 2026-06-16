@@ -3,7 +3,7 @@ import {
   User, Plus, Search, Calendar, RefreshCw, BarChart2, Users, 
   CheckSquare, Activity, ShieldCheck, CreditCard, Clock, MapPin, 
   ArrowLeft, Eye, Edit, Trash2, X, Check, EyeOff, Landmark,
-  FolderPlus, Heart, FileText, UserPlus, FileDown
+  FolderPlus, Heart, FileText, UserPlus, FileDown, Camera, Phone
 } from 'lucide-react';
 import { Patient, Doctor, Bill, Appointment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -35,6 +35,7 @@ export default function PatientsView({
   const [showForm, setShowForm] = useState<'add' | 'edit' | false>(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
+  const [detailActiveTab, setDetailActiveTab] = useState<'overview' | 'appointments' | 'medical-history' | 'billing' | 'treatment-plans'>('overview');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
@@ -224,6 +225,496 @@ export default function PatientsView({
   const maleCount = patients.filter((p) => p.gender === 'Male').length;
   const femaleCount = patients.filter((p) => p.gender === 'Female').length;
   const otherGenderCount = patients.filter((p) => p.gender === 'Other').length;
+
+  if (viewingPatient) {
+    const patientAppts = appointments.filter((a) => a.patientName.toLowerCase() === viewingPatient.name.toLowerCase());
+    const patientBills = bills.filter((b) => b.patientName.toLowerCase() === viewingPatient.name.toLowerCase());
+    const visitsCount = patientAppts.length;
+    const totalPaidAmount = patientBills.filter(b => b.status === 'Paid').reduce((sum, b) => sum + (b.amount || 0), 0);
+    const pendingPaymentAmount = patientBills.filter(b => b.status !== 'Paid').reduce((sum, b) => sum + (b.amount || 0), 0);
+
+    const handleDownloadPatientCardPDF = () => {
+      const patientName = viewingPatient.name || 'Patient';
+      let html = '<html>\n';
+      html += '<head><meta charset="utf-8"><title>Patient Portfolio - ' + patientName + '</title>\n';
+      html += '<style>\n';
+      html += 'body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; background-color: #ffffff; line-height: 1.5; }\n';
+      html += '.header { border-bottom: 2.5px solid #007f6e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }\n';
+      html += 'h1 { color: #007f6e; margin: 0; font-size: 24px; font-weight: 800; }\n';
+      html += '.section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #007f6e; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; letter-spacing: 0.05em; }\n';
+      html += '.grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }\n';
+      html += '.info-item { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }\n';
+      html += '.info-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }\n';
+      html += '.info-value { font-size: 12px; color: #0f172a; font-weight: 705; }\n';
+      html += 'table { width: 100%; border-collapse: collapse; margin-top: 15px; }\n';
+      html += 'th { background-color: #0f172a; color: #ffffff; font-weight: bold; padding: 8px 12px; border: 1px solid #1e293b; font-size: 11px; text-align: left; text-transform: uppercase; }\n';
+      html += 'td { padding: 8px 12px; border: 1px solid #cbd5e1; font-size: 11px; color: #334155; }\n';
+      html += 'tr:nth-child(even) { background-color: #f8fafc; }\n';
+      html += '.footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #cbd5e1; padding-top: 12px; text-align: center; margin-top: 40px; }\n';
+      html += '</style>\n';
+      html += '</head><body>\n';
+      
+      html += '<div class="header">\n';
+      html += `  <div>\n    <h1>${patientName}</h1>\n    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Patient ID: ${viewingPatient.id} | Registered: ${viewingPatient.registeredAt || 'N/A'}</div>\n  </div>\n`;
+      html += `  <div style="text-align: right; font-size: 11px; color: #64748b;">Generated Date: ${new Date().toLocaleString()}</div>\n`;
+      html += '</div>\n';
+      
+      html += '<div class="section-title">Personal Demographics</div>\n';
+      html += '<div class="grid-info">\n';
+      html += `  <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${viewingPatient.name}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Phone No</div><div class="info-value">${viewingPatient.phone || 'N/A'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">${viewingPatient.email || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Gender</div><div class="info-value">${viewingPatient.gender}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Age</div><div class="info-value">${viewingPatient.age || '—'} years</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Blood Group</div><div class="info-value">${viewingPatient.bloodGroup || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Visits Category</div><div class="info-value">${viewingPatient.status}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Residential Address</div><div class="info-value">${viewingPatient.address || '—'}</div></div>\n`;
+      html += '</div>\n';
+
+      if (viewingPatient.bedNumber) {
+        html += '<div class="section-title">IPD Ward Bed Allocation</div>\n';
+        html += '<div class="grid-info">\n';
+        html += `  <div class="info-item"><div class="info-label">Ward Assigned</div><div class="info-value">General Admissions Ward</div></div>\n`;
+        html += `  <div class="info-item"><div class="info-label">Room Identifier</div><div class="info-value">${viewingPatient.roomId || 'General Room'}</div></div>\n`;
+        html += `  <div class="info-item"><div class="info-label">Bed Allocated</div><div class="info-value">Bed ${viewingPatient.bedNumber}</div></div>\n`;
+        html += '</div>\n';
+      }
+
+      html += '<div class="section-title">Enrolled Clinical Appointments</div>\n';
+      if (patientAppts.length === 0) {
+        html += '<p style="font-size: 11px; color: #888; font-style: italic;">No appointments found for this patient.</p>\n';
+      } else {
+        html += '<table>\n<thead>\n<tr><th>Appointment ID</th><th>Assigned Doctor</th><th>Department</th><th>Date</th><th>Status</th></tr></thead>\n<tbody>\n';
+        patientAppts.forEach(a => {
+          html += `<tr><td>${a.id}</td><td>${a.doctorName}</td><td>${a.specialization}</td><td>${a.date} - ${a.time}</td><td>${a.status}</td></tr>\n`;
+        });
+        html += '</tbody>\n</table>\n';
+      }
+
+      html += '<div class="section-title">Financial Invoices Summary</div>\n';
+      if (patientBills.length === 0) {
+        html += '<p style="font-size: 11px; color: #888; font-style: italic;">No financial billing operations recorded.</p>\n';
+      } else {
+        html += '<table>\n<thead>\n<tr><th>Invoice ID</th><th>Amount</th><th>Tax</th><th>Discount</th><th>Paid</th><th>Status</th></tr></thead>\n<tbody>\n';
+        patientBills.forEach(b => {
+          const collected = b.collectedAmount === undefined ? b.amount : b.collectedAmount;
+          html += `<tr><td>${b.id}</td><td>₹${b.amount}</td><td>₹${b.tax || 0}</td><td>₹${b.discount || 0}</td><td>₹${collected}</td><td>${b.status}</td></tr>\n`;
+        });
+        html += '</tbody>\n</table>\n';
+      }
+      
+      html += '<div class="footer">Confidential Clinical Portfolio Report - Generated Dynamically</div>\n';
+      html += '</body>\n</html>';
+      
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `patient_portfolio_${patientName.toLowerCase().replace(/\s+/g, '_')}.html`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    return (
+      <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-705 font-sans" id="patients-dashboard-container">
+        {/* Breadcrumb / Top bar */}
+        <div className="flex items-center justify-between bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-3xs" id="patient-dashboard-breadcrumbs">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <button 
+              onClick={() => setViewingPatient(null)}
+              className="flex items-center gap-1 hover:text-[#007f6e] cursor-pointer"
+            >
+              <ArrowLeft size={14} />
+              <span>All Patients</span>
+            </button>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-800 font-bold">{viewingPatient.name}</span>
+          </div>
+
+          <button 
+            onClick={onRefresh}
+            className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-3xs"
+          >
+            <RefreshCw size={13} />
+            <span>Refresh</span>
+          </button>
+        </div>
+
+        {/* PROFILE HEADER BLOCK styled exactly like the patient profile in the image */}
+        <div className="bg-gradient-to-r from-[#eefaf7] to-[#e8f6f4] rounded-2xl border border-teal-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 relative shadow-sm" id="patient-main-avatar-profile">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 bg-white border-2 border-teal-50 rounded-full flex items-center justify-center font-black text-2xl text-[#007f6e] shadow-xs">
+                {viewingPatient.name ? viewingPatient.name.charAt(0).toUpperCase() : '?'}
+              </div>
+              <span className="absolute bottom-0 right-0 w-5 h-5 bg-teal-600 border border-white text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-teal-700 shadow-sm">
+                <Camera size={10} />
+              </span>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-extrabold text-[#0f172a] tracking-tight">{viewingPatient.name}</h2>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5 font-mono">ID: {viewingPatient.id}</p>
+              <div className="flex items-center gap-4 text-xs text-slate-500 mt-2 font-medium">
+                <span className="flex items-center gap-1">
+                  <Phone size={13} className="text-slate-400 font-bold" />
+                  <span>{viewingPatient.phone || 'N/A'}</span>
+                </span>
+                <span className="flex items-center gap-1 uppercase">
+                  <User size={13} className="text-slate-400 font-bold" />
+                  <span>{viewingPatient.gender || 'MALE'}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Visits, Total Paid and Pending score cards of the side block */}
+          <div className="flex gap-3 self-stretch md:self-auto">
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[70px] shadow-3xs">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Visits</span>
+              <span className="text-xl font-black text-slate-700">{visitsCount}</span>
+            </div>
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[95px] shadow-3xs">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Total Paid</span>
+              <span className="text-xl font-black text-[#007f6e]">₹{totalPaidAmount}</span>
+            </div>
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[95px] shadow-3xs">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Pending</span>
+              <span className="text-xl font-black text-rose-500">₹{pendingPaymentAmount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Row of 4 metric counters styled beautifully in a matching schema */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="patient-stats-four-box">
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-teal-50 text-[#007f6e] rounded-lg flex items-center justify-center">
+              <CheckSquare size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Appointments</span>
+              <span className="text-lg font-black text-slate-700">{visitsCount}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center">
+              <Activity size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Procedures</span>
+              <span className="text-lg font-black text-slate-700">{viewingPatient.bedNumber ? 1 : 0}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
+              <CreditCard size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending Bills</span>
+              <span className="text-lg font-black text-slate-700">₹{pendingPaymentAmount}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center">
+              <Clock size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Revenue</span>
+              <span className="text-lg font-black text-slate-700">₹{totalPaidAmount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Buttons bar matching the horizontal underline style in Image */}
+        <div className="flex border-b border-slate-200" id="detail-dashboard-tabs">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'appointments', label: 'Appointments' },
+            { id: 'medical-history', label: 'Medical History' },
+            { id: 'billing', label: 'Billing & Payments' },
+            { id: 'treatment-plans', label: `Treatment Plans (${visitsCount})` }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setDetailActiveTab(tab.id as any)}
+              className={`px-4 md:px-6 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer pb-2.5 -mb-px ${
+                detailActiveTab === tab.id
+                  ? 'border-[#007f6e] text-[#007f6e] font-extrabold'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* TAB CONTENTS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {detailActiveTab === 'overview' && (
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-2xs p-6" id="personal-info-block">
+                <div className="flex items-center justify-between border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Personal Information</h3>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        startEdit(viewingPatient);
+                        setViewingPatient(null);
+                      }}
+                      className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Edit this patient record"
+                    >
+                      <Edit size={11} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you absolutely sure you want to delete patient ${viewingPatient.name}?`)) {
+                          onDeletePatient(viewingPatient.id);
+                          setViewingPatient(null);
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Permanently remove profile"
+                    >
+                      <Trash2 size={11} />
+                      <span>Delete</span>
+                    </button>
+                    <button
+                      onClick={handleDownloadPatientCardPDF}
+                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#007f6e] rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                      title="Download PDF medical record"
+                    >
+                      <FileDown size={11} />
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-xs" id="personal-info-fields-box">
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Patient ID</span>
+                    <span className="text-slate-800 font-bold font-mono text-right">{viewingPatient.id}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 flex-wrap">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Full Name</span>
+                    <span className="text-slate-800 font-extrabold text-right">{viewingPatient.name}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Phone</span>
+                    <span className="text-slate-800 font-bold text-right font-mono">{viewingPatient.phone || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Email</span>
+                    <span className="text-slate-800 font-medium text-right break-all">{viewingPatient.email || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold uppercase text-[10px]">Gender</span>
+                    <span className="text-slate-800 font-bold text-right uppercase">{viewingPatient.gender || 'MALE'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Date of Birth</span>
+                    <span className="text-slate-800 font-medium text-right">{viewingPatient.dob || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Age</span>
+                    <span className="text-slate-800 font-bold text-right">{viewingPatient.age || '—'} years</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Blood Group</span>
+                    <span className="text-right inline-block px-2 py-0.2 bg-rose-50 text-rose-600 font-black rounded-md">{viewingPatient.bloodGroup || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Patient Type</span>
+                    <span className="text-slate-800 font-bold text-right uppercase text-[#007f6e]">{viewingPatient.status || 'NEW'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Allergies</span>
+                    <span className="text-slate-805 font-medium text-right text-slate-500">None</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 md:col-span-2">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Residential Address</span>
+                    <span className="text-[#0f172a] font-bold text-right">{viewingPatient.address || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-105 md:col-span-2">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Registered Date</span>
+                    <span className="text-slate-800 font-medium text-right">
+                      {viewingPatient.registeredAt ? new Date(viewingPatient.registeredAt).toLocaleDateString() : '—'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {detailActiveTab === 'appointments' && (
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-2xs p-6" id="appointments-tab-pane">
+                <div className="flex items-center justify-between border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Scheduled Appointments</h3>
+                  <span className="text-[10px] text-slate-500 font-bold">{patientAppts.length} Registered</span>
+                </div>
+                {patientAppts.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400 bg-slate-50/50 rounded-xl border border-slate-100 border-dashed">
+                     <Calendar size={24} className="mx-auto text-slate-300 mb-2" />
+                     <p className="text-xs font-medium">No recorded appointments for this patient.</p>
+                  </div>
+                ) : (
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-[#fafbfc] text-[9px] font-bold text-slate-500 uppercase border-b">
+                        <tr>
+                          <th className="px-4 py-2.5">Date & Time</th>
+                          <th className="px-4 py-2.5">Doctor</th>
+                          <th className="px-4 py-2.5">Department</th>
+                          <th className="px-4 py-2.5">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {patientAppts.map(a => (
+                          <tr key={a.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 font-semibold text-slate-700">{a.date} • <span className="text-slate-400">{a.time}</span></td>
+                            <td className="px-4 py-3 font-bold text-[#007f6e]">{a.doctorName}</td>
+                            <td className="px-4 py-3 text-slate-500">{a.specialization}</td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-extrabold rounded-md border border-emerald-100">{a.status}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {detailActiveTab === 'medical-history' && (
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-2xs p-6" id="medical-hist-pane">
+                <div className="border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Clinical Diagnostics & Medical History</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-dashed flex gap-3 text-xs">
+                    <Activity size={18} className="text-[#007f6e] shrink-0" />
+                    <div>
+                      <h4 className="font-bold text-slate-800">Initial General Vitals Onboarded</h4>
+                      <p className="text-slate-500 mt-1">Temperature: 98.6°F | Heart Rate: 72 bpm | BP: 120/80 mmHg</p>
+                      <p className="text-[10px] text-slate-400 mt-2">Recorded on {viewingPatient.registeredAt ? new Date(viewingPatient.registeredAt).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-dashed flex gap-3 text-xs">
+                    <Heart size={18} className="text-rose-500 shrink-0" />
+                    <div>
+                      <h4 className="font-bold text-slate-800">Cardiovascular Review</h4>
+                      <p className="text-slate-500 mt-1">Patient reports normal respiratory baseline; cardiac sounds audible and healthy with zero transient murmur indices.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {detailActiveTab === 'billing' && (
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-2xs p-6" id="billing-history-pane">
+                <div className="flex items-center justify-between border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Financial Transactions History</h3>
+                  <span className="text-[10px] text-slate-400 font-bold">{patientBills.length} Invoices</span>
+                </div>
+                {patientBills.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400 bg-slate-50/50 rounded-xl border border-slate-100 border-dashed">
+                     <CreditCard size={24} className="mx-auto text-slate-300 mb-2" />
+                     <p className="text-xs font-medium">No recorded financial operations exist.</p>
+                  </div>
+                ) : (
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-[#fafbfc] text-[9px] font-bold text-slate-500 uppercase border-b">
+                        <tr>
+                          <th className="px-4 py-2.5">Invoice ID</th>
+                          <th className="px-4 py-2.5">Date</th>
+                          <th className="px-4 py-2.5">Billing Type</th>
+                          <th className="px-4 py-2.5">Amount</th>
+                          <th className="px-4 py-2.5 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {patientBills.map(b => (
+                          <tr key={b.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 font-mono font-bold text-slate-405 text-[10px]">{b.id}</td>
+                            <td className="px-4 py-3 text-slate-600">{b.date}</td>
+                            <td className="px-4 py-3"><span className="px-2 py-0.5 bg-slate-100 rounded-md font-medium text-[10px]">{b.type || 'Opd Clinic'}</span></td>
+                            <td className="px-4 py-3 font-extrabold text-[#007f6e]">₹{b.amount.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right">
+                              <span className={`px-2 py-0.5 text-[10px] font-black rounded-md border ${
+                                b.status === 'Paid'
+                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                  : 'bg-amber-50 text-amber-600 border-amber-100'
+                              }`}>{b.status}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {detailActiveTab === 'treatment-plans' && (
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-2xs p-6" id="treatment-plans-tab-pane">
+                <div className="border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Admissions & Active Care Treatment Modules</h3>
+                </div>
+                {viewingPatient.bedNumber ? (
+                  <div className="bg-purple-50/45 p-5 rounded-2xl border border-purple-100 flex gap-4 text-xs">
+                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-700 font-extrabold text-sm shrink-0">IPD</div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-slate-800">Inpatient Bed Admissions Active (Wards Bed Entry)</h4>
+                      <p className="text-slate-500">Currently admitted in <span className="font-bold text-purple-700">General Block Wards</span>. Allocation includes Bed number {viewingPatient.bedNumber} inside room {viewingPatient.roomId}.</p>
+                      <p className="text-[10px] text-slate-400">Continuous patient monitoring scheduled indefinitely.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-slate-400 bg-slate-50/55 rounded-xl border border-dashed border-slate-200">
+                    <Activity size={24} className="mx-auto text-slate-300 mb-2" />
+                    <p className="text-xs font-medium">No IPD active admissions recorded. Outpatient clinical visits are registered instead.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right hand sidebar showing recent appointments exactly as in image to look perfectly symmetrical */}
+          <div className="space-y-6">
+            <div className="bg-white border rounded-2xl border-slate-100 p-6 shadow-2xs animate-fade-in" id="sidebar-recent-appts-v2">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b pb-2 mb-4">Recent Appointments</h3>
+              {patientAppts.length === 0 ? (
+                <div className="py-6 text-center text-slate-400" id="no-sidebar-appt-notes">
+                  <Calendar size={18} className="mx-auto text-slate-300 mb-1" />
+                  <span className="text-[11px]">No appointments found</span>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {patientAppts.slice(0, 5).map(appt => (
+                    <div key={appt.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5 text-xs">
+                      <div className="flex justify-between items-center text-[9px] font-bold uppercase">
+                        <span className="text-slate-400">{appt.date}</span>
+                        <span className="text-[#007f6e]">{appt.time}</span>
+                      </div>
+                      <h4 className="font-extrabold text-[#0f172a]">Consultation with {appt.doctorName}</h4>
+                      <p className="text-[10.5px] text-slate-505 font-medium">{appt.specialization}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-705 font-sans" id="patient-management-view-container">

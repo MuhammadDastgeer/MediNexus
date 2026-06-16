@@ -106,6 +106,8 @@ export interface Bill {
   pendingAmount?: number;
   collectedAmount?: number;
   items?: string; // stringified JSON array of { name: string, value: number }
+  tax?: number;
+  type?: string;
 }
 
 export interface InventoryItem {

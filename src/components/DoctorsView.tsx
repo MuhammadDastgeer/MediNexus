@@ -30,7 +30,10 @@ import {
   Shield,
   CreditCard,
   Send,
-  Building
+  Building,
+  Camera,
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
 import { Doctor } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -57,6 +60,7 @@ export default function DoctorsView({
   const [showForm, setShowForm] = useState(false);
   const [isEditingId, setIsEditingId] = useState<string | null>(null);
   const [viewingDoctor, setViewingDoctor] = useState<Doctor | null>(null);
+  const [detailActiveTab, setDetailActiveTab] = useState<'overview' | 'roster-settings'>('overview');
   
   // Custom Alerts / Messages
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -268,6 +272,341 @@ export default function DoctorsView({
   const handleSendAllInvites = () => {
     triggerToast('Sending credentials invite link to all on-boarded medical specialists.');
   };
+
+  if (viewingDoctor) {
+    const handleDownloadDoctorCardPDF = () => {
+      const docName = viewingDoctor.name || 'Doctor';
+      let html = '<html>\n';
+      html += '<head><meta charset="utf-8"><title>Doctor Portfolio - ' + docName + '</title>\n';
+      html += '<style>\n';
+      html += 'body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; background-color: #ffffff; line-height: 1.5; }\n';
+      html += '.header { border-bottom: 2.5px solid #007f6e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }\n';
+      html += 'h1 { color: #007f6e; margin: 0; font-size: 24px; font-weight: 800; }\n';
+      html += '.section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #007f6e; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; letter-spacing: 0.05em; }\n';
+      html += '.grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }\n';
+      html += '.info-item { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }\n';
+      html += '.info-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }\n';
+      html += '.info-value { font-size: 12px; color: #0f172a; font-weight: 705; }\n';
+      html += '.footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #cbd5e1; padding-top: 12px; text-align: center; margin-top: 40px; }\n';
+      html += '</style>\n';
+      html += '</head><body>\n';
+      
+      html += '<div class="header">\n';
+      html += `  <div>\n    <h1>${docName}</h1>\n    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Specialization: ${viewingDoctor.specialization} | Department: ${viewingDoctor.department || 'Clinical General'}</div>\n  </div>\n`;
+      html += `  <div style="text-align: right; font-size: 11px; color: #64748b;">Generated Date: ${new Date().toLocaleString()}</div>\n`;
+      html += '</div>\n';
+      
+      html += '<div class="section-title">Clinical Specialist Demographics</div>\n';
+      html += '<div class="grid-info">\n';
+      html += `  <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${viewingDoctor.name}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Phone No</div><div class="info-value">${viewingDoctor.phone || 'N/A'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">${viewingDoctor.email || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Gender</div><div class="info-value">${viewingDoctor.gender || 'Not Specified'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">${viewingDoctor.dob || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Blood Group</div><div class="info-value">${viewingDoctor.bloodGroup || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Home Address</div><div class="info-value">${viewingDoctor.address || '—'}</div></div>\n`;
+      html += '</div>\n';
+
+      html += '<div class="section-title">Professional Certification & Hospital Registry</div>\n';
+      html += '<div class="grid-info">\n';
+      html += `  <div class="info-item"><div class="info-label">Specialist Qualification</div><div class="info-value">${viewingDoctor.qualification || 'MBBS'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Practical Experience</div><div class="info-value">${viewingDoctor.experience || '0'} Years</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Medical Registration No</div><div class="info-value">${viewingDoctor.medicalRegNo || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">System License Certificate</div><div class="info-value">${viewingDoctor.licenseNumber || '—'}</div></div>\n`;
+      html += '</div>\n';
+
+      html += '<div class="section-title">Consultation Rates Fee Structure</div>\n';
+      html += '<div class="grid-info">\n';
+      html += `  <div class="info-item"><div class="info-label">First Consultation Fee</div><div class="info-value">₹${viewingDoctor.consultationFee || 500}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Follow-up Session Fee</div><div class="info-value">₹${viewingDoctor.followUpFee || 300}</div></div>\n`;
+      html += '</div>\n';
+      
+      html += '<div class="footer">Confidential Hospital Specialist Profile - Generated Dynamically - City Hospital</div>\n';
+      html += '</body>\n</html>';
+      
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `doctor_profile_${docName.toLowerCase().replace(/\s+/g, '_')}.html`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    return (
+      <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-705 font-sans animate-fade-in" id="doctor-dashboard-container">
+        {/* Navigation Breadcrumb / Top bar */}
+        <div className="flex items-center justify-between bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-3xs" id="doctor-dashboard-breadcrumbs">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <button 
+              onClick={() => setViewingDoctor(null)}
+              className="flex items-center gap-1 hover:text-[#007f6e] cursor-pointer"
+            >
+              <ArrowLeft size={14} />
+              <span>All Doctors</span>
+            </button>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-800 font-bold">{viewingDoctor.name}</span>
+          </div>
+
+          <button 
+            onClick={() => {
+              triggerToast('Doctor profile data refreshed.');
+            }}
+            className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-3xs"
+          >
+            <RefreshCw size={13} className="text-white" />
+            <span>Refresh</span>
+          </button>
+        </div>
+
+        {/* PROFILE HEADER BLOCK styled matches user-uploaded patients image specs */}
+        <div className="bg-gradient-to-r from-[#eefaf7] to-[#e8f6f4] rounded-2xl border border-teal-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 relative shadow-sm" id="doctor-main-avatar-profile">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 bg-white border-2 border-teal-50 rounded-full flex items-center justify-center font-black text-2xl text-[#007f6e] shadow-xs">
+                {viewingDoctor.name ? viewingDoctor.name.replace('Dr. ', '').trim().charAt(0) : '?'}
+              </div>
+              <span className="absolute bottom-0 right-0 w-5 h-5 bg-teal-600 border border-white text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-teal-700 shadow-sm">
+                <Camera size={10} />
+              </span>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-extrabold text-[#0f172a] tracking-tight">{viewingDoctor.name}</h2>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5 font-mono">{viewingDoctor.specialization} • Specialist</p>
+              <div className="flex items-center gap-4 text-xs text-slate-505 mt-2 font-medium">
+                <span className="flex items-center gap-1">
+                  <Phone size={13} className="text-slate-400 font-bold" />
+                  <span>{viewingDoctor.phone || 'N/A'}</span>
+                </span>
+                <span className="flex items-center gap-1 uppercase">
+                  <User size={13} className="text-slate-400 font-bold" />
+                  <span>{viewingDoctor.gender || 'Not Specified'}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Consultation Fee and Follow-Up Rates Miniature Score Blocks */}
+          <div className="flex gap-3 self-stretch md:self-auto">
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[70px] shadow-3xs">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Experience</span>
+              <span className="text-xl font-black text-[#007f6e]">{viewingDoctor.experience || '0'} Yrs</span>
+            </div>
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[102px] shadow-3xs">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Consult Fee</span>
+              <span className="text-xl font-black text-purple-600">₹{viewingDoctor.consultationFee || 500}</span>
+            </div>
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[102px] shadow-3xs">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Follow-Up</span>
+              <span className="text-xl font-black text-teal-600">₹{viewingDoctor.followUpFee || 300}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Row of 4 metric counters styled beautifully in a matching schema */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="doctor-stats-four-box">
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-teal-50 text-[#007f6e] rounded-lg flex items-center justify-center">
+              <Stethoscope size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Specialty</span>
+              <span className="text-xs font-bold text-slate-700 truncate block max-w-[150px]">{viewingDoctor.specialization}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center">
+              <Building size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Department</span>
+              <span className="text-xs font-bold text-slate-700 block">{viewingDoctor.department || 'Clinical General'}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
+              <Shield size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">License Status</span>
+              <span className="text-xs font-bold text-[#007f6e] block">{viewingDoctor.licenseNumber ? 'Registered' : 'N/A'}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center">
+              <Activity size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Roster status</span>
+              <span className="text-xs font-bold text-emerald-600 block">{viewingDoctor.status || 'On Duty'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Buttons bar matching the horizontal underline style index */}
+        <div className="flex border-b border-slate-200" id="doctor-dashboard-tabs">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'roster', label: 'Roster Schedule & Settings' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setDetailActiveTab(tab.id as any)}
+              className={`px-6 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer pb-2.5 -mb-px ${
+                detailActiveTab === tab.id
+                  ? 'border-[#007f6e] text-[#007f6e] font-extrabold'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* DETAILS CORE CONTENTS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {detailActiveTab === 'overview' && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-2xs" id="personal-info-block">
+                <div className="flex items-center justify-between border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Clinical Specialist Profile</h3>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        setIsEditingId(viewingDoctor.id);
+                        setViewingDoctor(null);
+                        setShowForm(true);
+                      }}
+                      className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Edit this doctor's profile"
+                    >
+                      <Edit3 size={11} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you absolutely sure you want to remove ${viewingDoctor.name}?`)) {
+                          onDeleteDoctor(viewingDoctor.id);
+                          setViewingDoctor(null);
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Delete profile record"
+                    >
+                      <Trash2 size={11} />
+                      <span>Delete</span>
+                    </button>
+                    <button
+                      onClick={handleDownloadDoctorCardPDF}
+                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#007f6e] rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                      title="Download PDF report certificate"
+                    >
+                      <Download size={11} />
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-xs" id="doctor-info-fields">
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Full Name</span>
+                    <span className="text-[#0f172a] font-extrabold text-right">{viewingDoctor.name}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Specialization</span>
+                    <span className="text-slate-800 font-bold text-right font-mono text-[#007f6e]">{viewingDoctor.specialization}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">Gender</span>
+                    <span className="text-slate-800 mt-0.5 block">{viewingDoctor.gender || 'Not Specified'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">Date of Birth</span>
+                    <span className="text-slate-805 mt-0.5 block">{viewingDoctor.dob || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">Blood Group</span>
+                    <span className="text-slate-700 bg-slate-50 border border-slate-100 px-2 font-bold rounded">
+                      {viewingDoctor.bloodGroup || 'unknown'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">Phone Contact</span>
+                    <span className="text-[#0f172a] mt-0.5 font-bold font-mono">{viewingDoctor.phone || 'No phone'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">Email ID</span>
+                    <span className="text-slate-800 mt-0.5 block break-all">{viewingDoctor.email || 'No email registered'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 md:col-span-2">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">Home Residential Address</span>
+                    <span className="text-[#0f172a] font-medium text-right leading-normal">{viewingDoctor.address || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">System Qualification</span>
+                    <span className="text-slate-800 mt-0.5 block">{viewingDoctor.qualification || 'MBBS'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">Clinic Experience</span>
+                    <span className="text-[#007f6e] mt-0.5 font-bold">{viewingDoctor.experience || '0'} Year(s) Practice</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">Medical Registration No</span>
+                    <span className="text-slate-880 mt-0.5 block font-mono">{viewingDoctor.medicalRegNo || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[9px]">System License Certificate</span>
+                    <span className="text-slate-808 mt-0.5 block font-mono">{viewingDoctor.licenseNumber || '—'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {detailActiveTab === 'roster' && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-2xs" id="roster-schedule-pane">
+                <div className="border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Hospital Duty Roster & Visibility</h3>
+                </div>
+                <div className="space-y-4 text-xs font-semibold">
+                  <div className="flex items-center gap-3 p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                    <span className={`w-3 h-3 rounded-full ${viewingDoctor.status === 'On Duty' || viewingDoctor.isActive !== false ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                    <span className="text-slate-800">Specialist is currently marked as: <span className="font-extrabold uppercase text-[#007f6e]">{viewingDoctor.status || 'On Duty'}</span></span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3.5 bg-blue-50/35 rounded-xl border border-blue-100">
+                    <span className={`w-3 h-3 rounded-full ${viewingDoctor.availableForBooking !== false ? 'bg-[#007f6e]' : 'bg-slate-300'}`} />
+                    <span className="text-slate-800">Visible for Patient Consultations Appointment Scheduler: <span className="font-extrabold text-blue-600">{viewingDoctor.availableForBooking !== false ? 'ACTIVE' : 'INACTIVE'}</span></span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-2xs" id="doctors-sidebar-pane">
+              <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider border-b pb-2 mb-4">Consultation Rates</h3>
+              <div className="space-y-3.5" id="sidebar-bills-list">
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs space-y-1">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">First-Time Admission Consultation</span>
+                  <span className="text-lg font-black text-slate-800">₹{viewingDoctor.consultationFee || 500}</span>
+                </div>
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs space-y-1">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Follow-up Clinical review Fee</span>
+                  <span className="text-lg font-black text-purple-600">₹{viewingDoctor.followUpFee || 300}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 h-full overflow-y-auto select-none space-y-6 bg-[#f8fafc]/90" id="doctors-unified-view">

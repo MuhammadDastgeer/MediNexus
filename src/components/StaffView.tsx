@@ -3,7 +3,7 @@ import {
   Users, Plus, Search, Calendar, RefreshCw, 
   Clock, CheckSquare, ArrowLeft, Shield, Landmark, 
   Trash2, Edit, Eye, X, Check, Mail, Phone, 
-  MapPin, CreditCard, UserCheck, BarChart2 
+  MapPin, CreditCard, UserCheck, BarChart2, Camera, Download 
 } from 'lucide-react';
 import { Staff } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -21,6 +21,7 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
   const [showForm, setShowForm] = useState<'add' | 'edit' | false>(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [viewingStaff, setViewingStaff] = useState<Staff | null>(null);
+  const [detailActiveTab, setDetailActiveTab] = useState<'overview' | 'financials'>('overview');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
@@ -165,6 +166,347 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
     (s.email && s.email.toLowerCase().includes(search.toLowerCase())) ||
     (s.department && s.department.toLowerCase().includes(search.toLowerCase()))
   );
+
+  if (viewingStaff) {
+    const handleDownloadStaffCardPDF = () => {
+      const staffName = viewingStaff.name || 'Staff';
+      let html = '<html>\n';
+      html += '<head><meta charset="utf-8"><title>Staff Portfolio - ' + staffName + '</title>\n';
+      html += '<style>\n';
+      html += 'body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; background-color: #ffffff; line-height: 1.5; }\n';
+      html += '.header { border-bottom: 2.5px solid #007f6e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }\n';
+      html += 'h1 { color: #007f6e; margin: 0; font-size: 24px; font-weight: 800; }\n';
+      html += '.section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #007f6e; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; letter-spacing: 0.05em; }\n';
+      html += '.grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }\n';
+      html += '.info-item { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }\n';
+      html += '.info-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }\n';
+      html += '.info-value { font-size: 12px; color: #0f172a; font-weight: 705; }\n';
+      html += '.footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #cbd5e1; padding-top: 12px; text-align: center; margin-top: 40px; }\n';
+      html += '</style>\n';
+      html += '</head><body>\n';
+      
+      html += '<div class="header">\n';
+      html += `  <div>\n    <h1>${staffName}</h1>\n    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Role Profile: ${viewingStaff.role} | Department: ${viewingStaff.department || 'Clinical General'}</div>\n  </div>\n`;
+      html += `  <div style="text-align: right; font-size: 11px; color: #64748b;">Generated Date: ${new Date().toLocaleString()}</div>\n`;
+      html += '</div>\n';
+      
+      html += '<div class="section-title">Staff Member Demographics</div>\n';
+      html += '<div class="grid-info">\n';
+      html += `  <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${viewingStaff.name}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Phone No</div><div class="info-value">${viewingStaff.phone || 'N/A'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">${viewingStaff.email || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Joining Date</div><div class="info-value">${viewingStaff.joinDate || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">${viewingStaff.dob || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Working Days (per month)</div><div class="info-value">${viewingStaff.workingDays || '26'} Days</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Home Address</div><div class="info-value">${viewingStaff.address || '—'}</div></div>\n`;
+      html += '</div>\n';
+
+      html += '<div class="section-title">Employment Role & Financial Roster</div>\n';
+      html += '<div class="grid-info">\n';
+      html += `  <div class="info-item"><div class="info-label">Designated Role</div><div class="info-value">${viewingStaff.role}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Assigned Department</div><div class="info-value">${viewingStaff.department || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Monthly Wages (₹)</div><div class="info-value">₹${Number(viewingStaff.monthlySalary || 0).toLocaleString()}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Account Status</div><div class="info-value">${viewingStaff.status || 'Active'}</div></div>\n`;
+      html += '</div>\n';
+
+      html += '<div class="section-title">Verified Bank Credentials & Direct Deposit</div>\n';
+      html += '<div class="grid-info">\n';
+      html += `  <div class="info-item"><div class="info-label">Direct Deposit Bank</div><div class="info-value">${viewingStaff.bankName || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Bank Account Number</div><div class="info-value">${viewingStaff.bankAccountNo || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Permanent PAN Badge No</div><div class="info-value">${viewingStaff.panNo || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">Provident Fund PF Account No</div><div class="info-value">${viewingStaff.pfAccountNo || '—'}</div></div>\n`;
+      html += `  <div class="info-item"><div class="info-label">PF Universal Access No (UAN)</div><div class="info-value">${viewingStaff.pfUan || '—'}</div></div>\n`;
+      html += '</div>\n';
+      
+      html += '<div class="footer">Confidential Hospital Staff Member Record - Generated Dynamically</div>\n';
+      html += '</body>\n</html>';
+      
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `staff_profile_${staffName.toLowerCase().replace(/\s+/g, '_')}.html`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    return (
+      <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-705 font-sans animate-fade-in" id="staff-dashboard-container">
+        {/* Navigation Breadcrumb / Top bar */}
+        <div className="flex items-center justify-between bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-3xs" id="staff-dashboard-breadcrumbs">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <button 
+              onClick={() => setViewingStaff(null)}
+              className="flex items-center gap-1 hover:text-[#007f6e] cursor-pointer"
+            >
+              <ArrowLeft size={14} />
+              <span>All Staff Members</span>
+            </button>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-800 font-bold">{viewingStaff.name}</span>
+          </div>
+
+          <button 
+            onClick={onRefresh}
+            className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-3xs"
+          >
+            <RefreshCw size={13} className="text-white" />
+            <span>Refresh</span>
+          </button>
+        </div>
+
+        {/* PROFILE HEADER BLOCK styled matches user-uploaded patients image specs */}
+        <div className="bg-gradient-to-r from-[#eefaf7] to-[#e8f6f4] rounded-2xl border border-teal-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 relative shadow-sm" id="staff-main-avatar-profile">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 bg-white border-2 border-teal-50 rounded-full flex items-center justify-center font-black text-2xl text-[#007f6e] shadow-xs">
+                {viewingStaff.name ? viewingStaff.name.charAt(0).toUpperCase() : '?'}
+              </div>
+              <span className="absolute bottom-0 right-0 w-5 h-5 bg-teal-600 border border-white text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-teal-700 shadow-sm">
+                <Camera size={10} />
+              </span>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-extrabold text-[#0f172a] tracking-tight">{viewingStaff.name}</h2>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5 font-mono">{viewingStaff.role} • {viewingStaff.department}</p>
+              <div className="flex items-center gap-4 text-xs text-slate-505 mt-2 font-medium font-mono">
+                <span className="flex items-center gap-1 font-sans">
+                  <Phone size={13} className="text-slate-400 font-bold" />
+                  <span>{viewingStaff.phone || 'N/A'}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar size={13} className="text-slate-400 font-bold" />
+                  <span>Joined {viewingStaff.joinDate || 'N/A'}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Role and Salary and Working Days score cards of the side block */}
+          <div className="flex gap-3 self-stretch md:self-auto">
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[70px] shadow-3xs text-slate-700 text-xs font-bold font-mono">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block font-sans">Days</span>
+              <span className="text-xl font-black">{viewingStaff.workingDays || '26'}</span>
+            </div>
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[102px] shadow-3xs">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block font-sans">Wage Salary</span>
+              <span className="text-xl font-black text-[#007f6e]">₹{Number(viewingStaff.monthlySalary || 0).toLocaleString()}</span>
+            </div>
+            <div className="bg-white border border-slate-100 rounded-xl py-2 px-4 text-center min-w-[102px] shadow-3xs">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block font-sans">Status</span>
+              <span className={`text-xl font-black ${viewingStaff.status === 'Active' ? 'text-emerald-600' : 'text-amber-500'}`}>{viewingStaff.status}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Row of 4 metric counters styled beautifully in a matching schema */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="staff-stats-four-box">
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-teal-50 text-[#007f6e] rounded-lg flex items-center justify-center">
+              <Users size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assigned Role</span>
+              <span className="text-xs font-bold text-slate-700 block">{viewingStaff.role}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center">
+              <Shield size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Department</span>
+              <span className="text-xs font-bold text-slate-700 truncate max-w-[150px] block">{viewingStaff.department || '—'}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
+              <CreditCard size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Monthly Wage</span>
+              <span className="text-xs font-bold text-slate-700 block">₹{Number(viewingStaff.monthlySalary || 0).toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center">
+              <Clock size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Registry Days</span>
+              <span className="text-xs font-bold text-[#007f6e] block">{viewingStaff.workingDays || 26} Days</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Buttons bar matching the horizontal underline style index */}
+        <div className="flex border-b border-slate-200" id="staff-dashboard-tabs">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'financials', label: 'Financial & Banking Audit' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setDetailActiveTab(tab.id as any)}
+              className={`px-6 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer pb-2.5 -mb-px ${
+                detailActiveTab === tab.id
+                  ? 'border-[#007f6e] text-[#007f6e] font-extrabold'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* DETAILS CORE CONTENTS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {detailActiveTab === 'overview' && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-2xs" id="personal-info-block">
+                <div className="flex items-center justify-between border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Clinical Staff Record</h3>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        startEdit(viewingStaff);
+                        setViewingStaff(null);
+                      }}
+                      className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Edit this staff profile"
+                    >
+                      <Edit size={11} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you absolutely sure you want to remove staff member ${viewingStaff.name}?`)) {
+                          onDeleteStaff(viewingStaff.id);
+                          setViewingStaff(null);
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Permanently delete recorded info"
+                    >
+                      <Trash2 size={11} />
+                      <span>Delete</span>
+                    </button>
+                    <button
+                      onClick={handleDownloadStaffCardPDF}
+                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#007f6e] rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                      title="Download PDF medical record"
+                    >
+                      <Download size={11} />
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-xs" id="staff-overview-fields">
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Staff Name</span>
+                    <span className="text-[#0f172a] font-extrabold text-right">{viewingStaff.name}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Role / Profile</span>
+                    <span className="text-slate-800 font-bold text-right font-mono text-[#007f6e]">{viewingStaff.role}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Active Department</span>
+                    <span className="text-slate-800 font-bold text-right uppercase">{viewingStaff.department || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Phone Contact</span>
+                    <span className="text-[#0f172a] font-bold text-right font-mono">{viewingStaff.phone || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 text-wrap">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Email ID</span>
+                    <span className="text-slate-800 font-medium text-right break-all">{viewingStaff.email || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Date of Birth</span>
+                    <span className="text-slate-808 font-medium text-right">{viewingStaff.dob || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Joining Date</span>
+                    <span className="text-slate-800 font-medium text-right font-mono">{viewingStaff.joinDate || '12/06/2026'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">System Status</span>
+                    <span className={`px-2 py-0.2 rounded font-black text-[10px] ${viewingStaff.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-650'}`}>{viewingStaff.status}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 md:col-span-2">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Home Residential Address</span>
+                    <span className="text-[#0f172a] font-medium text-right leading-normal">{viewingStaff.address || '—'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {detailActiveTab === 'financials' && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-2xs" id="financial-banking-pane">
+                <div className="border-b pb-3 mb-4">
+                  <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Payroll Banking & Accounts Ledger</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-xs" id="staff-financial-fields">
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Monthly Base Salary</span>
+                    <span className="text-[#007f6e] font-extrabold text-right">₹{Number(viewingStaff.monthlySalary || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Designated Deposit Bank</span>
+                    <span className="text-slate-800 font-bold text-right uppercase">{viewingStaff.bankName || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Bank Account Number</span>
+                    <span className="text-slate-805 font-bold font-mono text-right">{viewingStaff.bankAccountNo || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Permanent PAN Code No</span>
+                    <span className="text-slate-800 font-bold font-mono text-right uppercase">{viewingStaff.panNo || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">Provident Fund (PF) Account No</span>
+                    <span className="text-slate-800 font-medium font-mono text-right">{viewingStaff.pfAccountNo || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px]">PF Universal Access No (UAN)</span>
+                    <span className="text-slate-800 font-medium font-mono text-right">{viewingStaff.pfUan || '—'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-2xs animate-fade-in" id="staff-sidebar-ledger-pane">
+              <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider border-b pb-2 mb-4">Banking direct Deposit</h3>
+              <div className="space-y-3.5" id="staff-sidebar-bank-cards">
+                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs space-y-1">
+                  <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <Landmark size={12} className="text-slate-400" />
+                    <span>Direct Deposit Bank</span>
+                  </div>
+                  <span className="text-md font-black text-slate-800 block">{viewingStaff.bankName || 'NOT ONBOARDED'}</span>
+                  <span className="text-slate-500 font-mono text-[10.5px] block">{viewingStaff.bankAccountNo ? `A/C: ${viewingStaff.bankAccountNo}` : 'No Registered Account'}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs space-y-1">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">PAN Registration code</span>
+                  <span className="text-sm font-extrabold text-purple-700 font-mono uppercase block">{viewingStaff.panNo || 'NOT RECORDED'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-705 font-sans" id="staff-management-view-container">
