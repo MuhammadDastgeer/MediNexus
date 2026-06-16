@@ -1,0 +1,1800 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, 
+  Plus, 
+  Search, 
+  Check, 
+  X, 
+  Clock, 
+  Edit2, 
+  Trash2, 
+  Eye, 
+  User, 
+  Stethoscope, 
+  Mail, 
+  Phone, 
+  Lock, 
+  MessageCircle, 
+  AlertCircle, 
+  Sparkles,
+  RefreshCw,
+  FileText,
+  FileSpreadsheet,
+  Download,
+  CheckCircle,
+  FileText as FileWord,
+  CheckCircle2,
+  CalendarCheck,
+  AlertTriangle,
+  Bell,
+  CheckCheck,
+  Building
+} from 'lucide-react';
+import { Appointment, Doctor } from '../types';
+
+interface AppointmentsViewProps {
+  appointments: Appointment[];
+  doctors?: Doctor[];
+  onAddAppointment: (appointment: Omit<Appointment, 'id'>) => void;
+  onUpdateStatus: (id: string, status: Appointment['status']) => void;
+  onUpdateAppointment?: (id: string, fields: Partial<Appointment>) => void;
+  onDeleteAppointment?: (id: string) => void;
+  onRefresh?: () => void;
+}
+
+interface FollowUp {
+  id: string;
+  patientName: string;
+  doctorName: string;
+  specialization: string;
+  date: string;
+  status: 'Pending' | 'Completed' | 'Overdue';
+  phone?: string;
+  email?: string;
+}
+
+export default function AppointmentsView({
+  appointments = [],
+  doctors = [],
+  onAddAppointment,
+  onUpdateStatus,
+  onUpdateAppointment,
+  onDeleteAppointment,
+  onRefresh,
+}: AppointmentsViewProps) {
+  // Mode toggle between 'appointments' and 'followups'
+  const [activeMode, setActiveMode] = useState<'appointments' | 'followups'>('appointments');
+
+  // Multi-step Wizard state
+  const [showModal, setShowModal] = useState(false);
+  const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(1);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Form states
+  const [patientName, setPatientName] = useState('');
+  const [patientEmail, setPatientEmail] = useState('');
+  const [patientPassword, setPatientPassword] = useState('');
+  const [patientPhone, setPatientPhone] = useState('');
+  const [patientWhatsapp, setPatientWhatsapp] = useState('');
+  const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Male');
+  const [age, setAge] = useState<number>(30);
+
+  const [doctorName, setDoctorName] = useState('');
+  const [specialization, setSpecialization] = useState('Cardiology');
+  const [date, setDate] = useState('2026-06-15');
+  const [time, setTime] = useState('10:00');
+
+  // Interactive dynamic search lookup inside Step 1 of Booking Wizard
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
+  const [isEnteringNewPatient, setIsEnteringNewPatient] = useState(false);
+
+  // General Filters for APPOINTMENTS MODE (Matches layout exactly!)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('2026-06-15');
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('All Status');
+
+  // Export dropdown state
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+
+  // General Filters for FOLLOW-UPS MODE
+  const [followupTab, setFollowupTab] = useState<'today' | 'upcoming' | 'overdue' | 'all'>('today');
+  const [followupStatusFilter, setFollowupStatusFilter] = useState<string>('All Status');
+
+  // Success Feedbacks and Notifications
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
+
+  // Follow-ups storage backup configuration
+  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+
+  // Initialize and seed default local storage followups so they always have realistic data matching image
+  useEffect(() => {
+    const saved = localStorage.getItem('hosp_followups');
+    if (saved) {
+      setFollowUps(JSON.parse(saved));
+    } else {
+      const defaultFollowups: FollowUp[] = [
+        {
+          id: 'fol-101',
+          patientName: 'M. Ramzan',
+          doctorName: 'Dr. Anil Sharma',
+          specialization: 'Cardiology',
+          date: '2026-06-15',
+          status: 'Pending',
+          phone: '+92 300 1234567',
+          email: 'ramzan@gmail.com'
+        },
+        {
+          id: 'fol-102',
+          patientName: 'Kiran Shah',
+          doctorName: 'Dr. Priya Patel',
+          specialization: 'Pediatrics',
+          date: '2026-06-16',
+          status: 'Pending',
+          phone: '+92 321 9876543',
+          email: 'kiran@gmail.com'
+        },
+        {
+          id: 'fol-103',
+          patientName: 'Arshad Khan',
+          doctorName: 'Dr. Sameer Khan',
+          specialization: 'Orthopedics',
+          date: '2026-06-12',
+          status: 'Overdue',
+          phone: '+92 345 1122334',
+          email: 'arshad@gmail.com'
+        }
+      ];
+      localStorage.setItem('hosp_followups', JSON.stringify(defaultFollowups));
+      setFollowUps(defaultFollowups);
+    }
+  }, []);
+
+  // Save followups state to localStorage whenever modified
+  const saveFollowupsToStorage = (updatedList: FollowUp[]) => {
+    setFollowUps(updatedList);
+    localStorage.setItem('hosp_followups', JSON.stringify(updatedList));
+  };
+
+  // Drawer modal for viewing custom patient file details
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+
+  // Doctors selection builder
+  const fallbackDoctors = [
+    { name: 'Dr. Anil Sharma', specialization: 'Cardiology' },
+    { name: 'Dr. Priya Patel', specialization: 'Pediatrics' },
+    { name: 'Dr. Sameer Khan', specialization: 'Orthopedics' },
+    { name: 'Dr. Meera Sen', specialization: 'Neurology' },
+    { name: 'Dr. Rohan Jha', specialization: 'Dermatology' },
+  ];
+
+  const activeDoctors = doctors.length > 0 ? doctors : fallbackDoctors.map((d, i) => ({
+    id: `doc-${i}`,
+    name: d.name,
+    specialization: d.specialization,
+    status: 'On Duty' as const,
+    phone: '+91999999999'
+  }));
+
+  // Auto set doctor parameters if step changes
+  useEffect(() => {
+    if (!doctorName && activeDoctors.length > 0) {
+      setDoctorName(activeDoctors[0].name);
+      setSpecialization(activeDoctors[0].specialization);
+    }
+  }, [activeDoctors, doctorName]);
+
+  const handleDoctorChange = (selectedDocName: string) => {
+    setDoctorName(selectedDocName);
+    const matched = activeDoctors.find(d => d.name === selectedDocName);
+    if (matched) {
+      setSpecialization(matched.specialization);
+    }
+  };
+
+  // Helper overlaps checker to warn user of conflict booking (Same date, time, same doctor)
+  const isConflictDetected = () => {
+    if (!doctorName || !date || !time) return false;
+    return appointments.some(appt => 
+      appt.doctorName === doctorName && 
+      appt.date === date && 
+      appt.time === time &&
+      appt.id !== editingId &&
+      appt.status !== 'Cancelled'
+    );
+  };
+
+  // Clear overall filters
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setDateFilter('2026-06-15');
+    setShowAllAppointments(false);
+    setStatusFilter('All Status');
+    showToast('Filters cleared successfully.');
+  };
+
+  // Export Simulations
+  const handleExport = (format: 'PDF' | 'Excel' | 'Word') => {
+    setShowExportDropdown(false);
+    showToast(`Successfully preparing download process: ${format} document structured.`);
+  };
+
+  // Open booking wizard for new slot
+  const handleOpenNewWizard = () => {
+    setEditingId(null);
+    setPatientName('');
+    setPatientEmail('');
+    setPatientPassword('');
+    setPatientPhone('');
+    setPatientWhatsapp('');
+    setPatientGender('Male');
+    setAge(30);
+    
+    if (activeDoctors.length > 0) {
+      setDoctorName(activeDoctors[0].name);
+      setSpecialization(activeDoctors[0].specialization);
+    } else {
+      setDoctorName('Dr. Anil Sharma');
+      setSpecialization('Cardiology');
+    }
+
+    setDate('2026-06-15');
+    setTime('10:00');
+    setIsEnteringNewPatient(false);
+    setPatientSearchQuery('');
+    setActiveStep(1);
+    setShowModal(true);
+  };
+
+  // Open booking wizard for edit mode
+  const handleOpenEditWizard = (appt: Appointment) => {
+    setEditingId(appt.id);
+    setPatientName(appt.patientName);
+    setPatientEmail(appt.patientEmail || '');
+    setPatientPassword(appt.patientPassword || '');
+    setPatientPhone(appt.patientPhone || '');
+    setPatientWhatsapp(appt.patientWhatsapp || '');
+    setPatientGender(appt.patientGender || 'Male');
+    setAge(appt.age || 30);
+    setDoctorName(appt.doctorName);
+    setSpecialization(appt.specialization);
+    setDate(appt.date);
+    setTime(appt.time);
+    setIsEnteringNewPatient(true); // default to editable sheets
+    setActiveStep(1);
+    setShowModal(true);
+  };
+
+  // Quick select dynamic matching patient folder lookup
+  const handleSelectExistingPatient = (name: string, email: string, phone: string, gender: 'Male' | 'Female' | 'Other', ageVal: number) => {
+    setPatientName(name);
+    setPatientEmail(email);
+    setPatientPassword('••••••••');
+    setPatientPhone(phone);
+    setPatientWhatsapp(phone);
+    setPatientGender(gender);
+    setAge(ageVal);
+    setIsEnteringNewPatient(true);
+    // Move directory straight to doctor specialization select
+    setActiveStep(2);
+    showToast(`Patient profile imported. Preloaded details for ${name}.`);
+  };
+
+  // Wizard Save/Submit
+  const handleWizardSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientName) {
+      alert('Patient name is required.');
+      return;
+    }
+
+    const collision = isConflictDetected();
+    if (collision) {
+      const proceed = window.confirm(`Overlapping Warning: ${doctorName} is already booked on ${date} at ${time}. Do you still want to force save this appointment?`);
+      if (!proceed) return;
+    }
+
+    const payload: Omit<Appointment, 'id'> & {
+      patientEmail?: string;
+      patientPassword?: string;
+      patientPhone?: string;
+      patientWhatsapp?: string;
+      patientGender?: 'Male' | 'Female' | 'Other';
+      age?: number;
+    } = {
+      patientName,
+      doctorName,
+      specialization,
+      date,
+      time,
+      status: editingId ? 'Confirmed' : 'Scheduled',
+      patientEmail,
+      patientPassword,
+      patientPhone,
+      patientWhatsapp,
+      patientGender,
+      age
+    };
+
+    if (editingId) {
+      if (onUpdateAppointment) {
+        onUpdateAppointment(editingId, payload);
+        showToast('Appointment details edited successfully.');
+      }
+      if (selectedAppointment && selectedAppointment.id === editingId) {
+        setSelectedAppointment({ id: editingId, ...payload } as Appointment);
+      }
+    } else {
+      onAddAppointment(payload);
+      showToast('New appointment successfully added to clinical ledger.');
+    }
+
+    setShowModal(false);
+    if (onRefresh) onRefresh();
+  };
+
+  // Confirm/Complete changes
+  const handleToggleConfirmStatus = (id: string, currentStatus: Appointment['status']) => {
+    const nextStatus: Appointment['status'] = currentStatus === 'Scheduled' ? 'Confirmed' : 'Completed';
+    onUpdateStatus(id, nextStatus);
+    showToast(`Appointment state changed to ${nextStatus}.`);
+    if (onRefresh) onRefresh();
+  };
+
+  // Delete permanents
+  const handleDeleteAppointmentRecord = (id: string) => {
+    if (window.confirm('Delete Action: Are you sure you want to delete this appointment from SQLite database?')) {
+      if (onDeleteAppointment) {
+        onDeleteAppointment(id);
+        showToast('Appointment record removed from database.');
+      }
+      if (onRefresh) onRefresh();
+      setSelectedAppointment(null);
+    }
+  };
+
+  // Create Follow-up option from active appointment
+  const handleCreateFollowupFromAppointment = (appt: Appointment) => {
+    const newFollow: FollowUp = {
+      id: `fol-${Date.now().toString().slice(-4)}`,
+      patientName: appt.patientName,
+      doctorName: appt.doctorName,
+      specialization: appt.specialization,
+      date: appt.date,
+      status: 'Pending',
+      phone: appt.patientPhone,
+      email: appt.patientEmail
+    };
+    saveFollowupsToStorage([newFollow, ...followUps]);
+    showToast(`Scheduled a Follow-up for ${appt.patientName} on ${appt.date}.`);
+  };
+
+  // Follow-up state management actions
+  const handleCompleteFollowup = (folId: string) => {
+    const list = followUps.map(f => f.id === folId ? { ...f, status: 'Completed' as const } : f);
+    saveFollowupsToStorage(list);
+    showToast('Follow-up sheet cleared as Completed.');
+  };
+
+  const handleDeleteFollowup = (folId: string) => {
+    if (window.confirm('Are you sure you want to remove this follow-up sheet?')) {
+      const list = followUps.filter(f => f.id !== folId);
+      saveFollowupsToStorage(list);
+      showToast('Follow-ups reference removed.');
+    }
+  };
+
+  const handleSendReminder = (name: string, phone: string) => {
+    showToast(`WhatsApp reminder template dispatched to ${name} (${phone || '+92 300 0000000'}).`);
+  };
+
+  const handleSendAllReminders = () => {
+    showToast('Scheduled SMS and WhatsApp reminders dispatched to all pending patient contacts.');
+  };
+
+  // Dynamic lists of unique patient files
+  const registeredPatientsList: Array<{ name: string; email: string; phone: string; gender: 'Male' | 'Female' | 'Other'; age: number }> = [];
+  appointments.forEach(a => {
+    if (a.patientName && !registeredPatientsList.some(p => p.name.toLowerCase() === a.patientName.toLowerCase())) {
+      registeredPatientsList.push({
+        name: a.patientName,
+        email: a.patientEmail || `${a.patientName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+        phone: a.patientPhone || '+92 300 1234567',
+        gender: a.patientGender || 'Male',
+        age: a.age || 30
+      });
+    }
+  });
+
+  const searchedPatientMatches = registeredPatientsList.filter(p => 
+    p.name.toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
+    p.email.toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
+    p.phone.includes(patientSearchQuery)
+  );
+
+  // Stats Counters
+  // Appointments Stats
+  const countTodayAppts = appointments.filter(a => a.date === '2026-06-15').length;
+  const countCompletedAppts = appointments.filter(a => a.status === 'Completed').length;
+  const countCancelledAppts = appointments.filter(a => a.status === 'Cancelled').length;
+  const countTotalAppts = appointments.length;
+  const countRemainingAppts = appointments.filter(a => a.status === 'Scheduled' || a.status === 'Confirmed').length;
+
+  // Followup Stats
+  const countTodayFollowups = followUps.filter(f => f.date === '2026-06-15').length;
+  const countPendingFollowups = followUps.filter(f => f.status === 'Pending').length;
+  const countOverdueFollowups = followUps.filter(f => f.status === 'Overdue' || (f.date < '2026-06-15' && f.status !== 'Completed')).length;
+  const countCompletedFollowups = followUps.filter(f => f.status === 'Completed').length;
+
+  // Robust date comparison helper
+  const compareDates = (dateA?: string, dateB?: string) => {
+    if (!dateA || !dateB) return false;
+    const cleanA = dateA.trim().replace(/\//g, '-');
+    const cleanB = dateB.trim().replace(/\//g, '-');
+    return cleanA === cleanB;
+  };
+
+  // Filtering Logic for Appointments list table
+  const filteredAppointments = appointments.filter(a => {
+    // Search query check
+    const matchesSearch = searchQuery === '' || 
+      a.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.specialization.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.patientPhone && a.patientPhone.includes(searchQuery)) ||
+      (a.patientEmail && a.patientEmail.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    // Date picker filter
+    const matchesDate = showAllAppointments || compareDates(a.date, dateFilter);
+
+    // Dropdown status check
+    const matchesStatus = statusFilter === 'All Status' || a.status === statusFilter;
+
+    return matchesSearch && matchesDate && matchesStatus;
+  });
+
+  // Filtering Logic for Followups
+  const filteredFollowUps = followUps.filter(f => {
+    // Mode status dropdown
+    const matchesStatus = followupStatusFilter === 'All Status' || f.status === followupStatusFilter;
+
+    // Tabs
+    if (followupTab === 'today') {
+      return f.date === '2026-06-15' && matchesStatus;
+    }
+    if (followupTab === 'upcoming') {
+      return f.date > '2026-06-15' && matchesStatus;
+    }
+    if (followupTab === 'overdue') {
+      const isOverDate = f.date < '2026-06-15' && f.status !== 'Completed';
+      return (f.status === 'Overdue' || isOverDate) && matchesStatus;
+    }
+    return matchesStatus; // 'all'
+  });
+
+  return (
+    <div className="p-6 h-full overflow-y-auto space-y-6 bg-[#f4f7f6] relative font-sans" id="appointments-module-wrapper">
+      
+      {/* Toast Alert popup popup */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 animate-bounce">
+          <CheckCircle className="text-[#007f6e]" size={18} />
+          <span className="text-xs font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Top Controller Segment (Matches Image 1 & 2 Tab structure exactly!) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" id="view-mode-controller-header">
+        
+        {/* Toggle Pills block */}
+        <div className="inline-flex items-center gap-1.5 bg-white border border-slate-200 p-1.5 rounded-2xl shadow-xs">
+          <button
+            onClick={() => setActiveMode('appointments')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeMode === 'appointments'
+                ? 'bg-[#007f6e] text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+            }`}
+          >
+            <Calendar size={14} />
+            <span>Appointments</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveMode('followups')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeMode === 'followups'
+                ? 'bg-[#007f6e] text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+            }`}
+          >
+            <RefreshCw size={14} className={activeMode === 'followups' ? 'animate-spin' : ''} />
+            <span>Follow-ups</span>
+          </button>
+        </div>
+
+        {/* Global Action Booker */}
+        <button
+          onClick={handleOpenNewWizard}
+          className="flex items-center justify-center gap-2 bg-[#007f6e] hover:bg-[#006657] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
+          id="trigger-quick-booking-btn"
+        >
+          <Plus size={16} />
+          <span>Book Appointment</span>
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/*                       1. APPOINTMENTS MODE ACTIVE                         */}
+      {/* ========================================================================= */}
+      {activeMode === 'appointments' && (
+        <div className="space-y-6" id="appointments-mode-active-block">
+          
+          {/* A. Statistics Widget cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" id="appointments-stats-cards">
+            
+            {/* Today's Appointments Counter */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#007f6e] flex items-center justify-center">
+                <Clock size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Today's Appointments</span>
+                <span className="text-xl font-black text-slate-800 tracking-tight block mt-0.5">{countTodayAppts}</span>
+              </div>
+            </div>
+
+            {/* Completed */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#e6f4f1] text-[#007f6e] flex items-center justify-center">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
+                <span className="text-xl font-black text-[#007f6e] tracking-tight block mt-0.5">{countCompletedAppts}</span>
+              </div>
+            </div>
+
+            {/* Remaining */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <CalendarCheck size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Remaining</span>
+                <span className="text-xl font-black text-amber-600 tracking-tight block mt-0.5">{countRemainingAppts}</span>
+              </div>
+            </div>
+
+            {/* Total */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                <FileText size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Appointments</span>
+                <span className="text-xl font-black text-violet-700 tracking-tight block mt-0.5">{countTotalAppts}</span>
+              </div>
+            </div>
+
+            {/* Cancelled */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4 col-span-2 lg:col-span-1">
+              <div className="w-12 h-12 rounded-xl bg-rose-50 text-[#e11d48] flex items-center justify-center">
+                <X size={20} className="stroke-[3]" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Cancelled</span>
+                <span className="text-xl font-black text-rose-600 tracking-tight block mt-0.5">{countCancelledAppts}</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* B. Book New Appointment Dashed Banner target (Exactly matching Image 2!) */}
+          <div 
+            onClick={handleOpenNewWizard}
+            className="group cursor-pointer bg-emerald-50/20 border-2 border-dashed border-[#007f6e]/30 hover:border-[#007f6e]/75 hover:bg-emerald-50/45 p-4 rounded-2xl shadow-xs transition-all flex items-center justify-between"
+            id="dashed-booking-banner-action"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-full bg-[#007f6e] text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
+                <Plus size={18} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">Book New Appointment</h4>
+                <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Click to open the quick slot booking wizard layout.</p>
+              </div>
+            </div>
+            <span className="text-[#007f6e] text-xs font-semibold mr-2 group-hover:translate-x-1 duration-150 transition-transform">
+              &rarr;
+            </span>
+          </div>
+
+          {/* C. Master List container Card (Exactly matching Image 2 style & Filters!) */}
+          <div className="bg-white border border-slate-150 rounded-2xl overflow-hidden shadow-xs" id="appointments-master-list-card">
+            
+            {/* Header portion */}
+            <div className="p-4 border-b border-slate-100 bg-white flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Building className="text-[#007f6e]" size={18} />
+                <h3 className="text-sm font-bold text-slate-800">Appointments ledger</h3>
+              </div>
+
+              {/* Dynamic Filter Row (Search, Date limiters, checkboxes, All Status as shown!) */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                
+                {/* 1. Search input */}
+                <div className="relative w-full sm:w-56 min-w-[150px]">
+                  <Search size={13} className="absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search patient, doctor..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-[#007f6e] placeholder:text-slate-400 bg-slate-50/50"
+                  />
+                </div>
+
+                {/* 2. Date select picker */}
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    disabled={showAllAppointments}
+                    className={`text-xs pl-3 pr-2 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#007f6e] font-mono ${
+                      showAllAppointments ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white'
+                    }`}
+                  />
+                </div>
+
+                {/* 3. Show All checkbox toggles */}
+                <label className="flex items-center gap-1.5 cursor-pointer select-none py-1.5 px-2 bg-slate-50 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-150">
+                  <input
+                    type="checkbox"
+                    checked={showAllAppointments}
+                    onChange={(e) => setShowAllAppointments(e.target.checked)}
+                    className="text-[#007f6e] focus:ring-[#007f6e] rounded border-slate-300"
+                  />
+                  <span>Show All Appointments</span>
+                </label>
+
+                {/* 4. Dropdown statuses */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-[#007f6e] font-bold text-slate-700"
+                >
+                  <option value="All Status">All Status</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+
+                {/* 5. Clear buttons */}
+                <button
+                  onClick={handleClearFilters}
+                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#007f6e] bg-slate-50 hover:bg-slate-100 p-2 rounded-xl transition-all border border-slate-150 font-semibold"
+                >
+                  <RefreshCw size={11} />
+                  <span>Clear</span>
+                </button>
+
+                {/* 6. Export Selector Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowExportDropdown(!showExportDropdown)}
+                    className="flex items-center gap-1.5 bg-slate-950 text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-xs"
+                  >
+                    <Download size={12} />
+                    <span>Export</span>
+                  </button>
+                  {showExportDropdown && (
+                    <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-100 rounded-xl shadow-lg z-20 py-1.5 divide-y divide-slate-50">
+                      <button
+                        onClick={() => handleExport('PDF')}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <FileText size={13} className="text-rose-600" />
+                        <span>Export as PDF</span>
+                      </button>
+                      <button
+                        onClick={() => handleExport('Excel')}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <FileSpreadsheet size={13} className="text-emerald-600" />
+                        <span>Export as Excel</span>
+                      </button>
+                      <button
+                        onClick={() => handleExport('Word')}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <FileWord size={13} className="text-blue-500" />
+                        <span>Export as Word</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+
+            {/* Empty ledger or actual list */}
+            {filteredAppointments.length === 0 ? (
+              <div className="p-16 text-center bg-white" id="appointments-empty-state">
+                <div className="w-14 h-14 bg-emerald-50 text-[#007f6e] rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100/40">
+                  <CalendarCheck size={24} />
+                </div>
+                <h3 className="text-sm font-bold text-slate-700">No appointments found</h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  Try adjusting the date, uncheck Show All or apply a different selection query.
+                </p>
+                <div className="mt-4 flex justify-center gap-2">
+                  <button
+                    onClick={handleOpenNewWizard}
+                    className="bg-[#007f6e] text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-[#006657]"
+                  >
+                    Book Slot
+                  </button>
+                  <button
+                    onClick={() => setShowAllAppointments(true)}
+                    className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-200"
+                  >
+                    Show All
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-600">
+                  <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                    <tr>
+                      <th className="px-6 py-4">Patient Demographics</th>
+                      <th className="px-6 py-4">Assigned Specialist</th>
+                      <th className="px-6 py-4">Department / Specialty</th>
+                      <th className="px-6 py-4">Schedule Frame</th>
+                      <th className="px-6 py-4">Current Stage</th>
+                      <th className="px-6 py-4 text-right">Ledger Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredAppointments.map((a) => (
+                      <tr key={a.id} className="hover:bg-slate-50/50 transition-colors group">
+                        
+                        {/* Demographics */}
+                        <td className="px-6 py-4">
+                          <div 
+                            onClick={() => setSelectedAppointment(a)}
+                            className="font-bold text-slate-800 text-sm hover:text-[#007f6e] cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>{a.patientName}</span>
+                            {a.age && <span className="text-[10px] text-slate-400 font-medium">({a.age} yrs)</span>}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-1 font-mono flex flex-col space-y-0.5">
+                            {a.patientPhone && <span className="flex items-center gap-1"><Phone size={10} /> {a.patientPhone}</span>}
+                            {a.patientEmail && <span className="flex items-center gap-1"><Mail size={10} /> {a.patientEmail}</span>}
+                          </div>
+                        </td>
+
+                        {/* Specialist */}
+                        <td className="px-6 py-4">
+                          <div className="text-slate-700 font-semibold flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>{a.doctorName}</span>
+                          </div>
+                        </td>
+
+                        {/* Specialization */}
+                        <td className="px-6 py-4">
+                          <span className="bg-emerald-50 text-[#007f6e] text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-100/40 inline-block">
+                            {a.specialization}
+                          </span>
+                        </td>
+
+                        {/* Timing */}
+                        <td className="px-6 py-4 font-mono">
+                          <div className="font-bold text-slate-700">{a.date}</div>
+                          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                            <Clock size={10} />
+                            <span>{a.time}</span>
+                          </div>
+                        </td>
+
+                        {/* Stage */}
+                        <td className="px-6 py-4">
+                          <span
+                            onClick={() => {
+                              if (a.status !== 'Cancelled' && a.status !== 'Completed') {
+                                handleToggleConfirmStatus(a.id, a.status);
+                              }
+                            }}
+                            className={`cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border ${
+                              a.status === 'Scheduled' && 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
+                            } ${a.status === 'Confirmed' && 'bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100'} ${
+                              a.status === 'Completed' && 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                            } ${a.status === 'Cancelled' && 'bg-rose-50 text-rose-600 border-rose-100'}`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                            <span>{a.status}</span>
+                          </span>
+                        </td>
+
+                        {/* Action List */}
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end items-center gap-1.5">
+                            {/* View sheets */}
+                            <button
+                              onClick={() => setSelectedAppointment(a)}
+                              className="p-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-[#e6f4f1] hover:text-[#007f6e] transition-all"
+                              title="View Patient Intake File"
+                            >
+                              <Eye size={13} />
+                            </button>
+
+                            {/* Overlap schedule edit */}
+                            <button
+                              onClick={() => handleOpenEditWizard(a)}
+                              className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"
+                              title="Edit schedule details"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+
+                            {/* Create Followup option */}
+                            <button
+                              onClick={() => handleCreateFollowupFromAppointment(a)}
+                              className="p-1.5 rounded-lg bg-emerald-50 text-[#007f6e] hover:bg-emerald-100 transition-all font-semibold"
+                              title="Schedule a Follow-up visit"
+                            >
+                              <RefreshCw size={13} />
+                            </button>
+
+                            {/* Cancel shift */}
+                            <button
+                              onClick={() => handleDeleteAppointmentRecord(a.id)}
+                              className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-semibold"
+                              title="Cancel / Delete patient fold permanent"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/*                        2. FOLLOW-UPS MODE ACTIVE                         */}
+      {/* ========================================================================= */}
+      {activeMode === 'followups' && (
+        <div className="space-y-6" id="followups-mode-active-block">
+          
+          {/* A. Statistics Widget cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4" id="followups-stats-cards">
+            
+            {/* Today */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#e6f4f1] text-[#007f6e] flex items-center justify-center">
+                <Clock size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Today</span>
+                <span className="text-xl font-black text-slate-800 tracking-tight block mt-0.5">{countTodayFollowups}</span>
+              </div>
+            </div>
+
+            {/* Pending */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending</span>
+                <span className="text-xl font-black text-amber-600 tracking-tight block mt-0.5">{countPendingFollowups}</span>
+              </div>
+            </div>
+
+            {/* Overdue */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-rose-50 text-[#e11d48] flex items-center justify-center">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Overdue</span>
+                <span className="text-xl font-black text-rose-600 tracking-tight block mt-0.5">{countOverdueFollowups}</span>
+              </div>
+            </div>
+
+            {/* Completed */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#007f6e] flex items-center justify-center">
+                <CheckCheck size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
+                <span className="text-xl font-black text-[#007f6e] tracking-tight block mt-0.5">{countCompletedFollowups}</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* B. Capsules & Send Reminders controller bar (Exactly matching Image 1!) */}
+          <div className="bg-white border border-slate-150 p-4 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-xs">
+            
+            {/* Left Capsule pills group */}
+            <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 p-1 rounded-xl w-fit">
+              <button
+                onClick={() => setFollowupTab('today')}
+                className={`flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all ${
+                  followupTab === 'today'
+                    ? 'bg-[#007f6e] text-white'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span>Today</span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${followupTab === 'today' ? 'bg-white text-[#007f6e]' : 'bg-slate-200 text-slate-600'}`}>{countTodayFollowups}</span>
+              </button>
+
+              <button
+                onClick={() => setFollowupTab('upcoming')}
+                className={`flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all ${
+                  followupTab === 'upcoming'
+                    ? 'bg-[#007f6e] text-white'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span>Upcoming</span>
+              </button>
+
+              <button
+                onClick={() => setFollowupTab('overdue')}
+                className={`flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all ${
+                  followupTab === 'overdue'
+                    ? 'bg-[#007f6e] text-white'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span>Overdue</span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${followupTab === 'overdue' ? 'bg-white text-rose-600' : 'bg-rose-50 text-rose-600'}`}>{countOverdueFollowups}</span>
+              </button>
+
+              <button
+                onClick={() => setFollowupTab('all')}
+                className={`flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all ${
+                  followupTab === 'all'
+                    ? 'bg-[#007f6e] text-white'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span>All</span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${followupTab === 'all' ? 'bg-white text-slate-600' : 'bg-slate-200 text-slate-600'}`}>{followUps.length}</span>
+              </button>
+            </div>
+
+            {/* Right Action buttons */}
+            <div className="flex items-center gap-2.5">
+              
+              <select
+                value={followupStatusFilter}
+                onChange={(e) => setFollowupStatusFilter(e.target.value)}
+                className="text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-[#007f6e] font-bold text-slate-700"
+              >
+                <option value="All Status">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Completed">Completed</option>
+              </select>
+
+              <button
+                onClick={() => {
+                  showToast('Re-indexing followups records data updated.');
+                }}
+                className="p-2 border border-slate-250 bg-white hover:bg-slate-50 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5"
+                title="Refresh listings"
+              >
+                <RefreshCw size={12} />
+                <span>Refresh</span>
+              </button>
+
+              <button
+                onClick={handleSendAllReminders}
+                className="bg-[#fef9c3] hover:bg-[#fef3c7] text-[#854d0e] border border-amber-200 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-xs"
+              >
+                <Bell size={13} className="text-amber-600" />
+                <span>Send Reminders</span>
+              </button>
+
+            </div>
+
+          </div>
+
+          {/* C. Primary Listings area */}
+          {filteredFollowUps.length === 0 ? (
+            <div className="p-16 text-center bg-white border border-slate-150 rounded-2xl shadow-xs" id="followups-empty-state">
+              <div className="w-14 h-14 bg-emerald-50 text-[#007f6e] rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+                <CheckCircle size={22} />
+              </div>
+              <h3 className="text-base font-bold text-slate-800">No follow-ups today</h3>
+              <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">
+                Follow-ups will appear here when scheduled from appointment records or previous walk-ins.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-150 rounded-2xl overflow-hidden shadow-xs">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-[#fcfdfd] text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-4">Patient Demographics</th>
+                    <th className="px-6 py-4">Specialist Practitioner</th>
+                    <th className="px-6 py-4">Practice Specialty</th>
+                    <th className="px-6 py-4">Scheduled Date</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredFollowUps.map((fol) => (
+                    <tr key={fol.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-800 text-sm">{fol.patientName}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-1 flex flex-col">
+                          {fol.phone && <span>Phone: {fol.phone}</span>}
+                          {fol.email && <span>Email: {fol.email}</span>}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="text-slate-700 font-semibold">{fol.doctorName}</div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span className="bg-[#e6f4f1] text-[#007f6e] text-[10px] font-bold px-2 py-0.5 rounded-full inline-block">
+                          {fol.specialization}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 font-mono">
+                        <div className="font-semibold text-slate-700">{fol.date}</div>
+                        {fol.date === '2026-06-15' && (
+                          <span className="text-[9px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Scheduled Today</span>
+                        )}
+                        {fol.date < '2026-06-15' && fol.status !== 'Completed' && (
+                          <span className="text-[9px] bg-rose-50 text-rose-600 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Overdue sheet</span>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          fol.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                        }`}>
+                          {fol.status}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-1.5">
+                          {fol.status !== 'Completed' && (
+                            <button
+                              onClick={() => handleCompleteFollowup(fol.id)}
+                              className="px-2.5 py-1 rounded bg-[#e6f4f1] text-[#007f6e] hover:bg-[#d5eee8] transition-colors font-bold text-[10px]"
+                              title="Mark Done"
+                            >
+                              Clear Complete
+                            </button>
+                          )}
+                          {fol.phone && (
+                            <button
+                              onClick={() => handleSendReminder(fol.patientName, fol.phone)}
+                              className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                              title="Send WhatsApp Communication Link"
+                            >
+                              <MessageCircle size={13} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteFollowup(fol.id)}
+                            className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                            title="Remove"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/*                    3. GORGEOUS STEP-BY-STEP MODAL WIZARD                  */}
+      {/* ========================================================================= */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+            
+            {/* Header portion */}
+            <div className="bg-[#e6f4f1]/50 px-6 py-4 border-b border-[#007f6e]/10 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-full bg-[#007f6e] flex items-center justify-center text-white">
+                  <Sparkles size={16} />
+                </span>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                    {editingId ? 'Edit Appointment Form' : '⚡ Quick Book Appointment Form'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Please fill details step by step</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100/50 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Steps tracker indicators (Strict user design requirements!) */}
+            <div className="grid grid-cols-4 border-b border-slate-100 bg-white">
+              
+              <button
+                type="button"
+                onClick={() => setActiveStep(1)}
+                className={`py-3.5 text-center border-b-2 font-bold text-xs transition-all ${
+                  activeStep === 1 ? 'border-[#007f6e] text-[#007f6e]' : 'border-transparent text-slate-400'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${
+                    activeStep === 1 ? 'bg-[#007f6e] text-white animate-pulse' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    1
+                  </span>
+                  <span>Patient</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (patientName) setActiveStep(2);
+                }}
+                disabled={!patientName}
+                className={`py-3.5 text-center border-b-2 font-bold text-xs transition-all ${
+                  activeStep === 2 ? 'border-[#007f6e] text-[#007f6e]' : 'border-transparent text-slate-400'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${
+                    activeStep === 2 ? 'bg-[#007f6e] text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    2
+                  </span>
+                  <span>Doctor</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (patientName) setActiveStep(3);
+                }}
+                disabled={!patientName}
+                className={`py-3.5 text-center border-b-2 font-bold text-xs transition-all ${
+                  activeStep === 3 ? 'border-[#007f6e] text-[#007f6e]' : 'border-transparent text-slate-400'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${
+                    activeStep === 3 ? 'bg-[#007f6e] text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    3
+                  </span>
+                  <span>Schedule</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (patientName) setActiveStep(4);
+                }}
+                disabled={!patientName}
+                className={`py-3.5 text-center border-b-2 font-bold text-xs transition-all ${
+                  activeStep === 4 ? 'border-[#007f6e] text-[#007f6e]' : 'border-transparent text-slate-400'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${
+                    activeStep === 4 ? 'bg-[#007f6e] text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    4
+                  </span>
+                  <span>Confirm</span>
+                </div>
+              </button>
+
+            </div>
+
+            {/* Wizard Form Sheets Body */}
+            <form onSubmit={handleWizardSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+              
+              {/* ------------ STEP 1: PATIENT RECORD DETAILS ------------- */}
+              {activeStep === 1 && (
+                <div className="space-y-4">
+                  
+                  {/* Search Existing bar */}
+                  <div className="bg-[#fcfdfd] border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                      Search Patient Name / Email / Phone
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className="relative flex-1">
+                        <Search size={14} className="absolute left-3.5 top-2.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search patient, if not found then register new..."
+                          value={patientSearchQuery}
+                          onChange={(e) => {
+                            setPatientSearchQuery(e.target.value);
+                            if (e.target.value) {
+                              setIsEnteringNewPatient(false);
+                            }
+                          }}
+                          className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-250 rounded-xl focus:outline-none focus:border-[#007f6e] placeholder:text-slate-400"
+                        />
+                      </div>
+                      
+                      {/* Plus New button precisely styled like the mock illustration */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEnteringNewPatient(true);
+                          setPatientName(patientSearchQuery);
+                        }}
+                        className="px-4 py-2 bg-[#f4faf8] hover:bg-[#e6f4f1] text-[#007f6e] border border-dashed border-[#007f6e] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all w-fit shrink-0"
+                      >
+                        <Plus size={14} />
+                        <span>+ New Patient</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* lookup match dropdown lists */}
+                  {!isEnteringNewPatient && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Matching folder folders found</p>
+                      
+                      {patientSearchQuery === '' ? (
+                        <div className="p-6 bg-slate-50/50 border border-slate-100 rounded-2xl text-center text-slate-400 text-xs">
+                          Type patient name or search parameters or click the <span className="text-[#007f6e] font-bold">+ New Patient</span> button to add.
+                        </div>
+                      ) : searchedPatientMatches.length === 0 ? (
+                        <div className="p-8 bg-slate-50/60 border border-slate-150 rounded-2xl text-center space-y-2">
+                          <p className="text-xs text-slate-500">No previous registration matching "{patientSearchQuery}" found in the network database.</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEnteringNewPatient(true);
+                              setPatientName(patientSearchQuery);
+                            }}
+                            className="bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all"
+                          >
+                            Add New Patient Folder
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {searchedPatientMatches.map((p, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleSelectExistingPatient(p.name, p.email, p.phone, p.gender, p.age)}
+                              className="p-3 bg-white border border-slate-200 hover:border-[#007f6e] hover:bg-[#fcfdfd] rounded-xl flex items-center justify-between cursor-pointer transition-all"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-600">
+                                  {p.name.slice(0, 2).toUpperCase()}
+                                </span>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800">{p.name}</p>
+                                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{p.email} | Phone: {p.phone}</p>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-bold text-[#007f6e] bg-[#e6f4f1] px-3 py-1 rounded-full">
+                                Select &rdquo;
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Manual forms entry sheets fields */}
+                  {isEnteringNewPatient && (
+                    <div className="space-y-4 bg-slate-50/40 p-5 rounded-2xl border border-slate-200/60 animate-in slide-in-from-bottom-2 duration-150">
+                      
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <span className="text-[11px] font-bold text-slate-700">PATIENT CLINICAL DOSSIER</span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEnteringNewPatient(false)}
+                          className="text-[#007f6e] text-[10px] font-bold hover:underline"
+                        >
+                          &larr; Switch search lookup
+                        </button>
+                      </div>
+
+                      {/* Inputs grid system */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name *</label>
+                          <input
+                            type="text"
+                            value={patientName}
+                            onChange={(e) => setPatientName(e.target.value)}
+                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                            placeholder="Patient Full Name"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Email Address</label>
+                          <input
+                            type="email"
+                            value={patientEmail}
+                            onChange={(e) => setPatientEmail(e.target.value)}
+                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                            placeholder="patientname@gmail.com"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Password Credentials</label>
+                          <input
+                            type="password"
+                            value={patientPassword}
+                            onChange={(e) => setPatientPassword(e.target.value)}
+                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                            placeholder="••••••••••••"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Phone Number *</label>
+                          <input
+                            type="text"
+                            value={patientPhone}
+                            onChange={(e) => setPatientPhone(e.target.value)}
+                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                            placeholder="+92 300 0000000"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Communications</label>
+                          <input
+                            type="text"
+                            value={patientWhatsapp}
+                            onChange={(e) => setPatientWhatsapp(e.target.value)}
+                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                            placeholder="+92 300 0000000"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Age (Years)</label>
+                          <input
+                            type="number"
+                            value={age}
+                            onChange={(e) => setAge(Number(e.target.value))}
+                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                            required
+                          />
+                        </div>
+
+                      </div>
+
+                      {/* Gender choices */}
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Gender Identification</span>
+                        <div className="flex gap-5">
+                          {['Male', 'Female', 'Other'].map((g) => (
+                            <label key={g} className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                              <input
+                                type="radio"
+                                name="wizardGender"
+                                value={g}
+                                checked={patientGender === g}
+                                onChange={() => setPatientGender(g as any)}
+                                className="text-[#007f6e] focus:ring-[#007f6e] border-slate-300"
+                              />
+                              <span>{g}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+              {/* ------------ STEP 2: DOCTOR FROM DATABASE SELECTOR ------------ */}
+              {activeStep === 2 && (
+                <div className="space-y-4">
+                  <div className="bg-[#f0f9f6] p-4 rounded-xl border border-[#d1ebe4] flex items-start gap-2.5">
+                    <Stethoscope className="text-[#007f6e] mt-0.5" size={16} />
+                    <div>
+                      <h4 className="text-xs font-bold text-[#007f6e] uppercase">Active Providers Roster</h4>
+                      <p className="text-[10px] text-[#007f6e] mt-0.5">Select a practitioner. These records originate from the active database.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                    {activeDoctors.map((doc, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleDoctorChange(doc.name)}
+                        className={`p-4 border-2 rounded-2xl flex items-center justify-between cursor-pointer transition-all ${
+                          doctorName === doc.name
+                            ? 'border-[#007f6e] bg-[#f4faf8] shadow-xs'
+                            : 'border-slate-200 bg-white hover:border-slate-350'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${
+                            doctorName === doc.name ? 'bg-[#007f6e] text-white' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            DR
+                          </span>
+                          <div>
+                            <p className="text-xs font-bold text-slate-800">{doc.name}</p>
+                            <p className="text-[10px] text-[#007f6e] font-semibold uppercase tracking-wider mt-0.5">
+                              {doc.specialization}
+                            </p>
+                          </div>
+                        </div>
+                        {doctorName === doc.name && (
+                          <span className="w-5 h-5 rounded-full bg-[#007f6e] text-white flex items-center justify-center shadow-xs">
+                            <Check size={12} className="stroke-[3]" />
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+              )}
+
+              {/* ------------ STEP 3: SCHEDULE TIMING ------------- */}
+              {activeStep === 3 && (
+                <div className="space-y-4">
+                  <div className="bg-[#f4f7f6] p-4 rounded-xl border border-slate-150 flex items-center gap-3">
+                    <Calendar className="text-[#007f6e]" size={18} />
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800">Date & Slot Selection</h4>
+                      <p className="text-[10px] text-slate-400">Specify dates correctly to verify conflict overlaps beforehand.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Consultation Date *</label>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full text-xs px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#007f6e] bg-white font-mono"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Time Slot *</label>
+                      <input
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                        className="w-full text-xs px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#007f6e] bg-white font-mono"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* ------------ STEP 4: OVERLAP CHECK & CONFIRM DETAILS ------------- */}
+              {activeStep === 4 && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  
+                  {/* Conflict detection alert banner as described */}
+                  {isConflictDetected() ? (
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3">
+                      <AlertTriangle className="text-amber-600 mt-0.5 shrink-0" size={18} />
+                      <div>
+                        <h4 className="text-xs font-bold text-amber-800">⚠️ Existing overlapping booking conflict alert!</h4>
+                        <p className="text-[10px] text-amber-700 mt-1 leading-relaxed">
+                          {doctorName} is already booked on {date} at {time}. To prevent scheduling slot overlaps, consider choosing another time or date slot in Step 3.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-start gap-3">
+                      <CheckCircle className="text-[#007f6e] mt-0.5 shrink-0" size={18} />
+                      <div>
+                        <h4 className="text-xs font-bold text-[#007f6e]">Perfect Slot Available!</h4>
+                        <p className="text-[10px] text-emerald-700 mt-1">We checked the SQLite database. Zero overlays detected for {doctorName} at this time slot.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary preview ledger cards */}
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 shadow-xs">
+                    
+                    <div className="p-3.5 bg-slate-50 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">CONFIRMATION PROTOCOL Ledger</span>
+                      <span className="bg-[#007f6e]/10 text-[#007f6e] text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase">Pending Submit</span>
+                    </div>
+
+                    {/* Patient detail */}
+                    <div className="p-4 grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Patient Fold File</p>
+                        <p className="font-bold text-slate-800 mt-1 text-sm">{patientName}</p>
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{age} years, {patientGender}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Identifiers / Contact</p>
+                        <p className="text-slate-800 font-mono mt-1">Phone: {patientPhone || 'N/A'}</p>
+                        <p className="text-slate-800 font-mono mt-0.5">WhatsApp: {patientWhatsapp || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    {/* Doctor detail */}
+                    <div className="p-4 grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Assigned Specialist</p>
+                        <p className="font-bold text-[#007f6e] mt-1 text-sm">{doctorName}</p>
+                        <p className="text-[10px] text-slate-500 font-semibold">{specialization}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Scheduled Framework</p>
+                        <p className="font-bold text-slate-800 font-mono mt-1">{date}</p>
+                        <p className="text-slate-500 font-mono text-[10px] mt-0.5">{time}</p>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
+              {/* Wizard Bottom buttons controller */}
+              <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-6">
+                
+                <button
+                  type="button"
+                  onClick={() => setActiveStep(prev => Math.max(1, prev - 1) as any)}
+                  disabled={activeStep === 1}
+                  className={`px-4 py-2 border rounded-xl text-xs font-bold transition-all ${
+                    activeStep === 1 
+                      ? 'border-slate-100 text-slate-300 pointer-events-none' 
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs'
+                  }`}
+                >
+                  Back Section
+                </button>
+
+                {activeStep < 4 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (activeStep === 1 && !patientName) {
+                        alert('Please fill out patient and credentials first.');
+                        return;
+                      }
+                      setActiveStep(prev => Math.min(4, prev + 1) as any);
+                    }}
+                    className="px-5 py-2.5 bg-[#007f6e] hover:bg-[#006657] text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  >
+                    Next Section
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-[#007f6e] hover:bg-[#006657] text-white rounded-xl text-xs font-black transition-all shadow-md hover:shadow-lg"
+                  >
+                    {editingId ? 'Modify & Overwrite Appointment' : 'Confirm & Save Appointment'}
+                  </button>
+                )}
+
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/*                       4. PATIENT DETAILS DRAWER VIEW                      */}
+      {/* ========================================================================= */}
+      {selectedAppointment && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-end">
+          <div className="bg-white h-screen w-full max-w-md shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-250">
+            
+            <div className="space-y-6">
+              
+              {/* Header */}
+              <div className="flex justify-between items-center border-b pb-4">
+                <div>
+                  <h3 className="text-base font-black text-slate-800 tracking-tight">Clinical Intake Sheet</h3>
+                  <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest mt-1">Record ID: {selectedAppointment.id}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedAppointment(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-800 rounded-full hover:bg-slate-100 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Status block */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-150 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">Current Phase status</span>
+                <span className="text-xs font-black text-[#007f6e] uppercase tracking-wider">{selectedAppointment.status}</span>
+              </div>
+
+              {/* Patient Core parameters */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <User size={12} className="text-[#007f6e]" /> PATIENT ENTRANCE IDENTIFIER
+                </h4>
+                
+                <div className="p-4 bg-[#f4faf8] border border-[#d1ebe4] rounded-2xl relative overflow-hidden space-y-2 shadow-xs">
+                  <span className="absolute right-3.5 top-3.5 bg-[#e6f4f1] text-[#007f6e] text-[9px] font-bold px-3 py-1 rounded-full uppercase">
+                    {selectedAppointment.patientGender || 'Male'}
+                  </span>
+                  <h2 className="text-base font-black text-slate-800">{selectedAppointment.patientName}</h2>
+                  <p className="text-xs font-bold text-slate-500 mt-1">Age Reference: {selectedAppointment.age || 30} years old</p>
+                </div>
+
+                {/* Patient specifics list */}
+                <div className="space-y-2">
+                  
+                  {selectedAppointment.patientEmail && (
+                    <div className="flex items-center gap-3 text-xs text-slate-700 bg-white border border-slate-200/60 p-3 rounded-xl shadow-xs">
+                      <Mail size={14} className="text-slate-400" />
+                      <div className="font-mono">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">Registered Email</p>
+                        <p className="text-slate-800 mt-1">{selectedAppointment.patientEmail}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAppointment.patientPhone && (
+                    <div className="flex items-center gap-3 text-xs text-slate-700 bg-white border border-slate-200/60 p-3 rounded-xl shadow-xs">
+                      <Phone size={14} className="text-slate-400" />
+                      <div className="font-mono">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">Registered Mobile</p>
+                        <p className="text-slate-800 mt-1">{selectedAppointment.patientPhone}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAppointment.patientWhatsapp && (
+                    <div className="flex items-center gap-3 text-xs text-slate-700 bg-white border border-slate-200/60 p-3 rounded-xl shadow-xs">
+                      <MessageCircle size={14} className="text-[#25d366]" />
+                      <div className="font-mono">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">WhatsApp Communications</p>
+                        <p className="text-[#007f6e] mt-1 font-bold">{selectedAppointment.patientWhatsapp}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAppointment.patientPassword && (
+                    <div className="flex items-center gap-3 text-xs text-slate-700 bg-white border border-slate-200/60 p-3 rounded-xl shadow-xs">
+                      <Lock size={14} className="text-slate-400" />
+                      <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">Patient Password Record</p>
+                        <p className="text-slate-700 mt-1 font-mono">•••••••• (Shared Credential)</p>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+
+              {/* Assigned physician */}
+              <div className="space-y-3 pt-2">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Stethoscope size={12} className="text-[#007f6e]" /> CLINICAL PRACTITIONER SHEET
+                </h4>
+
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3 font-mono text-xs">
+                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 text-[10px] font-bold">Practitioner</span>
+                    <span className="font-bold text-slate-800">{selectedAppointment.doctorName}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 text-[10px] font-bold">Specialization</span>
+                    <span className="font-bold text-[#007f6e]">{selectedAppointment.specialization}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 text-[10px] font-bold">Date Limit</span>
+                    <span className="font-bold text-slate-800">{selectedAppointment.date}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 text-[10px] font-bold">Time Slot Clock</span>
+                    <span className="font-bold text-slate-800">{selectedAppointment.time}</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Bottom Actions inside viewing drawer */}
+            <div className="mt-8 pt-4 border-t border-slate-100 space-y-3">
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleOpenEditWizard(selectedAppointment)}
+                  className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                >
+                  <Edit2 size={13} />
+                  <span>Edit Appointment File</span>
+                </button>
+                <button
+                  onClick={() => handleDeleteAppointmentRecord(selectedAppointment.id)}
+                  className="py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-all shadow-xs"
+                  title="Remove permanently"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+
+              <button
+                onClick={() => {
+                  handleCreateFollowupFromAppointment(selectedAppointment);
+                  setSelectedAppointment(null);
+                }}
+                className="w-full py-2.5 bg-[#007f6e] hover:bg-[#006657] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+              >
+                <RefreshCw size={13} />
+                <span>Schedule a Follow-up visit</span>
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

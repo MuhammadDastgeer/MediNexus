@@ -1,0 +1,6 @@
+{
+  "name": "Hospital Admin",
+  "description": "A fully synchronized, highly polished, real-time hospital administration dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
