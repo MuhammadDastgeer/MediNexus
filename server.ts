@@ -274,6 +274,7 @@ addColumnSafely('staff', 'bankAccountNo', 'TEXT');
 addColumnSafely('staff', 'panNo', 'TEXT');
 addColumnSafely('staff', 'pfAccountNo', 'TEXT');
 addColumnSafely('staff', 'pfUan', 'TEXT');
+addColumnSafely('staff', 'password', 'TEXT');
 addColumnSafely('blogs', 'description', 'TEXT');
 
 // Prepopulate tables if empty

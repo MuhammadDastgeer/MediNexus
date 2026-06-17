@@ -9,12 +9,14 @@ import {
   Trash2, 
   Plus, 
   Edit2, 
+  Edit3,
   Eye, 
   X,
   Mail,
   Phone,
   Calendar,
-  Building
+  Building,
+  Download
 } from 'lucide-react';
 
 interface Inquiry {
@@ -436,70 +438,123 @@ export default function EnquiriesView({
 
       {/* Details View Modal */}
       {viewingEnquiry && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl border border-slate-100 max-w-lg w-full p-6 shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                <HelpCircle size={15} className="text-[#007f6e]" />
-                Enquiry Detail Card
-              </h3>
-              <button 
-                onClick={() => setViewingEnquiry(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="text-base font-bold text-slate-800">{viewingEnquiry.name}</h4>
-                  <span className={`inline-block px-2 py-0.5 mt-1 rounded-full text-[10px] font-bold ${
-                    viewingEnquiry.status === 'Resolved' ? 'bg-emerald-50 text-emerald-600' :
-                    viewingEnquiry.status === 'Spam' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
-                  }`}>
-                    {viewingEnquiry.status}
-                  </span>
-                </div>
-                <div className="text-right text-[11px] text-slate-450 space-y-1">
-                  <div className="flex items-center gap-1 justify-end font-medium">
-                    <Calendar size={12} />
-                    <span>{new Date(viewingEnquiry.date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center gap-1 justify-end font-semibold text-[#007f6e]">
-                    <Building size={12} />
-                    <span>{viewingEnquiry.department}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="flex items-center gap-2 text-slate-605">
-                    <Phone size={13} className="text-slate-400" />
-                    <span className="font-mono text-slate-700">{viewingEnquiry.phone || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-605">
-                    <Mail size={13} className="text-slate-400" />
-                    <span className="text-slate-700 truncate" title={viewingEnquiry.email}>{viewingEnquiry.email || 'N/A'}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-200/60">
-                  <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1">Submit Message Query</span>
-                  <p className="text-xs text-slate-700 leading-relaxed font-sans whitespace-pre-line">{viewingEnquiry.query}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2 border-t border-slate-100">
+        <div className="fixed inset-0 z-50 bg-[#090d16]/60 backdrop-blur-xs flex items-center justify-center p-4" id="enquiry-view-modal">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-100 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Header banner */}
+            <div className="bg-gradient-to-r from-[#007f6e] to-[#115e59] text-white p-6 relative">
               <button
                 onClick={() => setViewingEnquiry(null)}
-                className="px-4 py-2 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-bold"
+                className="absolute top-4 right-4 bg-white/15 hover:bg-white/20 text-white rounded-full p-2.5 transition-colors focus:outline-none"
               >
-                Close View
+                <X size={15} />
               </button>
+              
+              <div className="flex gap-4 items-center">
+                <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center text-white font-extrabold text-base shadow-xs">
+                  {viewingEnquiry.name.trim().charAt(0) || 'E'}
+                </div>
+                <div>
+                  <h2 className="text-md md:text-lg font-bold">{viewingEnquiry.name}</h2>
+                  <span className="text-emerald-100 text-xs font-semibold bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10 inline-block mt-1">
+                    Enquiry ID: {viewingEnquiry.id}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body Contents */}
+            <div className="p-6 space-y-5 max-h-[30rem] overflow-y-auto">
+              {/* Row 1: Contact Detail and Status */}
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1.5 mb-2.5">Contact Detail & Metadata</h4>
+                <div className="grid grid-cols-2 gap-4 text-xs font-medium">
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Phone Number</span>
+                    <span className="text-slate-850 mt-0.5 block font-mono">{viewingEnquiry.phone || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Email Address</span>
+                    <span className="text-slate-850 mt-0.5 block break-all">{viewingEnquiry.email || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Department Room</span>
+                    <span className="text-slate-850 mt-0.5 block">{viewingEnquiry.department || 'General'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Submission Date</span>
+                    <span className="text-slate-850 mt-0.5 block">{new Date(viewingEnquiry.date).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Message text content */}
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1.5 mb-2.5">Submission Query Question</h4>
+                <div className="p-3 bg-slate-50 border border-slate-100/80 rounded-xl">
+                  <span className="text-slate-400 font-semibold block uppercase text-[8px] mb-1">Inquiry Description</span>
+                  <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line font-medium pr-1">
+                    {viewingEnquiry.query}
+                  </p>
+                </div>
+              </div>
+
+              {/* Row 3: Live Status badge details */}
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1.5 mb-2.5">Oversight Status</h4>
+                <div className="flex items-center gap-2 text-xs font-semibold">
+                  <span className={`w-3 h-3 rounded-full ${
+                    viewingEnquiry.status === 'Resolved' ? 'bg-emerald-500' :
+                    viewingEnquiry.status === 'Spam' ? 'bg-rose-500' : 'bg-amber-500'
+                  }`} />
+                  <span className="text-slate-700">Inquiry status marked as <strong className="text-slate-850">{viewingEnquiry.status}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer with Edit, Delete, Download PDF & Close buttons */}
+            <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    handleOpenEdit(viewingEnquiry);
+                    setViewingEnquiry(null);
+                  }}
+                  className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
+                >
+                  <Edit3 size={12} />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to delete this enquiry?`)) {
+                      onDeleteEnquiry(viewingEnquiry.id);
+                      setViewingEnquiry(null);
+                    }
+                  }}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
+                >
+                  <Trash2 size={12} />
+                  <span>Delete</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    window.print();
+                  }}
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/55 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
+                >
+                  <Download size={12} />
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  onClick={() => setViewingEnquiry(null)}
+                  className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold transition-all"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -48,6 +48,7 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
   // Form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [joinDate, setJoinDate] = useState('12/06/2026');
   const [dob, setDob] = useState('');
@@ -73,6 +74,7 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
     setSelectedStaffId(staff.id);
     setName(staff.name || '');
     setEmail(staff.email || '');
+    setPassword(staff.password || '');
     setPhone(staff.phone || '');
     setJoinDate(staff.joinDate || '12/06/2026');
     setDob(staff.dob || '');
@@ -94,6 +96,7 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
     setSelectedStaffId(null);
     setName('');
     setEmail('');
+    setPassword('');
     setPhone('');
     setJoinDate('12/06/2026');
     setDob('');
@@ -113,14 +116,15 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !role) {
-      alert("Please fill in all required fields marked with an asterisk (*).");
+    if (!name || !email || !password || !role) {
+      alert("Please fill in all required fields marked with an asterisk (*). Name, Email, and Password are required.");
       return;
     }
 
     const payload: Omit<Staff, 'id'> & { id?: string } = {
       name,
       email,
+      password,
       phone,
       joinDate,
       dob,
@@ -167,71 +171,72 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
     (s.department && s.department.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const handleDownloadStaffCardPDF = () => {
+    if (!viewingStaff) return;
+    const staffName = viewingStaff.name || 'Staff';
+    let html = '<html>\n';
+    html += '<head><meta charset="utf-8"><title>Staff Portfolio - ' + staffName + '</title>\n';
+    html += '<style>\n';
+    html += 'body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; background-color: #ffffff; line-height: 1.5; }\n';
+    html += '.header { border-bottom: 2.5px solid #007f6e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }\n';
+    html += 'h1 { color: #007f6e; margin: 0; font-size: 24px; font-weight: 800; }\n';
+    html += '.section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #007f6e; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; letter-spacing: 0.05em; }\n';
+    html += '.grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }\n';
+    html += '.info-item { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }\n';
+    html += '.info-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }\n';
+    html += '.info-value { font-size: 12px; color: #0f172a; font-weight: 705; }\n';
+    html += '.footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #cbd5e1; padding-top: 12px; text-align: center; margin-top: 40px; }\n';
+    html += '</style>\n';
+    html += '</head><body>\n';
+    
+    html += '<div class="header">\n';
+    html += `  <div>\n    <h1>${staffName}</h1>\n    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Role Profile: ${viewingStaff.role} | Department: ${viewingStaff.department || 'Clinical General'}</div>\n  </div>\n`;
+    html += `  <div style="text-align: right; font-size: 11px; color: #64748b;">Generated Date: ${new Date().toLocaleString()}</div>\n`;
+    html += '</div>\n';
+    
+    html += '<div class="section-title">Staff Member Demographics</div>\n';
+    html += '<div class="grid-info">\n';
+    html += `  <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${viewingStaff.name}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Phone No</div><div class="info-value">${viewingStaff.phone || 'N/A'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">${viewingStaff.email || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Joining Date</div><div class="info-value">${viewingStaff.joinDate || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">${viewingStaff.dob || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Working Days (per month)</div><div class="info-value">${viewingStaff.workingDays || '26'} Days</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Home Address</div><div class="info-value">${viewingStaff.address || '—'}</div></div>\n`;
+    html += '</div>\n';
+
+    html += '<div class="section-title">Employment Role & Financial Roster</div>\n';
+    html += '<div class="grid-info">\n';
+    html += `  <div class="info-item"><div class="info-label">Designated Role</div><div class="info-value">${viewingStaff.role}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Assigned Department</div><div class="info-value">${viewingStaff.department || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Monthly Wages (₹)</div><div class="info-value">₹${Number(viewingStaff.monthlySalary || 0).toLocaleString()}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Account Status</div><div class="info-value">${viewingStaff.status || 'Active'}</div></div>\n`;
+    html += '</div>\n';
+
+    html += '<div class="section-title">Verified Bank Credentials & Direct Deposit</div>\n';
+    html += '<div class="grid-info">\n';
+    html += `  <div class="info-item"><div class="info-label">Direct Deposit Bank</div><div class="info-value">${viewingStaff.bankName || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Bank Account Number</div><div class="info-value">${viewingStaff.bankAccountNo || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Permanent PAN Badge No</div><div class="info-value">${viewingStaff.panNo || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Provident Fund PF Account No</div><div class="info-value">${viewingStaff.pfAccountNo || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">PF Universal Access No (UAN)</div><div class="info-value">${viewingStaff.pfUan || '—'}</div></div>\n`;
+    html += '</div>\n';
+    
+    html += '<div class="footer">Confidential Hospital Staff Member Record - Generated Dynamically</div>\n';
+    html += '</body>\n</html>';
+    
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `staff_profile_${staffName.toLowerCase().replace(/\s+/g, '_')}.html`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (viewingStaff) {
-    const handleDownloadStaffCardPDF = () => {
-      const staffName = viewingStaff.name || 'Staff';
-      let html = '<html>\n';
-      html += '<head><meta charset="utf-8"><title>Staff Portfolio - ' + staffName + '</title>\n';
-      html += '<style>\n';
-      html += 'body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; background-color: #ffffff; line-height: 1.5; }\n';
-      html += '.header { border-bottom: 2.5px solid #007f6e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }\n';
-      html += 'h1 { color: #007f6e; margin: 0; font-size: 24px; font-weight: 800; }\n';
-      html += '.section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #007f6e; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; letter-spacing: 0.05em; }\n';
-      html += '.grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }\n';
-      html += '.info-item { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }\n';
-      html += '.info-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }\n';
-      html += '.info-value { font-size: 12px; color: #0f172a; font-weight: 705; }\n';
-      html += '.footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #cbd5e1; padding-top: 12px; text-align: center; margin-top: 40px; }\n';
-      html += '</style>\n';
-      html += '</head><body>\n';
-      
-      html += '<div class="header">\n';
-      html += `  <div>\n    <h1>${staffName}</h1>\n    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Role Profile: ${viewingStaff.role} | Department: ${viewingStaff.department || 'Clinical General'}</div>\n  </div>\n`;
-      html += `  <div style="text-align: right; font-size: 11px; color: #64748b;">Generated Date: ${new Date().toLocaleString()}</div>\n`;
-      html += '</div>\n';
-      
-      html += '<div class="section-title">Staff Member Demographics</div>\n';
-      html += '<div class="grid-info">\n';
-      html += `  <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${viewingStaff.name}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Phone No</div><div class="info-value">${viewingStaff.phone || 'N/A'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">${viewingStaff.email || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Joining Date</div><div class="info-value">${viewingStaff.joinDate || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">${viewingStaff.dob || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Working Days (per month)</div><div class="info-value">${viewingStaff.workingDays || '26'} Days</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Home Address</div><div class="info-value">${viewingStaff.address || '—'}</div></div>\n`;
-      html += '</div>\n';
-
-      html += '<div class="section-title">Employment Role & Financial Roster</div>\n';
-      html += '<div class="grid-info">\n';
-      html += `  <div class="info-item"><div class="info-label">Designated Role</div><div class="info-value">${viewingStaff.role}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Assigned Department</div><div class="info-value">${viewingStaff.department || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Monthly Wages (₹)</div><div class="info-value">₹${Number(viewingStaff.monthlySalary || 0).toLocaleString()}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Account Status</div><div class="info-value">${viewingStaff.status || 'Active'}</div></div>\n`;
-      html += '</div>\n';
-
-      html += '<div class="section-title">Verified Bank Credentials & Direct Deposit</div>\n';
-      html += '<div class="grid-info">\n';
-      html += `  <div class="info-item"><div class="info-label">Direct Deposit Bank</div><div class="info-value">${viewingStaff.bankName || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Bank Account Number</div><div class="info-value">${viewingStaff.bankAccountNo || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Permanent PAN Badge No</div><div class="info-value">${viewingStaff.panNo || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Provident Fund PF Account No</div><div class="info-value">${viewingStaff.pfAccountNo || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">PF Universal Access No (UAN)</div><div class="info-value">${viewingStaff.pfUan || '—'}</div></div>\n`;
-      html += '</div>\n';
-      
-      html += '<div class="footer">Confidential Hospital Staff Member Record - Generated Dynamically</div>\n';
-      html += '</body>\n</html>';
-      
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `staff_profile_${staffName.toLowerCase().replace(/\s+/g, '_')}.html`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-
     return (
       <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-705 font-sans animate-fade-in" id="staff-dashboard-container">
         {/* Navigation Breadcrumb / Top bar */}
@@ -590,6 +595,17 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="staff@hospital.com"
+                    className="w-full text-xs px-3.5 py-2.5 border border-slate-200 bg-slate-50/20 rounded-lg focus:outline-none focus:border-[#007f6e]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Password *</label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter login password"
                     className="w-full text-xs px-3.5 py-2.5 border border-slate-200 bg-slate-50/20 rounded-lg focus:outline-none focus:border-[#007f6e]"
                   />
                 </div>
@@ -1301,6 +1317,10 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
                     <span className="text-slate-800 font-medium">{viewingStaff.email || '—'}</span>
                   </div>
                   <div>
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Login Password</span>
+                    <span className="text-slate-800 font-mono font-bold text-teal-600 bg-teal-50 px-1 py-0.2 rounded">{viewingStaff.password || '—'}</span>
+                  </div>
+                  <div>
                     <span className="block text-[10px] text-slate-400 font-bold uppercase">Phone Number</span>
                     <span className="text-slate-800 font-medium">{viewingStaff.phone || '—'}</span>
                   </div>
@@ -1385,14 +1405,48 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
 
             </div>
 
-            {/* Footer Control */}
-            <div className="bg-[#fafbfc] border-t border-slate-100 p-4 flex justify-end">
-              <button
-                onClick={() => setViewingStaff(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors"
-              >
-                Close Profile
-              </button>
+            {/* Footer with Edit, Delete, Download Report PDF, and Close buttons */}
+            <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    startEdit(viewingStaff);
+                    setViewingStaff(null);
+                  }}
+                  className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Edit size={12} />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Are you absolutely sure you want to remove staff member ${viewingStaff.name}?`)) {
+                      onDeleteStaff(viewingStaff.id);
+                      setViewingStaff(null);
+                    }
+                  }}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 size={12} />
+                  <span>Delete</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleDownloadStaffCardPDF}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-[#007f6e]/30 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Download size={12} />
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  onClick={() => setViewingStaff(null)}
+                  className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -11,9 +11,9 @@ interface RightSidebarProps {
 }
 
 export default function RightSidebar({ appointments, patients, inventory, doctors, bills }: RightSidebarProps) {
-  const [currentYear, setCurrentYear] = useState<number>(2026);
-  const [currentMonthIndex, setCurrentMonthIndex] = useState<number>(5); // June is index 5
-  const [selectedDay, setSelectedDay] = useState<number>(15);
+  const [currentYear, setCurrentYear] = useState<number>(() => new Date().getFullYear());
+  const [currentMonthIndex, setCurrentMonthIndex] = useState<number>(() => new Date().getMonth());
+  const [selectedDay, setSelectedDay] = useState<number>(() => new Date().getDate());
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -89,11 +89,22 @@ export default function RightSidebar({ appointments, patients, inventory, doctor
   ).length;
 
   // Let's compute doctors on duty as those having appointment duties scheduled on the selected day
+  // OR who are marked 'On Duty' in the doctors directory when looking at today.
+  const today = new Date();
+  const isViewingToday = selectedDay === today.getDate() &&
+                         currentMonthIndex === today.getMonth() &&
+                         currentYear === today.getFullYear();
+
   const appointmentsForDay = appointments.filter(
     a => isSelectedDay(a.date, selectedDay) && a.status !== 'Cancelled'
   );
 
-  const uniqueDoctorsOnDuty = Array.from(new Set(appointmentsForDay.map(a => a.doctorName)));
+  const apptDoctorNames = appointmentsForDay.map(a => a.doctorName);
+  const onDutyDoctorNames = isViewingToday
+    ? doctors.filter(d => d.status === 'On Duty').map(d => d.name)
+    : [];
+
+  const uniqueDoctorsOnDuty = Array.from(new Set([...apptDoctorNames, ...onDutyDoctorNames]));
   const doctorsOnDutyCount = uniqueDoctorsOnDuty.length;
 
   // Compute Revenue dynamically from Paid invoices on selected day
@@ -180,7 +191,8 @@ export default function RightSidebar({ appointments, patients, inventory, doctor
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1" id="doctors-on-duty-list">
             {uniqueDoctorsOnDuty.map((docName, idx) => {
               const appt = appointmentsForDay.find(a => a.doctorName === docName);
-              const spec = appt ? appt.specialization : 'General Medicine';
+              const matchingDocObj = doctors.find(d => d.name.toLowerCase() === docName.toLowerCase());
+              const spec = matchingDocObj ? matchingDocObj.specialization : (appt ? appt.specialization : 'General Medicine');
               return (
                 <div key={idx} className="flex items-center gap-3 p-2 bg-[#f4faf8] hover:bg-[#ebf5f2] border border-[#d1ebe4] rounded-xl transition-all" id={`duty-doctor-${idx}`}>
                   <div className="w-7 h-7 rounded-full bg-[#007f6e] flex items-center justify-center text-white font-bold text-xs">

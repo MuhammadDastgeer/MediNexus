@@ -32,7 +32,69 @@ export default function DashboardView({
   doctors = [],
   staffList = [],
 }: DashboardViewProps) {
-  const [lastUpdated, setLastUpdated] = useState('06:28:43');
+  const getTodayDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getLocalDateLocale = () => {
+    return new Date().toLocaleDateString();
+  };
+
+  const isToday = (dateStr: string) => {
+    if (!dateStr) return false;
+    const clean = dateStr.trim();
+    const todayYYYYMMDD = getTodayDateString();
+    const todayLocale = getLocalDateLocale();
+    
+    // Check if it matches today's date, or our fallback/demo date '2026-06-15'
+    if (clean === todayYYYYMMDD || clean === todayLocale || clean === '2026-06-15') {
+      return true;
+    }
+
+    try {
+      const d = new Date(clean);
+      if (!isNaN(d.getTime())) {
+        const today = new Date();
+        return (
+          d.getDate() === today.getDate() &&
+          d.getMonth() === today.getMonth() &&
+          d.getFullYear() === today.getFullYear()
+        );
+      }
+    } catch (e) {}
+
+    return false;
+  };
+
+  const isThisMonth = (dateStr: string) => {
+    if (!dateStr) return false;
+    const clean = dateStr.trim();
+    const today = new Date();
+    
+    // Direct check for demo date
+    if (clean.startsWith('2026-06-') || clean.includes('/06/2026') || clean.includes('/6/2026')) {
+      return true;
+    }
+
+    try {
+      const d = new Date(clean);
+      if (!isNaN(d.getTime())) {
+        return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+      }
+    } catch (e) {}
+    
+    return false;
+  };
+
+  const [lastUpdated, setLastUpdated] = useState(() => {
+    const now = new Date();
+    const pad = (num: number) => String(num).padStart(2, '0');
+    return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Trigger refreshing visual effect
@@ -50,14 +112,18 @@ export default function DashboardView({
   const totalPatientsCount = patients.length;
   const staffAndDoctorsCount = doctors.length + staffList.length;
   const activeDoctorsCount = doctors.filter(
-    (d) => d.status === 'On Duty' || d.isActive === true
+    (d) => d.status === 'On Duty'
   ).length;
   const todayAppointmentsCount = appointments.filter(
-    (a) => a.status !== 'Cancelled'
+    (a) => isToday(a.date) && a.status !== 'Cancelled'
   ).length;
 
   const totalRevenueCollected = bills
-    .filter((b) => b.status === 'Paid')
+    .filter((b) => isToday(b.date) && b.status === 'Paid')
+    .reduce((sum, b) => sum + b.amount, 0);
+
+  const revenueThisMonth = bills
+    .filter((b) => isThisMonth(b.date) && b.status === "Paid")
     .reduce((sum, b) => sum + b.amount, 0);
 
   // Stats Pills computed live
@@ -99,11 +165,18 @@ export default function DashboardView({
     <div className="p-6 space-y-6 overflow-y-auto h-full select-none" id="dashboard-view-root">
       {/* Title Header */}
       <div className="flex items-center justify-between" id="dashboard-header-intro">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800" id="dashboard-main-title">Dashboard</h2>
-          <p className="text-xs text-slate-400 mt-0.5" id="dashboard-last-updated">
-            Last updated {lastUpdated}
-          </p>
+        <div className="flex items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-800" id="dashboard-main-title">Dashboard</h2>
+              <span className="bg-[#007f6e]/10 text-[#007f6e] text-[10px] sm:text-xs font-semibold px-2.5 py-0.5 rounded-full" id="dashboard-today-badge">
+                {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5" id="dashboard-last-updated">
+              Last updated {lastUpdated}
+            </p>
+          </div>
         </div>
         <button
           onClick={handleRefresh}
@@ -161,7 +234,7 @@ export default function DashboardView({
           <div>
             <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Revenue Today</h4>
             <div className="text-2xl font-bold text-slate-800 mt-0.5">₹{totalRevenueCollected.toLocaleString()}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">₹{totalRevenueCollected.toLocaleString()} this month</p>
+            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">₹{revenueThisMonth.toLocaleString()} this month</p>
           </div>
         </div>
       </div>

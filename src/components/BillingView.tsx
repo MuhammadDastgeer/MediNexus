@@ -41,6 +41,14 @@ export default function BillingView({
   onDeleteBill, 
   onRefresh 
 }: BillingViewProps) {
+  const getTodayDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Modal & Wizard State
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
@@ -313,7 +321,7 @@ export default function BillingView({
           {/* Today Filter Button */}
           <button
             onClick={() => {
-              setFilterDate('2026-06-15');
+              setFilterDate(getTodayDateString());
             }}
             className="flex items-center gap-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-colors"
           >

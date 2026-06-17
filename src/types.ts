@@ -94,6 +94,7 @@ export interface Staff {
   panNo?: string;
   pfAccountNo?: string;
   pfUan?: string;
+  password?: string;
 }
 
 export interface Bill {

@@ -70,6 +70,8 @@ export default function AppointmentsView({
   const [showModal, setShowModal] = useState(false);
   const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(1);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isNewAppointmentInsteadOfOverwrite, setIsNewAppointmentInsteadOfOverwrite] = useState(false);
+  const [isExistingPatientSelected, setIsExistingPatientSelected] = useState(false);
 
   // Form states
   const [patientName, setPatientName] = useState('');
@@ -80,9 +82,17 @@ export default function AppointmentsView({
   const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [age, setAge] = useState<number>(30);
 
+  const getTodayDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [doctorName, setDoctorName] = useState('');
   const [specialization, setSpecialization] = useState('Cardiology');
-  const [date, setDate] = useState('2026-06-15');
+  const [date, setDate] = useState(() => getTodayDateString());
   const [time, setTime] = useState('10:00');
 
   // Interactive dynamic search lookup inside Step 1 of Booking Wizard
@@ -91,7 +101,7 @@ export default function AppointmentsView({
 
   // General Filters for APPOINTMENTS MODE (Matches layout exactly!)
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState('2026-06-15');
+  const [dateFilter, setDateFilter] = useState(() => getTodayDateString());
   const [showAllAppointments, setShowAllAppointments] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('All Status');
 
@@ -166,6 +176,63 @@ export default function AppointmentsView({
   // Drawer modal for viewing custom patient file details
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
+  const handleDownloadAppointmentPDF = () => {
+    if (!selectedAppointment) return;
+    const patientName = selectedAppointment.patientName || 'Patient';
+    let html = '<html>\n';
+    html += '<head><meta charset="utf-8"><title>Clinical Intake Record - ' + patientName + '</title>\n';
+    html += '<style>\n';
+    html += 'body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; background-color: #ffffff; line-height: 1.5; }\n';
+    html += '.header { border-bottom: 2.5px solid #007f6e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }\n';
+    html += 'h1 { color: #007f6e; margin: 0; font-size: 24px; font-weight: 800; }\n';
+    html += '.section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #007f6e; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; letter-spacing: 0.05em; }\n';
+    html += '.grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }\n';
+    html += '.info-item { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }\n';
+    html += '.info-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }\n';
+    html += '.info-value { font-size: 12px; color: #0f172a; font-weight: 700; }\n';
+    html += '.footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #cbd5e1; padding-top: 12px; text-align: center; margin-top: 40px; }\n';
+    html += '</style>\n';
+    html += '</head><body>\n';
+    
+    html += '<div class="header">\n';
+    html += `  <div>\n    <h1>Clinical Intake Record</h1>\n    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Patient: ${patientName} | Record ID: ${selectedAppointment.id}</div>\n  </div>\n`;
+    html += `  <div style="text-align: right; font-size: 11px; color: #64748b;">Generated Date: ${new Date().toLocaleString()}</div>\n`;
+    html += '</div>\n';
+    
+    html += '<div class="section-title">Patient Demographics & Identifiers</div>\n';
+    html += '<div class="grid-info">\n';
+    html += `  <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${selectedAppointment.patientName}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Gender</div><div class="info-value">${selectedAppointment.patientGender || 'Not Specified'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Age Reference</div><div class="info-value">${selectedAppointment.age || '30'} Years</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Phone No</div><div class="info-value">${selectedAppointment.patientPhone || 'N/A'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">${selectedAppointment.patientEmail || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">WhatsApp Contact</div><div class="info-value">${selectedAppointment.patientWhatsapp || '—'}</div></div>\n`;
+    html += '</div>\n';
+
+    html += '<div class="section-title">Appointment Details & Roster</div>\n';
+    html += '<div class="grid-info">\n';
+    html += `  <div class="info-item"><div class="info-label">Assigned Practitioner</div><div class="info-value">${selectedAppointment.doctorName}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Specialization</div><div class="info-value">${selectedAppointment.specialization}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Appointment Date</div><div class="info-value">${selectedAppointment.date}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Scheduled Time</div><div class="info-value">${selectedAppointment.time}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Current Phase Status</div><div class="info-value">${selectedAppointment.status}</div></div>\n`;
+    html += '</div>\n';
+    
+    html += '<div class="footer">Confidential Hospital Patient Intake File - Generated Dynamically - City Hospital</div>\n';
+    html += '</body>\n</html>';
+    
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `appointment_record_${patientName.toLowerCase().replace(/\s+/g, '_')}.html`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Patient Intake Profile PDF generated successfully.');
+  };
+
   // Doctors selection builder
   const fallbackDoctors = [
     { name: 'Dr. Anil Sharma', specialization: 'Cardiology' },
@@ -214,7 +281,7 @@ export default function AppointmentsView({
   // Clear overall filters
   const handleClearFilters = () => {
     setSearchQuery('');
-    setDateFilter('2026-06-15');
+    setDateFilter(getTodayDateString());
     setShowAllAppointments(false);
     setStatusFilter('All Status');
     showToast('Filters cleared successfully.');
@@ -251,6 +318,8 @@ export default function AppointmentsView({
   // Open booking wizard for new slot
   const handleOpenNewWizard = () => {
     setEditingId(null);
+    setIsNewAppointmentInsteadOfOverwrite(false);
+    setIsExistingPatientSelected(false);
     setPatientName('');
     setPatientEmail('');
     setPatientPassword('');
@@ -260,14 +329,14 @@ export default function AppointmentsView({
     setAge(30);
     
     if (activeDoctors.length > 0) {
-      setDoctorName(activeDoctors[0].name);
-      setSpecialization(activeDoctors[0].specialization);
+       setDoctorName(activeDoctors[0].name);
+       setSpecialization(activeDoctors[0].specialization);
     } else {
-      setDoctorName('Dr. Anil Sharma');
-      setSpecialization('Cardiology');
+       setDoctorName('Dr. Anil Sharma');
+       setSpecialization('Cardiology');
     }
 
-    setDate('2026-06-15');
+    setDate(getTodayDateString());
     setTime('10:00');
     setIsEnteringNewPatient(false);
     setPatientSearchQuery('');
@@ -289,7 +358,17 @@ export default function AppointmentsView({
     setSpecialization(appt.specialization);
     setDate(appt.date);
     setTime(appt.time);
-    setIsEnteringNewPatient(true); // default to editable sheets
+    
+    // An edited appointment might be an existing clinical patient or a new clinical patient
+    // We can assume it is an existing selected patient profile to make scheduling clean
+    setIsExistingPatientSelected(true);
+    setIsEnteringNewPatient(false);
+    
+    // Automatically flag as new appointment (preserve historical item) if the existing one has completed, canceled, or its date lies in the past
+    const isPastDate = appt.date < getTodayDateString();
+    const isPastOrCanceled = appt.status === 'Cancelled' || appt.status === 'Completed' || isPastDate;
+    setIsNewAppointmentInsteadOfOverwrite(isPastOrCanceled);
+
     setActiveStep(1);
     setShowModal(true);
   };
@@ -303,10 +382,11 @@ export default function AppointmentsView({
     setPatientWhatsapp(phone);
     setPatientGender(gender);
     setAge(ageVal);
-    setIsEnteringNewPatient(true);
+    setIsExistingPatientSelected(true);
+    setIsEnteringNewPatient(false);
     // Move directory straight to doctor specialization select
     setActiveStep(2);
-    showToast(`Patient profile imported. Preloaded details for ${name}.`);
+    showToast(`Patient folder linked successfully. Preloaded details for ${name}.`);
   };
 
   // Wizard Save/Submit
@@ -345,7 +425,7 @@ export default function AppointmentsView({
       age
     };
 
-    if (editingId) {
+    if (editingId && !isNewAppointmentInsteadOfOverwrite) {
       if (onUpdateAppointment) {
         onUpdateAppointment(editingId, payload);
         showToast('Appointment details edited successfully.');
@@ -354,8 +434,12 @@ export default function AppointmentsView({
         setSelectedAppointment({ id: editingId, ...payload } as Appointment);
       }
     } else {
-      onAddAppointment(payload);
-      showToast('New appointment successfully added to clinical ledger.');
+      const newPayload = {
+        ...payload,
+        status: 'Scheduled' as const
+      };
+      onAddAppointment(newPayload);
+      showToast('New appointment successfully added (previous record preserved).');
     }
 
     setShowModal(false);
@@ -443,16 +527,16 @@ export default function AppointmentsView({
 
   // Stats Counters
   // Appointments Stats
-  const countTodayAppts = appointments.filter(a => a.date === '2026-06-15').length;
+  const countTodayAppts = appointments.filter(a => a.date === getTodayDateString() || a.date === '2026-06-15').length;
   const countCompletedAppts = appointments.filter(a => a.status === 'Completed').length;
   const countCancelledAppts = appointments.filter(a => a.status === 'Cancelled').length;
   const countTotalAppts = appointments.length;
   const countRemainingAppts = appointments.filter(a => a.status === 'Scheduled' || a.status === 'Confirmed').length;
 
   // Followup Stats
-  const countTodayFollowups = followUps.filter(f => f.date === '2026-06-15').length;
+  const countTodayFollowups = followUps.filter(f => f.date === getTodayDateString() || f.date === '2026-06-15').length;
   const countPendingFollowups = followUps.filter(f => f.status === 'Pending').length;
-  const countOverdueFollowups = followUps.filter(f => f.status === 'Overdue' || (f.date < '2026-06-15' && f.status !== 'Completed')).length;
+  const countOverdueFollowups = followUps.filter(f => f.status === 'Overdue' || (f.date < getTodayDateString() && f.status !== 'Completed' && f.date !== '2026-06-15')).length;
   const countCompletedFollowups = followUps.filter(f => f.status === 'Completed').length;
 
   // Robust date comparison helper
@@ -488,14 +572,15 @@ export default function AppointmentsView({
     const matchesStatus = followupStatusFilter === 'All Status' || f.status === followupStatusFilter;
 
     // Tabs
+    const todayStr = getTodayDateString();
     if (followupTab === 'today') {
-      return f.date === '2026-06-15' && matchesStatus;
+      return (f.date === todayStr || f.date === '2026-06-15') && matchesStatus;
     }
     if (followupTab === 'upcoming') {
-      return f.date > '2026-06-15' && matchesStatus;
+      return f.date > todayStr && f.date !== '2026-06-15' && matchesStatus;
     }
     if (followupTab === 'overdue') {
-      const isOverDate = f.date < '2026-06-15' && f.status !== 'Completed';
+      const isOverDate = f.date < todayStr && f.date !== '2026-06-15' && f.status !== 'Completed';
       return (f.status === 'Overdue' || isOverDate) && matchesStatus;
     }
     return matchesStatus; // 'all'
@@ -1100,10 +1185,10 @@ export default function AppointmentsView({
 
                       <td className="px-6 py-4 font-mono">
                         <div className="font-semibold text-slate-700">{fol.date}</div>
-                        {fol.date === '2026-06-15' && (
+                        {(fol.date === getTodayDateString() || fol.date === '2026-06-15') && (
                           <span className="text-[9px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Scheduled Today</span>
                         )}
-                        {fol.date < '2026-06-15' && fol.status !== 'Completed' && (
+                        {fol.date < getTodayDateString() && fol.date !== '2026-06-15' && fol.status !== 'Completed' && (
                           <span className="text-[9px] bg-rose-50 text-rose-600 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Overdue sheet</span>
                         )}
                       </td>
@@ -1272,203 +1357,266 @@ export default function AppointmentsView({
               {/* ------------ STEP 1: PATIENT RECORD DETAILS ------------- */}
               {activeStep === 1 && (
                 <div className="space-y-4">
-                  
-                  {/* Search Existing bar */}
-                  <div className="bg-[#fcfdfd] border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
-                      Search Patient Name / Email / Phone
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <div className="relative flex-1">
-                        <Search size={14} className="absolute left-3.5 top-2.5 text-slate-400" />
-                        <input
-                          type="text"
-                          placeholder="Search patient, if not found then register new..."
-                          value={patientSearchQuery}
-                          onChange={(e) => {
-                            setPatientSearchQuery(e.target.value);
-                            if (e.target.value) {
-                              setIsEnteringNewPatient(false);
-                            }
-                          }}
-                          className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-250 rounded-xl focus:outline-none focus:border-[#007f6e] placeholder:text-slate-400"
-                        />
-                      </div>
-                      
-                      {/* Plus New button precisely styled like the mock illustration */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsEnteringNewPatient(true);
-                          setPatientName(patientSearchQuery);
-                        }}
-                        className="px-4 py-2 bg-[#f4faf8] hover:bg-[#e6f4f1] text-[#007f6e] border border-dashed border-[#007f6e] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all w-fit shrink-0"
-                      >
-                        <Plus size={14} />
-                        <span>+ New Patient</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* lookup match dropdown lists */}
-                  {!isEnteringNewPatient && (
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Matching folder folders found</p>
-                      
-                      {patientSearchQuery === '' ? (
-                        <div className="p-6 bg-slate-50/50 border border-slate-100 rounded-2xl text-center text-slate-400 text-xs">
-                          Type patient name or search parameters or click the <span className="text-[#007f6e] font-bold">+ New Patient</span> button to add.
+                  {isExistingPatientSelected ? (
+                    <div className="bg-emerald-50/40 border-2 border-[#007f6e] rounded-2xl p-5 space-y-4 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="text-[#007f6e]" size={18} />
+                          <span className="text-[10px] font-extrabold text-[#007f6e] uppercase tracking-wider bg-[#d1ebe4] px-2.5 py-1 rounded-full">
+                            Registered Clinical Patient Link Confirmed
+                          </span>
                         </div>
-                      ) : searchedPatientMatches.length === 0 ? (
-                        <div className="p-8 bg-slate-50/60 border border-slate-150 rounded-2xl text-center space-y-2">
-                          <p className="text-xs text-slate-500">No previous registration matching "{patientSearchQuery}" found in the network database.</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsExistingPatientSelected(false);
+                            setIsEnteringNewPatient(false);
+                            setPatientName('');
+                            setPatientEmail('');
+                            setPatientPhone('');
+                            setPatientWhatsapp('');
+                            setAge(30);
+                            setPatientSearchQuery('');
+                          }}
+                          className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/60 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                        >
+                          <span>&times;</span>
+                          <span>De-link Patient</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/90 p-4 border border-[#e2efe3] rounded-xl text-xs text-slate-700 shadow-3xs">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Patient Name</p>
+                          <p className="text-sm font-bold text-slate-800 capitalize mt-0.5">{patientName}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Contact Phone</p>
+                          <p className="text-sm font-semibold text-slate-800 mt-0.5">{patientPhone || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Address</p>
+                          <p className="text-sm text-slate-600 font-mono mt-0.5">{patientEmail || '—'}</p>
+                        </div>
+                        <div className="flex gap-6">
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-sans">Age</p>
+                            <p className="text-sm font-semibold text-slate-705 mt-0.5">{age} Years</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-sans">Gender</p>
+                            <p className="text-sm font-semibold text-slate-705 mt-0.5">{patientGender}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white/60 border border-teal-100 p-3.5 rounded-xl flex items-start gap-2.5">
+                        <AlertCircle size={15} className="text-[#007f6e] mt-0.5 shrink-0" />
+                        <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
+                          <strong>Active Vault Lock:</strong> Previous historical appointments and ledger records for <strong>{patientName}</strong> are preserved in full. We will only request the new scheduled appointment parameters.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Search Existing bar */}
+                      <div className="bg-[#fcfdfd] border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                          Search Patient Name / Email / Phone
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <div className="relative flex-1">
+                            <Search size={14} className="absolute left-3.5 top-2.5 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="Search patient, if not found then register new..."
+                              value={patientSearchQuery}
+                              onChange={(e) => {
+                                setPatientSearchQuery(e.target.value);
+                                if (e.target.value) {
+                                  setIsEnteringNewPatient(false);
+                                }
+                              }}
+                              className="w-full pl-10 pr-4 py-2.5 text-xs border border-slate-250 rounded-xl focus:outline-none focus:border-[#007f6e] placeholder:text-slate-400"
+                            />
+                          </div>
+                          
+                          {/* Plus New button precisely styled like the mock illustration */}
                           <button
                             type="button"
                             onClick={() => {
                               setIsEnteringNewPatient(true);
                               setPatientName(patientSearchQuery);
                             }}
-                            className="bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all"
+                            className="px-4 py-2 bg-[#f4faf8] hover:bg-[#e6f4f1] text-[#007f6e] border border-dashed border-[#007f6e] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all w-fit shrink-0"
                           >
-                            Add New Patient Folder
+                            <Plus size={14} />
+                            <span>+ New Patient</span>
                           </button>
                         </div>
-                      ) : (
-                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                          {searchedPatientMatches.map((p, idx) => (
-                            <div
-                              key={idx}
-                              onClick={() => handleSelectExistingPatient(p.name, p.email, p.phone, p.gender, p.age)}
-                              className="p-3 bg-white border border-slate-200 hover:border-[#007f6e] hover:bg-[#fcfdfd] rounded-xl flex items-center justify-between cursor-pointer transition-all"
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-600">
-                                  {p.name.slice(0, 2).toUpperCase()}
-                                </span>
-                                <div>
-                                  <p className="text-xs font-bold text-slate-800">{p.name}</p>
-                                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{p.email} | Phone: {p.phone}</p>
-                                </div>
-                              </div>
-                              <span className="text-[10px] font-bold text-[#007f6e] bg-[#e6f4f1] px-3 py-1 rounded-full">
-                                Select &rdquo;
-                              </span>
+                      </div>
+
+                      {/* lookup match dropdown lists */}
+                      {!isEnteringNewPatient && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Matching folder folders found</p>
+                          
+                          {patientSearchQuery === '' ? (
+                            <div className="p-6 bg-slate-50/50 border border-slate-100 rounded-2xl text-center text-slate-400 text-xs">
+                              Type patient name or search parameters or click the <span className="text-[#007f6e] font-bold">+ New Patient</span> button to add.
                             </div>
-                          ))}
+                          ) : searchedPatientMatches.length === 0 ? (
+                            <div className="p-8 bg-slate-50/60 border border-slate-150 rounded-2xl text-center space-y-2">
+                              <p className="text-xs text-slate-500">No previous registration matching "{patientSearchQuery}" found in the network database.</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsEnteringNewPatient(true);
+                                  setPatientName(patientSearchQuery);
+                                }}
+                                className="bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all"
+                              >
+                                Add New Patient Folder
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                              {searchedPatientMatches.map((p, idx) => (
+                                <div
+                                  key={idx}
+                                  onClick={() => handleSelectExistingPatient(p.name, p.email, p.phone, p.gender, p.age)}
+                                  className="p-3 bg-white border border-slate-200 hover:border-[#007f6e] hover:bg-[#fcfdfd] rounded-xl flex items-center justify-between cursor-pointer transition-all"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-600">
+                                      {p.name.slice(0, 2).toUpperCase()}
+                                    </span>
+                                    <div>
+                                      <p className="text-xs font-bold text-slate-800">{p.name}</p>
+                                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{p.email} | Phone: {p.phone}</p>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] font-bold text-[#007f6e] bg-[#e6f4f1] px-3 py-1 rounded-full">
+                                    Select &rdquo;
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
-                    </div>
-                  )}
 
-                  {/* Manual forms entry sheets fields */}
-                  {isEnteringNewPatient && (
-                    <div className="space-y-4 bg-slate-50/40 p-5 rounded-2xl border border-slate-200/60 animate-in slide-in-from-bottom-2 duration-150">
-                      
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                        <span className="text-[11px] font-bold text-slate-700">PATIENT CLINICAL DOSSIER</span>
-                        <button
-                          type="button"
-                          onClick={() => setIsEnteringNewPatient(false)}
-                          className="text-[#007f6e] text-[10px] font-bold hover:underline"
-                        >
-                          &larr; Switch search lookup
-                        </button>
-                      </div>
+                      {/* Manual forms entry sheets fields */}
+                      {isEnteringNewPatient && (
+                        <div className="space-y-4 bg-slate-50/40 p-5 rounded-2xl border border-slate-200/60 animate-in slide-in-from-bottom-2 duration-150">
+                          
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                            <span className="text-[11px] font-bold text-slate-700">PATIENT CLINICAL DOSSIER</span>
+                            <button
+                              type="button"
+                              onClick={() => setIsEnteringNewPatient(false)}
+                              className="text-[#007f6e] text-[10px] font-bold hover:underline"
+                            >
+                              &larr; Switch search lookup
+                            </button>
+                          </div>
 
-                      {/* Inputs grid system */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name *</label>
-                          <input
-                            type="text"
-                            value={patientName}
-                            onChange={(e) => setPatientName(e.target.value)}
-                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
-                            placeholder="Patient Full Name"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Email Address</label>
-                          <input
-                            type="email"
-                            value={patientEmail}
-                            onChange={(e) => setPatientEmail(e.target.value)}
-                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
-                            placeholder="patientname@gmail.com"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Password Credentials</label>
-                          <input
-                            type="password"
-                            value={patientPassword}
-                            onChange={(e) => setPatientPassword(e.target.value)}
-                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
-                            placeholder="••••••••••••"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Phone Number *</label>
-                          <input
-                            type="text"
-                            value={patientPhone}
-                            onChange={(e) => setPatientPhone(e.target.value)}
-                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
-                            placeholder="+92 300 0000000"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Communications</label>
-                          <input
-                            type="text"
-                            value={patientWhatsapp}
-                            onChange={(e) => setPatientWhatsapp(e.target.value)}
-                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
-                            placeholder="+92 300 0000000"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Age (Years)</label>
-                          <input
-                            type="number"
-                            value={age}
-                            onChange={(e) => setAge(Number(e.target.value))}
-                            className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
-                            required
-                          />
-                        </div>
-
-                      </div>
-
-                      {/* Gender choices */}
-                      <div>
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Gender Identification</span>
-                        <div className="flex gap-5">
-                          {['Male', 'Female', 'Other'].map((g) => (
-                            <label key={g} className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                          {/* Inputs grid system */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name *</label>
                               <input
-                                type="radio"
-                                name="wizardGender"
-                                value={g}
-                                checked={patientGender === g}
-                                onChange={() => setPatientGender(g as any)}
-                                className="text-[#007f6e] focus:ring-[#007f6e] border-slate-300"
+                                type="text"
+                                value={patientName}
+                                onChange={(e) => setPatientName(e.target.value)}
+                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                                placeholder="Patient Full Name"
+                                required
                               />
-                              <span>{g}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
+                            </div>
 
-                    </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Email Address</label>
+                              <input
+                                type="email"
+                                value={patientEmail}
+                                onChange={(e) => setPatientEmail(e.target.value)}
+                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                                placeholder="patientname@gmail.com"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Password Credentials</label>
+                              <input
+                                type="password"
+                                value={patientPassword}
+                                onChange={(e) => setPatientPassword(e.target.value)}
+                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                                placeholder="••••••••••••"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Phone Number *</label>
+                              <input
+                                type="text"
+                                value={patientPhone}
+                                onChange={(e) => setPatientPhone(e.target.value)}
+                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                                placeholder="+92 300 0000000"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Communications</label>
+                              <input
+                                type="text"
+                                value={patientWhatsapp}
+                                onChange={(e) => setPatientWhatsapp(e.target.value)}
+                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                                placeholder="+92 300 0000000"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Age (Years)</label>
+                              <input
+                                type="number"
+                                value={age}
+                                onChange={(e) => setAge(Number(e.target.value))}
+                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                                required
+                              />
+                            </div>
+
+                          </div>
+
+                          {/* Gender choices */}
+                          <div>
+                            <span className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Gender Identification</span>
+                            <div className="flex gap-5">
+                              {['Male', 'Female', 'Other'].map((g) => (
+                                <label key={g} className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                                  <input
+                                    type="radio"
+                                    name="wizardGender"
+                                    value={g}
+                                    checked={patientGender === g}
+                                    onChange={() => setPatientGender(g as any)}
+                                    className="text-[#007f6e] focus:ring-[#007f6e] border-slate-300"
+                                  />
+                                  <span>{g}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                        </div>
+                      )}
+                    </>
                   )}
 
                 </div>
@@ -1555,6 +1703,26 @@ export default function AppointmentsView({
                     </div>
                   </div>
 
+                  {editingId && (
+                    <div className="bg-emerald-50/30 border border-emerald-100 p-4 rounded-xl space-y-2 mt-4">
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          id="save-as-new-checkbox-step3"
+                          checked={isNewAppointmentInsteadOfOverwrite}
+                          onChange={(e) => setIsNewAppointmentInsteadOfOverwrite(e.target.checked)}
+                          className="mt-1 h-4 w-4 text-[#007f6e] focus:ring-[#007f6e] border-slate-300 rounded cursor-pointer"
+                        />
+                        <label htmlFor="save-as-new-checkbox-step3" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                          Save as New Appointment (Keep Old Appointment History)
+                        </label>
+                      </div>
+                      <p className="text-[10px] text-slate-500 pl-6 pr-2 leading-relaxed">
+                        Checking this box preserves the patient's past appointments (whether completed, cancelled, or past dates) and registers this schedule as a new visit. Recommended when booking subsequent check-ups or follow-ups.
+                      </p>
+                    </div>
+                  )}
+
                 </div>
               )}
 
@@ -1621,6 +1789,34 @@ export default function AppointmentsView({
 
                   </div>
 
+                  {editingId && (
+                    <div className={`p-4 rounded-xl border ${
+                      isNewAppointmentInsteadOfOverwrite 
+                        ? 'bg-emerald-50/50 border-emerald-200 text-emerald-800' 
+                        : 'bg-amber-50/50 border-amber-200 text-amber-800'
+                    } transition-colors space-y-2 mt-4`}>
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          id="save-as-new-checkbox-step4"
+                          checked={isNewAppointmentInsteadOfOverwrite}
+                          onChange={(e) => setIsNewAppointmentInsteadOfOverwrite(e.target.checked)}
+                          className="mt-1 h-4 w-4 text-[#007f6e] focus:ring-[#007f6e] border-slate-300 rounded cursor-pointer"
+                        />
+                        <div>
+                          <label htmlFor="save-as-new-checkbox-step4" className="text-xs font-bold cursor-pointer select-none">
+                            Save as New Follow-up Appointment (Keep Old Appointment History)
+                          </label>
+                          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                            {isNewAppointmentInsteadOfOverwrite 
+                              ? '👍 Excellent choice! A brand new appointment will be registered today. The original past/canceled appointment record will remain completely unaltered in the history ledger.' 
+                              : '⚠️ Warning: This will overwrite the existing appointment details. Choose this option only if you are correcting a typo, otherwise keep it checked to prevent losing clinical history.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
 
@@ -1672,153 +1868,168 @@ export default function AppointmentsView({
       )}
 
       {/* ========================================================================= */}
-      {/*                       4. PATIENT DETAILS DRAWER VIEW                      */}
+      {/*                       4. PATIENT DETAILS DIALOG MODAL                     */}
       {/* ========================================================================= */}
       {selectedAppointment && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-end">
-          <div className="bg-white h-screen w-full max-w-md shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-250">
+        <div className="fixed inset-0 z-50 bg-[#090d16]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" id="appointment-detail-view-modal">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-100 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             
-            <div className="space-y-6">
+            {/* Gradient Banner */}
+            <div className="bg-gradient-to-r from-[#007f6e] to-[#115e59] text-white p-6 relative">
+              <button
+                onClick={() => setSelectedAppointment(null)}
+                className="absolute top-4 right-4 bg-white/15 hover:bg-white/25 text-white rounded-full p-2.5 transition-colors focus:outline-none cursor-pointer"
+              >
+                <X size={15} />
+              </button>
               
-              {/* Header */}
-              <div className="flex justify-between items-center border-b pb-4">
+              <div className="flex gap-4 items-center">
+                <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center text-white font-extrabold text-base shadow-xs uppercase">
+                  {selectedAppointment.patientName.trim().charAt(0) || 'P'}
+                </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-800 tracking-tight">Clinical Intake Sheet</h3>
-                  <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest mt-1">Record ID: {selectedAppointment.id}</p>
-                </div>
-                <button
-                  onClick={() => setSelectedAppointment(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-800 rounded-full hover:bg-slate-100 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Status block */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-150 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">Current Phase status</span>
-                <span className="text-xs font-black text-[#007f6e] uppercase tracking-wider">{selectedAppointment.status}</span>
-              </div>
-
-              {/* Patient Core parameters */}
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <User size={12} className="text-[#007f6e]" /> PATIENT ENTRANCE IDENTIFIER
-                </h4>
-                
-                <div className="p-4 bg-[#f4faf8] border border-[#d1ebe4] rounded-2xl relative overflow-hidden space-y-2 shadow-xs">
-                  <span className="absolute right-3.5 top-3.5 bg-[#e6f4f1] text-[#007f6e] text-[9px] font-bold px-3 py-1 rounded-full uppercase">
-                    {selectedAppointment.patientGender || 'Male'}
-                  </span>
-                  <h2 className="text-base font-black text-slate-800">{selectedAppointment.patientName}</h2>
-                  <p className="text-xs font-bold text-slate-500 mt-1">Age Reference: {selectedAppointment.age || 30} years old</p>
-                </div>
-
-                {/* Patient specifics list */}
-                <div className="space-y-2">
-                  
-                  {selectedAppointment.patientEmail && (
-                    <div className="flex items-center gap-3 text-xs text-slate-700 bg-white border border-slate-200/60 p-3 rounded-xl shadow-xs">
-                      <Mail size={14} className="text-slate-400" />
-                      <div className="font-mono">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">Registered Email</p>
-                        <p className="text-slate-800 mt-1">{selectedAppointment.patientEmail}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedAppointment.patientPhone && (
-                    <div className="flex items-center gap-3 text-xs text-slate-700 bg-white border border-slate-200/60 p-3 rounded-xl shadow-xs">
-                      <Phone size={14} className="text-slate-400" />
-                      <div className="font-mono">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">Registered Mobile</p>
-                        <p className="text-slate-800 mt-1">{selectedAppointment.patientPhone}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedAppointment.patientWhatsapp && (
-                    <div className="flex items-center gap-3 text-xs text-slate-700 bg-white border border-slate-200/60 p-3 rounded-xl shadow-xs">
-                      <MessageCircle size={14} className="text-[#25d366]" />
-                      <div className="font-mono">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">WhatsApp Communications</p>
-                        <p className="text-[#007f6e] mt-1 font-bold">{selectedAppointment.patientWhatsapp}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedAppointment.patientPassword && (
-                    <div className="flex items-center gap-3 text-xs text-slate-700 bg-white border border-slate-200/60 p-3 rounded-xl shadow-xs">
-                      <Lock size={14} className="text-slate-400" />
-                      <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">Patient Password Record</p>
-                        <p className="text-slate-700 mt-1 font-mono">•••••••• (Shared Credential)</p>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              </div>
-
-              {/* Assigned physician */}
-              <div className="space-y-3 pt-2">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Stethoscope size={12} className="text-[#007f6e]" /> CLINICAL PRACTITIONER SHEET
-                </h4>
-
-                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3 font-mono text-xs">
-                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-slate-400 text-[10px] font-bold">Practitioner</span>
-                    <span className="font-bold text-slate-800">{selectedAppointment.doctorName}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-slate-400 text-[10px] font-bold">Specialization</span>
-                    <span className="font-bold text-[#007f6e]">{selectedAppointment.specialization}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-slate-400 text-[10px] font-bold">Date Limit</span>
-                    <span className="font-bold text-slate-800">{selectedAppointment.date}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-slate-400 text-[10px] font-bold">Time Slot Clock</span>
-                    <span className="font-bold text-slate-800">{selectedAppointment.time}</span>
+                  <h2 className="text-md md:text-lg font-bold">{selectedAppointment.patientName}</h2>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="text-emerald-100 text-[10px] font-semibold bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10">
+                      ID: {selectedAppointment.id}
+                    </span>
+                    <span className="text-emerald-500 font-bold bg-white text-[10px] px-2.5 py-0.5 rounded-full shadow-xs uppercase">
+                      {selectedAppointment.status}
+                    </span>
                   </div>
                 </div>
               </div>
-
             </div>
 
-            {/* Bottom Actions inside viewing drawer */}
-            <div className="mt-8 pt-4 border-t border-slate-100 space-y-3">
+            {/* Content Section - Scrollable */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               
-              <div className="flex gap-2">
+              {/* Grid content two columns */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* 1. Patient Demographics details */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-1">
+                    <User size={12} className="text-[#007f6e]" /> Patient Demographics
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                      <span className="text-slate-400 text-xs font-medium">Gender</span>
+                      <span className="text-slate-800 text-xs font-bold">{selectedAppointment.patientGender || 'Male'}</span>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                      <span className="text-slate-400 text-xs font-medium">Age</span>
+                      <span className="text-slate-800 text-xs font-bold">{selectedAppointment.age || '30'} Years</span>
+                    </div>
+                    {selectedAppointment.patientPhone && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                        <span className="text-slate-400 text-[10px] uppercase font-bold">Registered Mobile</span>
+                        <span className="text-slate-850 text-xs font-bold font-mono text-[#007f6e]">{selectedAppointment.patientPhone}</span>
+                      </div>
+                    )}
+                    {selectedAppointment.patientEmail && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                        <span className="text-slate-400 text-[10px] uppercase font-bold">Registered Email</span>
+                        <span className="text-slate-800 text-xs font-bold font-mono truncate">{selectedAppointment.patientEmail}</span>
+                      </div>
+                    )}
+                    {selectedAppointment.patientWhatsapp && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                        <span className="text-slate-400 text-[10px] uppercase font-bold">WhatsApp Contact</span>
+                        <span className="text-[#25d366] text-xs font-bold font-mono">{selectedAppointment.patientWhatsapp}</span>
+                      </div>
+                    )}
+                    {selectedAppointment.patientPassword && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                        <span className="text-slate-400 text-[10px] uppercase font-bold">Portal Credential</span>
+                        <span className="text-slate-500 text-xs font-bold font-mono">•••••••• (Secured Passport)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Clinical Practitioner details */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-1">
+                    <Stethoscope size={12} className="text-[#007f6e]" /> Case Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col gap-1">
+                      <span className="text-slate-400 text-[10px] uppercase font-bold">Assigned Practitioner</span>
+                      <span className="text-slate-800 text-xs font-extrabold">{selectedAppointment.doctorName}</span>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                      <span className="text-slate-400 text-xs font-medium">Speciality</span>
+                      <span className="text-[#007f6e] text-xs font-bold">{selectedAppointment.specialization}</span>
+                    </div>
+                    <div className="bg-slate-100 p-3 rounded-xl border border-slate-200/60 flex justify-between items-center">
+                      <span className="text-slate-500 text-xs font-medium">Date</span>
+                      <span className="text-slate-800 text-xs font-bold font-mono">{selectedAppointment.date}</span>
+                    </div>
+                    <div className="bg-slate-100 p-3 rounded-xl border border-slate-200/60 flex justify-between items-center">
+                      <span className="text-slate-500 text-xs font-medium">Time Slot Clock</span>
+                      <span className="text-slate-800 text-xs font-bold font-mono">{selectedAppointment.time}</span>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                      <span className="text-slate-400 text-xs font-medium">Filing Stage</span>
+                      <span className="text-slate-700 text-xs font-bold">Intake Sheet</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+              
+            </div>
+
+            {/* Footer with Edit, Delete, Download Report PDF, Follow-Up, and Close buttons */}
+            <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => handleOpenEditWizard(selectedAppointment)}
-                  className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                  onClick={() => {
+                    handleOpenEditWizard(selectedAppointment);
+                    setSelectedAppointment(null);
+                  }}
+                  className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  <Edit2 size={13} />
-                  <span>Edit Appointment File</span>
+                  <Edit2 size={12} />
+                  <span>Edit</span>
                 </button>
                 <button
-                  onClick={() => handleDeleteAppointmentRecord(selectedAppointment.id)}
-                  className="py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-all shadow-xs"
-                  title="Remove permanently"
+                  onClick={() => {
+                    handleDeleteAppointmentRecord(selectedAppointment.id);
+                  }}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={12} />
+                  <span>Delete</span>
                 </button>
               </div>
 
-              <button
-                onClick={() => {
-                  handleCreateFollowupFromAppointment(selectedAppointment);
-                  setSelectedAppointment(null);
-                }}
-                className="w-full py-2.5 bg-[#007f6e] hover:bg-[#006657] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
-              >
-                <RefreshCw size={13} />
-                <span>Schedule a Follow-up visit</span>
-              </button>
-
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleDownloadAppointmentPDF}
+                  className="bg-[#e8f5e9] hover:bg-[#c8e6c9] text-[#2ebd59] border border-green-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Download size={12} />
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleCreateFollowupFromAppointment(selectedAppointment);
+                    setSelectedAppointment(null);
+                  }}
+                  className="bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#7c3aed] border border-[#7c3aed]/20 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw size={12} />
+                  <span>Schedule Follow-Up</span>
+                </button>
+                <button
+                  onClick={() => setSelectedAppointment(null)}
+                  className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
           </div>

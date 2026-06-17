@@ -33,6 +33,33 @@ router.post('/', (req, res) => {
       patientGender,
       age
     } = req.body;
+
+    // Automatically check if a patient with the same name exists
+    if (patientName && patientName.trim()) {
+      const existingPatient = db.prepare('SELECT id FROM patients WHERE LOWER(name) = LOWER(?)').get(patientName.trim());
+      if (!existingPatient) {
+        // Create new patient automatically
+        const patId = `pat-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 10)}`;
+        const regAt = new Date().toISOString();
+        const insertPat = db.prepare(`
+          INSERT INTO patients (
+            id, name, age, gender, phone, registeredAt, status, email, password
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        insertPat.run(
+          patId,
+          patientName.trim(),
+          Number(age || 30),
+          patientGender || 'Male',
+          patientPhone || '',
+          regAt,
+          'New',
+          patientEmail || '',
+          patientPassword || ''
+        );
+      }
+    }
+
     const stmt = db.prepare('INSERT OR REPLACE INTO appointments (id, patientName, doctorName, specialization, date, time, status, type, department, patientEmail, patientPassword, patientPhone, patientWhatsapp, patientGender, age) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     stmt.run(
       id,

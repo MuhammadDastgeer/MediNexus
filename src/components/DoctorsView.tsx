@@ -159,6 +159,10 @@ export default function DoctorsView({
       triggerToast('Doctor Email Address is required.');
       return;
     }
+    if (!formData.password) {
+      triggerToast('Doctor Password is required.');
+      return;
+    }
 
     const payload: Omit<Doctor, 'id'> = {
       name: formData.name,
@@ -206,8 +210,8 @@ export default function DoctorsView({
 
   // Metrics calculation
   const totalDoctors = doctors.length;
-  const activeDoctors = doctors.filter(d => d.status === 'On Duty' || d.isActive === true).length;
-  const availableToBook = doctors.filter(d => d.availableForBooking !== false && (d.status === 'On Duty' || d.isActive === true)).length;
+  const activeDoctors = doctors.filter(d => d.status === 'On Duty').length;
+  const availableToBook = doctors.filter(d => d.availableForBooking !== false && d.status === 'On Duty').length;
   const portalAccessSent = doctors.filter(d => d.email && d.email.trim() !== '').length;
 
   const getFees = () => {
@@ -232,7 +236,7 @@ export default function DoctorsView({
   const recentDoctors = [...doctors].slice(-3).reverse();
 
   // Doctor on duty lists
-  const dutyDoctorsToday = doctors.filter(d => d.status === 'On Duty' || d.isActive === true);
+  const dutyDoctorsToday = doctors.filter(d => d.status === 'On Duty');
 
   // Search filter
   const filteredDoctors = doctors.filter((doc) => {
@@ -273,68 +277,69 @@ export default function DoctorsView({
     triggerToast('Sending credentials invite link to all on-boarded medical specialists.');
   };
 
+  const handleDownloadDoctorCardPDF = () => {
+    if (!viewingDoctor) return;
+    const docName = viewingDoctor.name || 'Doctor';
+    let html = '<html>\n';
+    html += '<head><meta charset="utf-8"><title>Doctor Portfolio - ' + docName + '</title>\n';
+    html += '<style>\n';
+    html += 'body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; background-color: #ffffff; line-height: 1.5; }\n';
+    html += '.header { border-bottom: 2.5px solid #007f6e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }\n';
+    html += 'h1 { color: #007f6e; margin: 0; font-size: 24px; font-weight: 800; }\n';
+    html += '.section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #007f6e; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; letter-spacing: 0.05em; }\n';
+    html += '.grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }\n';
+    html += '.info-item { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }\n';
+    html += '.info-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }\n';
+    html += '.info-value { font-size: 12px; color: #0f172a; font-weight: 705; }\n';
+    html += '.footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #cbd5e1; padding-top: 12px; text-align: center; margin-top: 40px; }\n';
+    html += '</style>\n';
+    html += '</head><body>\n';
+    
+    html += '<div class="header">\n';
+    html += `  <div>\n    <h1>${docName}</h1>\n    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Specialization: ${viewingDoctor.specialization} | Department: ${viewingDoctor.department || 'Clinical General'}</div>\n  </div>\n`;
+    html += `  <div style="text-align: right; font-size: 11px; color: #64748b;">Generated Date: ${new Date().toLocaleString()}</div>\n`;
+    html += '</div>\n';
+    
+    html += '<div class="section-title">Clinical Specialist Demographics</div>\n';
+    html += '<div class="grid-info">\n';
+    html += `  <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${viewingDoctor.name}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Phone No</div><div class="info-value">${viewingDoctor.phone || 'N/A'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">${viewingDoctor.email || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Gender</div><div class="info-value">${viewingDoctor.gender || 'Not Specified'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">${viewingDoctor.dob || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Blood Group</div><div class="info-value">${viewingDoctor.bloodGroup || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Home Address</div><div class="info-value">${viewingDoctor.address || '—'}</div></div>\n`;
+    html += '</div>\n';
+
+    html += '<div class="section-title">Professional Certification & Hospital Registry</div>\n';
+    html += '<div class="grid-info">\n';
+    html += `  <div class="info-item"><div class="info-label">Specialist Qualification</div><div class="info-value">${viewingDoctor.qualification || 'MBBS'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Practical Experience</div><div class="info-value">${viewingDoctor.experience || '0'} Years</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Medical Registration No</div><div class="info-value">${viewingDoctor.medicalRegNo || '—'}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">System License Certificate</div><div class="info-value">${viewingDoctor.licenseNumber || '—'}</div></div>\n`;
+    html += '</div>\n';
+
+    html += '<div class="section-title">Consultation Rates Fee Structure</div>\n';
+    html += '<div class="grid-info">\n';
+    html += `  <div class="info-item"><div class="info-label">First Consultation Fee</div><div class="info-value">₹${viewingDoctor.consultationFee || 500}</div></div>\n`;
+    html += `  <div class="info-item"><div class="info-label">Follow-up Session Fee</div><div class="info-value">₹${viewingDoctor.followUpFee || 300}</div></div>\n`;
+    html += '</div>\n';
+    
+    html += '<div class="footer">Confidential Hospital Specialist Profile - Generated Dynamically - City Hospital</div>\n';
+    html += '</body>\n</html>';
+    
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `doctor_profile_${docName.toLowerCase().replace(/\s+/g, '_')}.html`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (viewingDoctor) {
-    const handleDownloadDoctorCardPDF = () => {
-      const docName = viewingDoctor.name || 'Doctor';
-      let html = '<html>\n';
-      html += '<head><meta charset="utf-8"><title>Doctor Portfolio - ' + docName + '</title>\n';
-      html += '<style>\n';
-      html += 'body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; background-color: #ffffff; line-height: 1.5; }\n';
-      html += '.header { border-bottom: 2.5px solid #007f6e; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }\n';
-      html += 'h1 { color: #007f6e; margin: 0; font-size: 24px; font-weight: 800; }\n';
-      html += '.section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #007f6e; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; letter-spacing: 0.05em; }\n';
-      html += '.grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }\n';
-      html += '.info-item { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }\n';
-      html += '.info-label { font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }\n';
-      html += '.info-value { font-size: 12px; color: #0f172a; font-weight: 705; }\n';
-      html += '.footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #cbd5e1; padding-top: 12px; text-align: center; margin-top: 40px; }\n';
-      html += '</style>\n';
-      html += '</head><body>\n';
-      
-      html += '<div class="header">\n';
-      html += `  <div>\n    <h1>${docName}</h1>\n    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Specialization: ${viewingDoctor.specialization} | Department: ${viewingDoctor.department || 'Clinical General'}</div>\n  </div>\n`;
-      html += `  <div style="text-align: right; font-size: 11px; color: #64748b;">Generated Date: ${new Date().toLocaleString()}</div>\n`;
-      html += '</div>\n';
-      
-      html += '<div class="section-title">Clinical Specialist Demographics</div>\n';
-      html += '<div class="grid-info">\n';
-      html += `  <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${viewingDoctor.name}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Phone No</div><div class="info-value">${viewingDoctor.phone || 'N/A'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">${viewingDoctor.email || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Gender</div><div class="info-value">${viewingDoctor.gender || 'Not Specified'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">${viewingDoctor.dob || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Blood Group</div><div class="info-value">${viewingDoctor.bloodGroup || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Home Address</div><div class="info-value">${viewingDoctor.address || '—'}</div></div>\n`;
-      html += '</div>\n';
-
-      html += '<div class="section-title">Professional Certification & Hospital Registry</div>\n';
-      html += '<div class="grid-info">\n';
-      html += `  <div class="info-item"><div class="info-label">Specialist Qualification</div><div class="info-value">${viewingDoctor.qualification || 'MBBS'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Practical Experience</div><div class="info-value">${viewingDoctor.experience || '0'} Years</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Medical Registration No</div><div class="info-value">${viewingDoctor.medicalRegNo || '—'}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">System License Certificate</div><div class="info-value">${viewingDoctor.licenseNumber || '—'}</div></div>\n`;
-      html += '</div>\n';
-
-      html += '<div class="section-title">Consultation Rates Fee Structure</div>\n';
-      html += '<div class="grid-info">\n';
-      html += `  <div class="info-item"><div class="info-label">First Consultation Fee</div><div class="info-value">₹${viewingDoctor.consultationFee || 500}</div></div>\n`;
-      html += `  <div class="info-item"><div class="info-label">Follow-up Session Fee</div><div class="info-value">₹${viewingDoctor.followUpFee || 300}</div></div>\n`;
-      html += '</div>\n';
-      
-      html += '<div class="footer">Confidential Hospital Specialist Profile - Generated Dynamically - City Hospital</div>\n';
-      html += '</body>\n</html>';
-      
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `doctor_profile_${docName.toLowerCase().replace(/\s+/g, '_')}.html`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-
     return (
       <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-705 font-sans animate-fade-in" id="doctor-dashboard-container">
         {/* Navigation Breadcrumb / Top bar */}
@@ -576,7 +581,7 @@ export default function DoctorsView({
                 </div>
                 <div className="space-y-4 text-xs font-semibold">
                   <div className="flex items-center gap-3 p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                    <span className={`w-3 h-3 rounded-full ${viewingDoctor.status === 'On Duty' || viewingDoctor.isActive !== false ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                    <span className={`w-3 h-3 rounded-full ${viewingDoctor.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                     <span className="text-slate-800">Specialist is currently marked as: <span className="font-extrabold uppercase text-[#007f6e]">{viewingDoctor.status || 'On Duty'}</span></span>
                   </div>
                   <div className="flex items-center gap-3 p-3.5 bg-blue-50/35 rounded-xl border border-blue-100">
@@ -731,10 +736,11 @@ export default function DoctorsView({
                 {/* Password Box */}
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                    Password
+                    Password <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="password"
+                    required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="••••••••"
@@ -1510,7 +1516,7 @@ export default function DoctorsView({
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {filteredDoctors.map((doc) => {
-                          const isDocActive = doc.status === 'On Duty' || doc.isActive !== false;
+                          const isDocActive = doc.status === 'On Duty';
                           return (
                             <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
                               
@@ -1745,7 +1751,7 @@ export default function DoctorsView({
                 <div className="flex flex-wrap gap-4 text-xs font-semibold">
                   
                   <div className="flex items-center gap-2">
-                    <span className={`w-3 h-3 rounded-full ${viewingDoctor.status === 'On Duty' || viewingDoctor.isActive !== false ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                    <span className={`w-3 h-3 rounded-full ${viewingDoctor.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                     <span className="text-slate-700">On Active Hospital Duty</span>
                   </div>
 
@@ -1759,26 +1765,50 @@ export default function DoctorsView({
 
             </div>
 
-            {/* Footer buttons */}
-            <div className="bg-slate-50 p-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
-              <button
-                onClick={() => {
-                  setViewingDoctor(null);
-                  handleOpenEditForm(viewingDoctor);
-                }}
-                className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] rounded-xl px-4 py-1.5 text-xs font-bold border border-emerald-500/10 transition-all flex items-center gap-1"
-                id="edit-from-modal-btn"
-              >
-                <Edit3 size={13} />
-                <span>Edit Profile</span>
-              </button>
-              <button
-                onClick={() => setViewingDoctor(null)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl px-4 py-1.5 text-xs font-bold border border-slate-200 transition-all"
-                id="close-from-modal-btn"
-              >
-                Close Dossier
-              </button>
+            {/* Footer with Edit, Delete, Download Report PDF, and Close buttons */}
+            <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setViewingDoctor(null);
+                    handleOpenEditForm(viewingDoctor);
+                  }}
+                  className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  id="edit-from-modal-btn"
+                >
+                  <Edit3 size={12} />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Are you absolutely sure you want to remove Dr. ${viewingDoctor.name}?`)) {
+                      onDeleteDoctor(viewingDoctor.id);
+                      setViewingDoctor(null);
+                    }
+                  }}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 size={12} />
+                  <span>Delete</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleDownloadDoctorCardPDF}
+                  className="bg-[#e8f5e9] hover:bg-[#c8e6c9] text-[#2ebd59] border border-green-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Download size={12} />
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  onClick={() => setViewingDoctor(null)}
+                  className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer"
+                  id="close-from-modal-btn"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
           </div>

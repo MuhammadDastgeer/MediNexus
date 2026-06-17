@@ -75,15 +75,63 @@ export default function PatientsView({
   const [selectedRoomName, setSelectedRoomName] = useState('');
   const [selectedBedNumber, setSelectedBedNumber] = useState('');
 
+  const getTodayDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Inline Appointment Variables (Optional check box)
   const [bookAppointmentNow, setBookAppointmentNow] = useState(false);
   const [appointmentDept, setAppointmentDept] = useState('Outpatient Department (OPD)');
   const [selectedDoctorName, setSelectedDoctorName] = useState('');
   const [appointmentReason, setAppointmentReason] = useState('');
-  const [appointmentDate, setAppointmentDate] = useState('2026-06-16');
+  const [appointmentDate, setAppointmentDate] = useState(() => getTodayDateString());
   const [appointmentSlot, setAppointmentSlot] = useState('09:00 AM');
 
   const [search, setSearch] = useState('');
+
+  // Quick book appointment from table or slide-over
+  const [selectedPatientForBooking, setSelectedPatientForBooking] = useState<Patient | null>(null);
+  const [drawerBookingDept, setDrawerBookingDept] = useState('Outpatient Department (OPD)');
+  const [drawerBookingDoc, setDrawerBookingDoc] = useState('');
+  const [drawerBookingReason, setDrawerBookingReason] = useState('');
+  const [drawerBookingDate, setDrawerBookingDate] = useState(() => getTodayDateString());
+  const [drawerBookingSlot, setDrawerBookingSlot] = useState('09:00 AM');
+
+  const handleQuickBookingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPatientForBooking) return;
+    if (!drawerBookingDoc) {
+      alert("Please select a Doctor.");
+      return;
+    }
+
+    const chosenDoc = doctors.find((d) => d.name === drawerBookingDoc);
+    onAddAppointment({
+      patientName: selectedPatientForBooking.name,
+      doctorName: drawerBookingDoc,
+      specialization: chosenDoc ? chosenDoc.specialization : 'General Medicine',
+      date: drawerBookingDate,
+      time: drawerBookingSlot,
+      status: 'Scheduled',
+      type: selectedPatientForBooking.status === 'New' ? 'Regular' : 'Follow-up',
+      patientEmail: selectedPatientForBooking.email || '',
+      patientPassword: selectedPatientForBooking.password || '',
+      patientPhone: selectedPatientForBooking.phone || '',
+      patientGender: selectedPatientForBooking.gender || 'Male',
+      age: selectedPatientForBooking.age || 30,
+    });
+
+    // Reset state & refresh
+    alert(`Appointment successfully booked for ${selectedPatientForBooking.name} on ${drawerBookingDate} at ${drawerBookingSlot}!`);
+    setSelectedPatientForBooking(null);
+    setDrawerBookingDoc('');
+    setDrawerBookingReason('');
+    if (onRefresh) onRefresh();
+  };
 
   // Prepopulate rooms and beds dynamically based on selected ward
   const activeWard = wards.find((w) => String(w.id) === selectedWardId);
@@ -148,8 +196,8 @@ export default function PatientsView({
   // Form submit handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !gender) {
-      alert('Please fill in Name, Phone, and Gender to register the patient.');
+    if (!name || !phone || !gender || !email || !password) {
+      alert('Please fill in Name, Phone, Gender, Email, and Password to register the patient.');
       return;
     }
 
@@ -880,18 +928,19 @@ export default function PatientsView({
               </div>
             </div>
 
-            {/* OPTIONAL SEC: Patient Online Portal Access Profile */}
+            {/* Patient Online Portal Access Profile */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-xs overflow-hidden">
               <div className="bg-[#fafbfc] px-6 py-4 border-b border-slate-100 flex items-center gap-2">
                 <ShieldCheck size={16} className="text-[#007f6e]" />
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Patient Login Credentials (Optional)</h3>
+                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Patient Login Credentials *</h3>
               </div>
               
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Email Address</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Email Address *</label>
                   <input
                     type="email"
+                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="patient@gmail.com"
@@ -900,9 +949,10 @@ export default function PatientsView({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Password</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Password *</label>
                   <input
                     type="password"
+                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
@@ -1651,9 +1701,21 @@ export default function PatientsView({
 
               {/* Part 3: Related Consultation & Appointments matching user request */}
               <div className="space-y-3">
-                <h4 className="font-extrabold text-emerald-700 border-b border-emerald-50 pb-1 flex items-center gap-1.5">
-                  <Calendar size={14} />
-                  <span>Appointments & Consultations scheduled</span>
+                <h4 className="font-extrabold text-emerald-700 border-b border-emerald-50 pb-1 flex items-center justify-between font-sans">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={14} />
+                    <span>Appointments & Consultations scheduled</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedPatientForBooking(viewingPatient);
+                      setDrawerBookingDate(getTodayDateString());
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-[#007f6e] hover:bg-[#006657] text-white rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={12} />
+                    <span>Book Appt</span>
+                  </button>
                 </h4>
                 {appointments.filter((a) => a.patientName.toLowerCase() === viewingPatient.name.toLowerCase()).length === 0 ? (
                   <p className="text-slate-400 italic">No scheduled appointments logged for this patient.</p>
@@ -1748,6 +1810,133 @@ export default function PatientsView({
                 Close Records
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK BOOK APPOINTMENT MODAL FOR A CLIENT */}
+      {selectedPatientForBooking && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in" id="quick-book-modal">
+          <div className="bg-white rounded-2xl w-full max-w-lg border border-slate-100 shadow-2xl overflow-hidden animate-scale-up">
+            <div className="bg-[#007f6e] text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Calendar size={18} />
+                <div>
+                  <h3 className="text-sm font-bold">Book Schedule Slot</h3>
+                  <p className="text-[11px] text-teal-50/80">Registering appointment for {selectedPatientForBooking.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPatientForBooking(null)}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickBookingSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">PATIENT NAME</label>
+                <input
+                  type="text"
+                  disabled
+                  value={selectedPatientForBooking.name}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-505 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">DEPARTMENT *</label>
+                  <select
+                    value={drawerBookingDept}
+                    onChange={(e) => setDrawerBookingDept(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e] h-10"
+                  >
+                    <option value="Outpatient Department (OPD)">Outpatient Department (OPD)</option>
+                    <option value="Emergency Care Ward">Emergency Care Ward</option>
+                    <option value="Cardiology Department">Cardiology Department</option>
+                    <option value="Pediatrics Clinic">Pediatrics Clinic</option>
+                    <option value="Orthopedics Lab">Orthopedics Lab</option>
+                    <option value="Neurology Dept">Neurology Dept</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">DOCTOR *</label>
+                  <select
+                    value={drawerBookingDoc}
+                    onChange={(e) => setDrawerBookingDoc(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e] h-10 font-bold text-slate-705"
+                  >
+                    <option value="">Select Doctor</option>
+                    {doctors.map((doc) => (
+                      <option key={doc.id} value={doc.name}>
+                        {doc.name} ({doc.specialization})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">APPOINTMENT DATE *</label>
+                  <input
+                    type="date"
+                    value={drawerBookingDate}
+                    onChange={(e) => setDrawerBookingDate(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e] h-10"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">TIME SLOT *</label>
+                  <select
+                    value={drawerBookingSlot}
+                    onChange={(e) => setDrawerBookingSlot(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e] h-10"
+                  >
+                    <option value="09:00 AM">09:00 AM</option>
+                    <option value="10:00 AM">10:00 AM</option>
+                    <option value="11:00 AM">11:00 AM</option>
+                    <option value="12:00 PM">12:00 PM</option>
+                    <option value="02:00 PM">02:00 PM</option>
+                    <option value="03:00 PM">03:00 PM</option>
+                    <option value="04:00 PM">04:00 PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">REASON FOR VISIT / CHIEF COMPLAINT</label>
+                <input
+                  type="text"
+                  value={drawerBookingReason}
+                  onChange={(e) => setDrawerBookingReason(e.target.value)}
+                  placeholder="e.g. Regular review, High blood pressure"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPatientForBooking(null)}
+                  className="px-5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl text-slate-500 bg-white hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 text-xs bg-[#007f6e] text-white font-bold rounded-xl hover:bg-[#006657] transition-all shadow-md"
+                >
+                  Confirm Appointment
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

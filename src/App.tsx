@@ -221,6 +221,55 @@ export default function App() {
     handleRefreshAll();
   }, []);
 
+  // Automated daily doctor roster status checker and system verification
+  useEffect(() => {
+    // Only proceed once doctors and appointments are cataloged
+    if (!doctors || doctors.length === 0) return;
+
+    // Get current calendar day in local system format
+    const todayStr = new Date().toDateString();
+    const lastDailyRosterSync = localStorage.getItem('last_daily_hospital_roster_sync');
+
+    if (lastDailyRosterSync === todayStr) return; // Already finished daily verification check
+
+    const syncRosterDaily = async () => {
+      console.log("Initiating daily hospital roster automatic sync.");
+      let changedAny = false;
+      const SwedishDate = new Date();
+      const todayDateStr = `${SwedishDate.getFullYear()}-${String(SwedishDate.getMonth() + 1).padStart(2, '0')}-${String(SwedishDate.getDate()).padStart(2, '0')}`;
+      
+      for (const doc of doctors) {
+        // Find if they have any scheduled appointment today
+        const hasApptToday = appointments.some(
+          a => (a.doctorName === doc.name || a.doctorName.toLowerCase().includes(doc.name.toLowerCase())) 
+               && a.date === todayDateStr 
+               && a.status !== 'Cancelled'
+        );
+
+        // If today they have work booked, but standard status is Off Duty, auto-correct roster to On Duty!
+        if (hasApptToday && doc.status !== 'On Duty') {
+          try {
+            await fetch(`/api/doctors/${doc.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'On Duty', isActive: 1 })
+            });
+            changedAny = true;
+          } catch (e) {
+            console.warn(`Error auto-checking roster for ${doc.name}`, e);
+          }
+        }
+      }
+
+      if (changedAny) {
+        handleRefreshAll();
+      }
+      localStorage.setItem('last_daily_hospital_roster_sync', todayStr);
+    };
+
+    syncRosterDaily();
+  }, [doctors, appointments]);
+
   // Post Patient / Edit
   const handleAddPatient = async (patientInput: Omit<Patient, 'id' | 'registeredAt'> & { id?: string }) => {
     const isEdit = !!patientInput.id;
@@ -561,23 +610,24 @@ export default function App() {
     const doc = doctors.find((d) => d.id === id);
     if (!doc) return;
     const newStatus = doc.status === 'On Duty' ? 'Off Duty' : 'On Duty';
+    const isNowActive = newStatus === 'On Duty' ? 1 : 0;
 
     try {
       const res = await fetch(`/api/doctors/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, isActive: isNowActive }),
       });
       if (res.ok) {
         handleRefreshAll();
       } else {
         setDoctors((prev) =>
-          prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d))
+          prev.map((d) => (d.id === id ? { ...d, status: newStatus, isActive: isNowActive === 1 } : d))
         );
       }
     } catch {
       setDoctors((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d))
+        prev.map((d) => (d.id === id ? { ...d, status: newStatus, isActive: isNowActive === 1 } : d))
       );
     }
   };

@@ -19,21 +19,22 @@ router.post('/', (req, res) => {
     const { 
       id, name, role, department, status,
       email, phone, joinDate, dob, workingDays, address, 
-      monthlySalary, bankName, bankAccountNo, panNo, pfAccountNo, pfUan
+      monthlySalary, bankName, bankAccountNo, panNo, pfAccountNo, pfUan, password
     } = req.body;
     const stmt = db.prepare(`
       INSERT OR REPLACE INTO staff (
         id, name, role, department, status,
         email, phone, joinDate, dob, workingDays, address,
-        monthlySalary, bankName, bankAccountNo, panNo, pfAccountNo, pfUan
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        monthlySalary, bankName, bankAccountNo, panNo, pfAccountNo, pfUan, password
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       id, name, role, department, status,
       email || null, phone || null, joinDate || null, dob || null, 
       workingDays !== undefined ? String(workingDays) : null, address || null, 
       monthlySalary !== undefined ? Number(monthlySalary) : null, 
-      bankName || null, bankAccountNo || null, panNo || null, pfAccountNo || null, pfUan || null
+      bankName || null, bankAccountNo || null, panNo || null, pfAccountNo || null, pfUan || null,
+      password || null
     );
     res.json({ success: true, id });
   } catch (err: any) {

@@ -19,7 +19,10 @@ import {
   Phone, 
   Mail, 
   Hash, 
-  FileText
+  FileText,
+  Edit3,
+  Download,
+  X
 } from 'lucide-react';
 import { Appointment, Doctor } from '../types';
 
@@ -57,11 +60,17 @@ export default function ConsultationView({
   };
 
   // Today's hardcoded date matching application state
-  const TODAY_DATE_STR = '2026-06-15';
+  const TODAY_DATE_STR = (() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })();
   const TODAY = parseLocalDate(TODAY_DATE_STR);
 
   const [currentDate, setCurrentDate] = useState<Date>(parseLocalDate(TODAY_DATE_STR));
-  const [showAllDates, setShowAllDates] = useState(false);
+  const [showAllDates, setShowAllDates] = useState(true);
   
   // Filter states
   const [selectedDept, setSelectedDept] = useState('All Departments');
@@ -536,96 +545,129 @@ export default function ConsultationView({
 
       {/* VIEW DETAILS DIALOG MODAL */}
       {viewingAppt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs select-none p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <FileText size={16} className="text-[#007f6e]" />
-                <h3 className="text-sm font-bold text-slate-800">Appointment Ledger Details</h3>
-              </div>
-              <button 
+        <div className="fixed inset-0 z-50 bg-[#090d16]/60 backdrop-blur-xs flex items-center justify-center p-4" id="consultation-view-modal">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-100 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Gradient Banner */}
+            <div className="bg-gradient-to-r from-[#007f6e] to-[#115e59] text-white p-6 relative">
+              <button
                 onClick={() => setViewingAppt(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold bg-white hover:bg-slate-100 w-7 h-7 rounded-full flex items-center justify-center border border-slate-200"
+                className="absolute top-4 right-4 bg-white/15 hover:bg-white/20 text-white rounded-full p-2.5 transition-colors focus:outline-none"
               >
-                ✕
+                <X size={15} />
               </button>
-            </div>
-
-            {/* Info contents */}
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3 bg-emerald-50/40 p-3.5 rounded-xl border border-emerald-100/30">
-                <div className="w-10 h-10 bg-[#007f6e]/10 rounded-full flex items-center justify-center text-[#007f6e] font-extrabold text-base">
-                  {viewingAppt.patientName.slice(0, 1).toUpperCase()}
+              
+              <div className="flex gap-4 items-center">
+                <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center text-white font-extrabold text-base shadow-xs">
+                  {viewingAppt.patientName.trim().charAt(0) || 'C'}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800 leading-tight">{viewingAppt.patientName}</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-sm font-mono">{viewingAppt.id}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${viewingAppt.type === 'Follow-up' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {viewingAppt.type || 'Regular'}
+                  <h2 className="text-md md:text-lg font-bold">{viewingAppt.patientName}</h2>
+                  <span className="text-emerald-100 text-xs font-semibold bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10 inline-block mt-1">
+                    Specialist: {viewingAppt.doctorName}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body Contents */}
+            <div className="p-6 space-y-5 max-h-[30rem] overflow-y-auto">
+              {/* Row 1: Basic Appt Coordinates */}
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1.5 mb-2.5">Schedule & Slot Parameters</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs font-medium">
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Specialty Field</span>
+                    <span className="text-[#007f6e] mt-0.5 block font-bold">{viewingAppt.specialization}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Appointment Date</span>
+                    <span className="text-slate-800 mt-0.5 block font-mono font-bold">{viewingAppt.date}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Assigned Slot</span>
+                    <span className="text-slate-800 mt-0.5 block font-mono">{viewingAppt.time}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Consult Type</span>
+                    <span className="text-slate-850 mt-0.5 block font-semibold">{viewingAppt.type || 'Regular / General'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Case Status</span>
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-0.5 ${
+                      viewingAppt.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
+                      viewingAppt.status === 'Confirmed' ? 'bg-indigo-50 text-indigo-600' : 
+                      viewingAppt.status === 'Cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                    }`}>
+                      {viewingAppt.status}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Doctor Assigned</span>
-                  <span className="text-xs font-semibold text-slate-800 block">{viewingAppt.doctorName}</span>
-                </div>
-                <div className="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5 font-sans">Speciality Field</span>
-                  <span className="text-xs font-semibold text-[#007f6e] hover:bg-slate-100 rounded block">{viewingAppt.specialization}</span>
-                </div>
-                <div className="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Appt Date</span>
-                  <span className="text-xs font-semibold text-slate-800 block">{viewingAppt.date}</span>
-                </div>
-                <div className="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Schedule Time</span>
-                  <span className="text-xs font-semibold text-slate-800 block font-mono">{viewingAppt.time}</span>
-                </div>
-                <div className="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 col-span-2">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">State Status</span>
-                  <span className={`inline-block px-2 py-0.5 font-bold rounded text-[10px] ${
-                    viewingAppt.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
-                    viewingAppt.status === 'Confirmed' ? 'bg-indigo-50 text-indigo-600' : 
-                    viewingAppt.status === 'Cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
-                  }`}>
-                    {viewingAppt.status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Extra Info */}
-              <div className="border-t border-slate-100 pt-3.5 space-y-2">
-                <h5 className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Demographic & Contacts</h5>
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <Phone size={11} className="text-slate-400" />
-                    <span>{viewingAppt.patientPhone || 'No phone'}</span>
+              {/* Row 2: Demographic parameters */}
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1.5 mb-2.5">Patient Credentials</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs font-medium">
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Contact Phone</span>
+                    <span className="text-slate-850 mt-0.5 block font-mono">{viewingAppt.patientPhone || 'N/A'}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Mail size={11} className="text-slate-400" />
-                    <span className="truncate">{viewingAppt.patientEmail || 'No email'}</span>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Email Address</span>
+                    <span className="text-slate-850 mt-0.5 block break-all">{viewingAppt.patientEmail || 'N/A'}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 col-span-2">
-                    <User size={11} className="text-slate-400" />
-                    <span>Age: {viewingAppt.age || 'N/A'} | Gender: {viewingAppt.patientGender || 'Unspecified'}</span>
+                  <div>
+                    <span className="text-slate-400 font-semibold block uppercase text-[9px]">Demographics</span>
+                    <span className="text-slate-850 mt-0.5 block">Age: {viewingAppt.age || 'N/A'} | {viewingAppt.patientGender || 'Unspecified'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Footer buttons */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 text-right">
-              <button
-                onClick={() => setViewingAppt(null)}
-                className="bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors"
-              >
-                Done
-              </button>
+            <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setEditingAppt(viewingAppt);
+                    setViewingAppt(null);
+                  }}
+                  className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
+                >
+                  <Edit3 size={12} />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to delete appointment clinical log for ${viewingAppt.patientName}?`)) {
+                      if (onDeleteAppointment) onDeleteAppointment(viewingAppt.id);
+                      setViewingAppt(null);
+                    }
+                  }}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
+                >
+                  <Trash2 size={12} />
+                  <span>Delete</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    window.print();
+                  }}
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/55 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
+                >
+                  <Download size={12} />
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  onClick={() => setViewingAppt(null)}
+                  className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold transition-all"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -651,66 +693,51 @@ export default function ConsultationView({
 
             {/* Form Inputs */}
             <div className="p-6 space-y-4">
-              {/* Date Block */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                  Consultation Date
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={editDate}
-                    onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white text-slate-800 border border-slate-200 rounded-lg transition-all focus:border-[#007f6e] focus:outline-none"
-                    id="edit-appointment-date"
-                  />
-                </div>
+              <div className="bg-[#f0f9f6]/80 border border-emerald-150 p-3 rounded-xl flex items-start gap-2 mb-2">
+                <Stethoscope size={15} className="text-[#007f6e] mt-0.5 shrink-0" />
+                <p className="text-[11px] text-emerald-800 leading-relaxed font-medium">
+                  <strong>Consultation Mode:</strong> Only appointment status can be modified here. Clinical details, date, and doctor slots are preserved to prevent changes to medical records.
+                </p>
               </div>
 
-              {/* Time Block */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                  Scheduled Time (e.g. 10:30 AM)
-                </label>
-                <input
-                  type="text"
-                  value={editTime}
-                  onChange={(e) => setEditTime(e.target.value)}
-                  placeholder="e.g. 11:30 AM"
-                  className="w-full text-xs px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white text-slate-800 border border-slate-200 rounded-lg transition-all focus:border-[#007f6e] focus:outline-none font-mono"
-                  id="edit-appointment-time"
-                />
+              {/* Consultation Info (Read-Only) */}
+              <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl space-y-2.5 text-xs text-slate-600">
+                <div className="flex justify-between border-b border-slate-100/60 pb-2">
+                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Patient Name</span>
+                  <span className="font-semibold text-slate-800 capitalize">{editingAppt.patientName}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100/60 pb-2">
+                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Assigned Specialist</span>
+                  <span className="font-semibold text-slate-700">{editingAppt.doctorName} ({editingAppt.specialization})</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100/60 pb-2">
+                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Original Date</span>
+                  <span className="font-mono font-bold text-slate-700">{editingAppt.date}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100/60 pb-2">
+                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Scheduled Time</span>
+                  <span className="font-mono text-slate-700">{editingAppt.time || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Appointment Type</span>
+                  <span className="font-semibold text-slate-705 bg-slate-100 px-2 py-0.5 rounded text-[10px]">{editingAppt.type || 'Regular / General'}</span>
+                </div>
               </div>
 
               {/* Status Select dropdown */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                  Status State
+                <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                  <span>Modify Status State *</span>
                 </label>
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value as any)}
-                  className="w-full text-xs px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white text-slate-800 border border-slate-200 rounded-lg focus:outline-none focus:border-[#007f6e] transition-all font-semibold"
+                  className="w-full text-xs px-3.5 py-2.5 bg-white border-2 border-[#007f6e] text-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-semibold cursor-pointer shadow-xs"
                 >
                   <option value="Scheduled">Scheduled (Remaining)</option>
                   <option value="Confirmed">Confirmed (In Progress)</option>
                   <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-
-              {/* Type Select dropdown */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                  Appointment Type
-                </label>
-                <select
-                  value={editType}
-                  onChange={(e) => setEditType(e.target.value as any)}
-                  className="w-full text-xs px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white text-slate-800 border border-slate-200 rounded-lg focus:outline-none focus:border-[#007f6e] transition-all font-semibold"
-                >
-                  <option value="Regular">Regular</option>
-                  <option value="Follow-up">Follow-up</option>
                 </select>
               </div>
             </div>
