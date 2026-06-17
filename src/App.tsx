@@ -24,7 +24,79 @@ import ReportsView from './components/ReportsView';
 import SupportView from './components/SupportView';
 
 export default function App() {
-  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const [activeView, setActiveViewState] = useState<ActiveView>('dashboard');
+
+  const viewToPathMap: Record<ActiveView, string> = {
+    'dashboard': '/admin/dashboard',
+    'appointments': '/admin/appointments',
+    'consultation': '/admin/consultation',
+    'billing': '/admin/billing',
+    'inventory': '/admin/inventory',
+    'ipd-wards': '/admin/ipd-wards',
+    'staff': '/admin/staff',
+    'doctors': '/admin/doctors',
+    'patients': '/admin/patients',
+    'departments': '/admin/departments',
+    'enquiries': '/admin/enquiries',
+    'medical-tourism': '/admin/medical-tourism',
+    'blogs': '/admin/blogs',
+    'reports': '/admin/reports',
+    'finance': '/admin/finance',
+    'configure-hospital': '/admin/configure-hospital',
+    'support': '/admin/support',
+  };
+
+  const getViewFromPath = (pathname: string): ActiveView => {
+    const cleanPath = pathname.toLowerCase().replace(/^\/+/g, '').replace(/\/+$/g, '');
+    if (cleanPath.includes('dashboard') || cleanPath.includes('desboard')) return 'dashboard';
+    if (cleanPath.includes('appointment')) return 'appointments';
+    if (cleanPath.includes('consultation')) return 'consultation';
+    if (cleanPath.includes('billing') || cleanPath.includes('bill')) return 'billing';
+    if (cleanPath.includes('inventory')) return 'inventory';
+    if (cleanPath.includes('ipd-wards') || cleanPath.includes('ward') || cleanPath.includes('ipd')) return 'ipd-wards';
+    if (cleanPath.includes('staff')) return 'staff';
+    if (cleanPath.includes('doctor')) return 'doctors';
+    if (cleanPath.includes('patient')) return 'patients';
+    if (cleanPath.includes('department')) return 'departments';
+    if (cleanPath.includes('enquiries') || cleanPath.includes('enquiry')) return 'enquiries';
+    if (cleanPath.includes('medical-tourism') || cleanPath.includes('tourism')) return 'medical-tourism';
+    if (cleanPath.includes('blog')) return 'blogs';
+    if (cleanPath.includes('report')) return 'reports';
+    if (cleanPath.includes('finance')) return 'finance';
+    if (cleanPath.includes('configure-hospital') || cleanPath.includes('configure')) return 'configure-hospital';
+    if (cleanPath.includes('support')) return 'support';
+    
+    return 'dashboard';
+  };
+
+  const setActiveView = (view: ActiveView) => {
+    setActiveViewState(view);
+    const targetPath = viewToPathMap[view] || `/admin/${view}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const matchedView = getViewFromPath(window.location.pathname);
+      setActiveViewState(matchedView);
+    };
+
+    const initialView = getViewFromPath(window.location.pathname);
+    setActiveViewState(initialView);
+
+    const targetPath = viewToPathMap[initialView];
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState(null, '', targetPath);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Dynamic state arrays backed up by SQLite Database
