@@ -11,7 +11,7 @@ import {
   Activity,
   HeartPlus,
 } from 'lucide-react';
-import { Appointment, Patient, InventoryItem, Bill, Doctor, Staff } from '../types';
+import { Appointment, Patient, InventoryItem, Bill, Doctor, Staff, Department, SubDepartment } from '../types';
 
 interface DashboardViewProps {
   appointments: Appointment[];
@@ -21,6 +21,11 @@ interface DashboardViewProps {
   onNavigate: (view: any) => void;
   doctors: Doctor[];
   staffList: Staff[];
+  enquiries?: any[];
+  blogPosts?: any[];
+  departments?: Department[];
+  subDepartments?: SubDepartment[];
+  transactions?: any[];
 }
 
 export default function DashboardView({
@@ -31,6 +36,11 @@ export default function DashboardView({
   onNavigate,
   doctors = [],
   staffList = [],
+  enquiries = [],
+  blogPosts = [],
+  departments = [],
+  subDepartments = [],
+  transactions = [],
 }: DashboardViewProps) {
   const getTodayDateString = () => {
     const d = new Date();
@@ -125,6 +135,191 @@ export default function DashboardView({
   const revenueThisMonth = bills
     .filter((b) => isThisMonth(b.date) && b.status === "Paid")
     .reduce((sum, b) => sum + b.amount, 0);
+
+  const totalEarnedRevenue = bills
+    .filter((b) => b.status === 'Paid')
+    .reduce((sum, b) => sum + b.amount, 0);
+
+  const followUpAppointments = appointments.filter(
+    (a) => a.type?.toLowerCase() === 'follow-up'
+  );
+
+  // Dynamic live system notice / alert generator
+  const getLiveAlerts = () => {
+    const list: Array<{
+      id: string;
+      title: string;
+      time: string;
+      type: string;
+      color: string;
+      icon: 'Calendar' | 'UserCheck' | 'IndianRupee' | 'Users' | 'Activity' | 'Bell' | 'HeartPlus';
+    }> = [];
+
+    // 1. Appointments
+    (appointments || []).forEach(a => {
+      list.push({
+        id: `appt-${a.id}`,
+        title: `Appointment Booked: ${a.patientName} (${a.type || 'Consultation'}) with Dr. ${a.doctorName}`,
+        time: a.date ? `${a.date} @ ${a.time}` : 'Scheduled',
+        type: 'Appointment',
+        color: 'emerald',
+        icon: 'Calendar'
+      });
+    });
+
+    // 2. Patients
+    (patients || []).forEach(p => {
+      list.push({
+        id: `pat-${p.id}`,
+        title: `New Patient Enrolled: ${p.name} (${p.gender}, ${p.age} yrs)`,
+        time: p.registeredAt ? new Date(p.registeredAt).toLocaleDateString() : 'Just registered',
+        type: 'Patient',
+        color: 'sky',
+        icon: 'UserCheck'
+      });
+    });
+
+    // 3. Bills
+    (bills || []).forEach(b => {
+      list.push({
+        id: `bill-${b.id}`,
+        title: `Billing Invoice Generated: ₹${b.amount} for ${b.patientName} (${b.status})`,
+        time: b.date || 'Today',
+        type: 'Billing',
+        color: 'amber',
+        icon: 'IndianRupee'
+      });
+    });
+
+    // 4. Doctors
+    (doctors || []).forEach(d => {
+      list.push({
+        id: `doc-${d.id}`,
+        title: `Specialist Enrolled: Dr. ${d.name} (${d.specialization})`,
+        time: 'Registered with On-duty profile',
+        type: 'Clinical Registry',
+        color: 'indigo',
+        icon: 'Users'
+      });
+    });
+
+    // 5. Staff
+    (staffList || []).forEach(s => {
+      list.push({
+        id: `staff-${s.id}`,
+        title: `Staff Recruited: ${s.name} (${s.role}) for ${s.department}`,
+        time: s.joinDate || 'Access Configured',
+        type: 'HR Staff',
+        color: 'teal',
+        icon: 'Users'
+      });
+    });
+
+    // 6. Enquiries
+    (enquiries || []).forEach(enq => {
+      list.push({
+        id: `enq-${enq.id}`,
+        title: `New Enquiry Received: "${enq.query || 'Inquiry description'}" from ${enq.name || 'Anonymous'}`,
+        time: enq.date || 'Support Inquiry',
+        type: 'Helpdesk Enquiry',
+        color: 'rose',
+        icon: 'Bell'
+      });
+    });
+
+    // 7. Blog Posts
+    (blogPosts || []).forEach(post => {
+      list.push({
+        id: `blog-${post.id}`,
+        title: `New Article: "${post.title}"`,
+        time: post.date ? new Date(post.date).toLocaleDateString() : 'Healthcare Blog',
+        type: 'Health Blog',
+        color: 'purple',
+        icon: 'Activity'
+      });
+    });
+
+    // 8. Departments & Sub-Depts
+    (departments || []).forEach(dept => {
+      list.push({
+        id: `dept-${dept.id}`,
+        title: `Medical Department Added: "${dept.name}" (${dept.code})`,
+        time: dept.type || 'Clinical Unit',
+        type: 'Infrastructure',
+        color: 'violet',
+        icon: 'HeartPlus'
+      });
+    });
+
+    (subDepartments || []).forEach(sub => {
+      list.push({
+        id: `sub-${sub.id}`,
+        title: `Clinical Sub-department Registered: "${sub.name}" (${sub.code})`,
+        time: 'Active Procedure Clinic',
+        type: 'Infrastructure',
+        color: 'cyan',
+        icon: 'HeartPlus'
+      });
+    });
+
+    // Weight parser for timestamps / numeric sorting to bubble up freshest entries
+    const getWeight = (itemId: string) => {
+      const match = itemId.match(/\d+/g);
+      if (match) {
+        return parseInt(match.join(''), 10);
+      }
+      return 0;
+    };
+
+    // Sort descending by weight
+    list.sort((x, y) => getWeight(y.id) - getWeight(x.id));
+
+    // Fallback if empty
+    if (list.length === 0) {
+      list.push({
+        id: 'fallback-system',
+        title: 'Hospital Core Systems Operational & Verified',
+        time: 'Real-time normal telemetry stream',
+        type: 'System Integrity Logs',
+        color: 'emerald',
+        icon: 'Activity'
+      });
+    }
+
+    return list.slice(0, 5); // Return top 5 freshest notices to keep panel elegant
+  };
+
+  const renderAlertIcon = (iconName: string, color: string) => {
+    const iconProps = { size: 14 };
+    let element = <Bell {...iconProps} />;
+    
+    if (iconName === 'Calendar') element = <Calendar {...iconProps} />;
+    else if (iconName === 'UserCheck') element = <UserCheck {...iconProps} />;
+    else if (iconName === 'IndianRupee') element = <IndianRupee {...iconProps} />;
+    else if (iconName === 'Users') element = <Users {...iconProps} />;
+    else if (iconName === 'Activity') element = <Activity {...iconProps} />;
+    else if (iconName === 'HeartPlus') element = <HeartPlus {...iconProps} />;
+
+    const themeMap: Record<string, string> = {
+      emerald: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+      sky: 'bg-sky-50 text-sky-600 border border-sky-100',
+      amber: 'bg-amber-50 text-amber-600 border border-[#fae5cc]',
+      indigo: 'bg-indigo-50 text-indigo-600 border border-indigo-100',
+      teal: 'bg-teal-50 text-teal-600 border border-teal-100',
+      rose: 'bg-rose-50 text-rose-600 border border-rose-100',
+      purple: 'bg-purple-50 text-purple-600 border border-purple-100',
+      violet: 'bg-violet-50 text-violet-600 border border-violet-100',
+      cyan: 'bg-cyan-50 text-cyan-600 border border-cyan-100'
+    };
+
+    const styleClass = themeMap[color] || 'bg-slate-50 text-slate-600 border border-slate-100';
+
+    return (
+      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${styleClass}`}>
+        {element}
+      </div>
+    );
+  };
 
   // Stats Pills computed live
   const scheduledCount = appointments.filter((a) => a.status === 'Scheduled').length;
@@ -226,15 +421,20 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* Card 4: Revenue Today */}
+        {/* Card 4: Earned Revenue */}
         <div className="bg-[#fdf3e7] border border-[#fae5cc] rounded-xl p-4 flex items-center gap-4 transition-all hover:scale-[1.01]" id="kpi-revenue-today">
           <div className="w-11 h-11 bg-[#f39c12] text-white rounded-xl flex items-center justify-center shadow-sm">
             <IndianRupee size={20} />
           </div>
-          <div>
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Revenue Today</h4>
-            <div className="text-2xl font-bold text-slate-800 mt-0.5">₹{totalRevenueCollected.toLocaleString()}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">₹{revenueThisMonth.toLocaleString()} this month</p>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Earned Revenue</h4>
+            <div className="text-2xl font-bold text-[#e67e22] mt-0.5" id="dashboard-total-earned-revenue-display">
+              ₹{totalEarnedRevenue.toLocaleString()}
+            </div>
+            <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-400 font-medium mt-1">
+              <span>Today: <strong className="text-slate-700">₹{totalRevenueCollected.toLocaleString()}</strong></span>
+              <span>This Month: <strong className="text-slate-700">₹{revenueThisMonth.toLocaleString()}</strong></span>
+            </div>
           </div>
         </div>
       </div>
@@ -346,103 +546,153 @@ export default function DashboardView({
 
         {/* Live Alerts Panel */}
         <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" id="trends-alerts-card">
-          <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="alerts-card-header">
-            <h3 className="text-xs font-bold text-slate-800">Live Alerts</h3>
-            <span className="text-slate-400 hover:text-slate-600 cursor-pointer">
-              <Activity size={16} />
+          <div className="flex items-center justify-between border-b border-slate-50 pb-3 h-10" id="alerts-card-header">
+            <div>
+              <h3 className="text-xs font-bold text-slate-800">Live Alerts</h3>
+              <p className="text-[9px] text-[#007f6e] font-semibold">Real-time notice board</p>
+            </div>
+            <span className="text-[#007f6e] animate-pulse flex items-center gap-1">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <Activity size={14} />
             </span>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center py-6" id="alerts-check-ring">
-            <div className="w-16 h-16 bg-[#e6f7ec] border-4 border-white ring-4 ring-[#e6f7ec]/30 rounded-full flex items-center justify-center text-[#00a85a] mb-3">
-              <CheckCircle2 size={28} />
-            </div>
-            <p className="text-xs text-slate-400 font-medium">All systems normal</p>
+          <div className="flex-1 mt-4 overflow-y-auto max-h-[190px] pr-1 space-y-3 select-none" id="alerts-notices-feed">
+            {getLiveAlerts().map((alert) => (
+              <div key={alert.id} className="flex gap-3 items-start hover:bg-slate-50 p-1.5 rounded-lg transition-colors border-b border-slate-50/50">
+                {renderAlertIcon(alert.icon, alert.color)}
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] uppercase font-extrabold text-[#007f6e]/95 tracking-tight block leading-none mb-0.5">
+                    {alert.type}
+                  </span>
+                  <p className="text-[11px] font-semibold text-slate-700 leading-normal break-words">
+                    {alert.title}
+                  </p>
+                  <span className="text-[9px] text-slate-400 font-mono mt-0.5 block">
+                    {alert.time}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Recently Registered Patients Container */}
-      <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs" id="registered-patients-card">
-        <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="registered-patients-header">
+      {/* Dynamic Patients & Follow-Up Appointments Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" id="patients-followups-row">
+        {/* Recently Registered Patients Container */}
+        <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" id="registered-patients-card">
           <div>
-            <h3 className="text-xs font-bold text-slate-800">Recently Registered Patients</h3>
-            <p className="text-[10px] text-slate-400 font-medium">
-              {totalPatientsCount} total · {patients.filter(p => new Date(p.registeredAt).toDateString() === new Date().toDateString()).length} registered today
-            </p>
+            <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="registered-patients-header">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800">Recently Registered Patients</h3>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {totalPatientsCount} total · {patients.filter(p => new Date(p.registeredAt).toDateString() === new Date().toDateString()).length} registered today
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigate('patients')}
+                className="w-7 h-7 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+                id="all-patients-link-btn"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+
+            {patients.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400 font-medium" id="registered-patients-empty">
+                No patients registered yet
+              </div>
+            ) : (
+              <div className="overflow-x-auto mt-4" id="recent-patients-list">
+                <table className="w-full text-left text-xs text-slate-600">
+                  <thead className="bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 font-sans">
+                    <tr>
+                      <th className="px-3 py-2">Patient</th>
+                      <th className="px-3 py-2">Gender / Age</th>
+                      <th className="px-3 py-2">Phone</th>
+                      <th className="px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {patients.slice(0, 4).map((p) => {
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50/50">
+                          <td className="px-3 py-2.5 font-semibold text-slate-800">{p.name}</td>
+                          <td className="px-3 py-2.5 text-slate-500">{p.gender} · {p.age} yrs</td>
+                          <td className="px-3 py-2.5 text-slate-400 font-mono text-[11px]">{p.phone}</td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                p.status === 'New' ? 'bg-[#e6f7ec]/80 text-[#00a85a]' : 'bg-[#f4effc]/80 text-[#8e52e9]'
+                              }`}
+                            >
+                              {p.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-          <button
-            onClick={() => onNavigate('patients')}
-            className="w-7 h-7 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
-            id="all-patients-link-btn"
-          >
-            <ChevronRight size={14} />
-          </button>
         </div>
 
-        {patients.length === 0 ? (
-          <div className="py-12 text-center text-xs text-slate-400 font-medium" id="registered-patients-empty">
-            No patients registered yet
-          </div>
-        ) : (
-          <div className="overflow-x-auto mt-4" id="recent-patients-list">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                <tr>
-                  <th className="px-4 py-2">Patient</th>
-                  <th className="px-4 py-2">Gender / Age</th>
-                  <th className="px-4 py-2">Phone</th>
-                  <th className="px-4 py-2">Visit Type</th>
-                  <th className="px-4 py-2">Active Appointment</th>
-                  <th className="px-4 py-2 text-right">Quick Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {patients.slice(0, 3).map((p) => {
-                  const matchedAppt = appointments.find(
-                    (a) => a.patientName.toLowerCase() === p.name.toLowerCase() && a.status !== 'Cancelled'
-                  );
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-semibold text-slate-800">{p.name}</td>
-                      <td className="px-4 py-3 text-slate-500">{p.gender} · {p.age} yrs</td>
-                      <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{p.phone}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            p.status === 'New' ? 'bg-[#e6f7ec]/80 text-[#00a85a]' : 'bg-[#f4effc]/80 text-[#8e52e9]'
-                          }`}
-                        >
-                          {p.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {matchedAppt ? (
-                          <div className="flex flex-col">
-                            <span className="text-slate-800 font-semibold">{matchedAppt.doctorName}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              {matchedAppt.date} @ {matchedAppt.time}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 italic font-medium">No schedule booked</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => onNavigate('appointments')}
-                          className="bg-slate-100 hover:bg-[#e6f4f1] border border-slate-200 text-slate-600 hover:text-[#007f6e] px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all"
-                        >
-                          Book Slot
-                        </button>
-                      </td>
+        {/* Follow-up Appointments Panel */}
+        <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" id="followups-card">
+          <div>
+            <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="followups-header">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800">Follow-Up Appointments</h3>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {followUpAppointments.length} total follow-ups booked · {followUpAppointments.filter(a => isToday(a.date)).length} due today
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigate('appointments')}
+                className="w-7 h-7 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+                id="all-followups-link-btn"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+
+            {followUpAppointments.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-xs text-slate-400 font-medium" id="followups-empty">
+                <HeartPlus size={24} className="text-[#007f6e]/30 mb-2" />
+                <span>No follow-up appointments scheduled</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto mt-4" id="recent-followups-list">
+                <table className="w-full text-left text-xs text-slate-600">
+                  <thead className="bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 font-sans">
+                    <tr>
+                      <th className="px-3 py-2">Patient</th>
+                      <th className="px-3 py-2">Doctor</th>
+                      <th className="px-3 py-2">Specialization</th>
+                      <th className="px-3 py-2 text-right">Schedule</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {followUpAppointments.slice(0, 4).map((a) => (
+                      <tr key={a.id} className="hover:bg-slate-50/50">
+                        <td className="px-3 py-2.5 font-semibold text-slate-800">{a.patientName}</td>
+                        <td className="px-3 py-2.5 text-slate-600 font-medium">Dr. {a.doctorName}</td>
+                        <td className="px-3 py-2.5 text-slate-400 text-[11px]">{a.specialization}</td>
+                        <td className="px-3 py-2.5 text-right font-mono text-[10px]">
+                          <span className="text-[#007f6e] font-bold block">{a.date}</span>
+                          <span className="text-slate-400 block">{a.time}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Two Bottom Row Navigation Cards */}

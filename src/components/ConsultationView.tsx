@@ -22,13 +22,17 @@ import {
   FileText,
   Edit3,
   Download,
-  X
+  X,
+  UserPlus
 } from 'lucide-react';
-import { Appointment, Doctor } from '../types';
+import { Appointment, Doctor, Department, Patient } from '../types';
 
 interface ConsultationViewProps {
   appointments: Appointment[];
   doctors: Doctor[];
+  departments?: Department[];
+  patients?: Patient[];
+  onAddPatient?: (patient: Omit<Patient, 'id' | 'registeredAt'> & { id?: string }) => void;
   onAddAppointment: (appt: Omit<Appointment, 'id' | 'status'>) => void;
   onUpdateAppointment?: (id: string, fields: Partial<Appointment>) => void;
   onDeleteAppointment?: (id: string) => void;
@@ -39,6 +43,9 @@ interface ConsultationViewProps {
 export default function ConsultationView({
   appointments = [],
   doctors = [],
+  departments = [],
+  patients = [],
+  onAddPatient,
   onAddAppointment,
   onUpdateAppointment,
   onDeleteAppointment,
@@ -143,22 +150,27 @@ export default function ConsultationView({
     setCurrentDate(parseLocalDate(TODAY_DATE_STR));
   };
 
-  // Get unique departments from doctors for select options
-  const uniqueDepartments = Array.from(new Set(doctors.map(d => d.specialization))).filter(Boolean);
+  // Get unique departments from added database departments and active doctor specializations
+  const uniqueDepartments = Array.from(new Set([
+    ...departments.map(d => d.name),
+    ...doctors.map(d => d.specialization)
+  ])).filter(Boolean);
 
-  // Compute live card counts for the selected date or all dates
-  const selectedDateAppts = showAllDates 
+  // Compute live card counts for the selected date or all dates (Only includes active 'new' appointments: Scheduled & Confirmed)
+  const selectedActiveAppts = (showAllDates 
     ? appointments 
-    : appointments.filter(a => matchDate(a.date, currentDate));
+    : appointments.filter(a => matchDate(a.date, currentDate))
+  ).filter(a => a.status === 'Scheduled' || a.status === 'Confirmed');
   
-  const todayAppointmentsCount = selectedDateAppts.length;
-  const completedCount = selectedDateAppts.filter(a => a.status === 'Completed').length;
-  const remainingCount = selectedDateAppts.filter(a => a.status === 'Scheduled').length; // Scheduled = Remaining
-  const inProgressCount = selectedDateAppts.filter(a => a.status === 'Confirmed').length; // Confirmed = In Progress
-  const cancelledCount = selectedDateAppts.filter(a => a.status === 'Cancelled').length; // Cancelled
+  const activeConsultationsCount = selectedActiveAppts.length;
+  const remainingCount = selectedActiveAppts.filter(a => a.status === 'Scheduled').length; // Scheduled = Remaining
+  const inProgressCount = selectedActiveAppts.filter(a => a.status === 'Confirmed').length; // Confirmed = In Progress
 
-  // Filtered Appointments list to display in table
+  // Filtered Appointments list to display in table (Only showing new active consultations, excluding completed/cancelled ones)
   const filteredAppointments = appointments.filter((a) => {
+    // "consultation ma jo new ho es ke only new he show ho old wal ni"
+    if (a.status === 'Completed' || a.status === 'Cancelled') return false;
+
     // Must match current selected date
     if (!showAllDates && !matchDate(a.date, currentDate)) return false;
 
@@ -240,60 +252,38 @@ export default function ConsultationView({
         </div>
       </div>
 
-      {/* KPI 5 Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 select-none" id="consult-kpi">
-        {/* Total Appointments */}
+      {/* KPI 3 Cards Row (Active / Now only) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 select-none" id="consult-kpi">
+        {/* Total Active Consultations */}
         <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-xs transition-shadow hover:shadow-sm">
           <div className="w-10 h-10 bg-cyan-50 text-cyan-500 rounded-xl flex items-center justify-center shrink-0">
             <Calendar size={18} />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Today's Appointments</span>
-            <span className="text-2xl font-extrabold text-slate-800 block leading-none">{todayAppointmentsCount}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Active Consultations</span>
+            <span className="text-2xl font-extrabold text-slate-800 block leading-none">{activeConsultationsCount}</span>
           </div>
         </div>
 
-        {/* Completed */}
-        <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center shrink-0">
-            <CheckCircle2 size={18} />
-          </div>
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Completed</span>
-            <span className="text-2xl font-extrabold text-slate-800 block leading-none">{completedCount}</span>
-          </div>
-        </div>
-
-        {/* Remaining */}
+        {/* Remaining (Scheduled) */}
         <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-xs transition-shadow hover:shadow-sm">
           <div className="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center shrink-0">
             <Clock size={18} />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Remaining</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Scheduled (Remaining)</span>
             <span className="text-2xl font-extrabold text-slate-800 block leading-none">{remainingCount}</span>
           </div>
         </div>
 
-        {/* In Progress */}
-        <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center shrink-0">
+        {/* In Progress (Confirmed) */}
+        <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-xs transition-shadow hover:shadow-sm mr-0">
+          <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center shrink-0">
             <Activity size={18} />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">In Progress</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">In Progress (Confirmed)</span>
             <span className="text-2xl font-extrabold text-slate-800 block leading-none">{inProgressCount}</span>
-          </div>
-        </div>
-
-        {/* Cancelled */}
-        <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center gap-3.5 shadow-xs transition-shadow hover:shadow-sm mr-0">
-          <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center shrink-0">
-            <XCircle size={18} />
-          </div>
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Cancelled</span>
-            <span className="text-2xl font-extrabold text-slate-800 block leading-none">{cancelledCount}</span>
           </div>
         </div>
       </div>
@@ -384,21 +374,16 @@ export default function ConsultationView({
         {/* Filters bar */}
         <div className="p-4 border-b border-slate-50 bg-[#fafbfc] flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3.5 flex-wrap">
-            {/* Department Dropdown */}
+            {/* Department Dropdown (Only dynamic departments from database) */}
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-medium text-slate-600 focus:outline-none focus:border-[#007f6e]"
+              className="px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-bold text-slate-600 focus:outline-none focus:border-[#007f6e] cursor-pointer"
             >
               <option value="All Departments">All Departments</option>
               {uniqueDepartments.map(dept => (
                 <option key={dept} value={dept}>{dept}</option>
               ))}
-              <option value="Cardiology">Cardiology</option>
-              <option value="Pediatrics">Pediatrics</option>
-              <option value="Orthopedics">Orthopedics</option>
-              <option value="Neurology">Neurology</option>
-              <option value="Dermatology">Dermatology</option>
             </select>
 
             {/* Doctor Dropdown */}
@@ -498,11 +483,13 @@ export default function ConsultationView({
                         a.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                         a.status === 'Confirmed' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 
                         a.status === 'Cancelled' ? 'bg-red-50 text-red-600 border-red-100' : 
+                        a.status === 'Overdue' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                         'bg-amber-50 text-amber-600 border-amber-100'
                       }`}>
                         {a.status === 'Completed' ? 'Completed' :
                          a.status === 'Confirmed' ? 'In Progress' :
-                         a.status === 'Cancelled' ? 'Cancelled' : 'Remaining'}
+                         a.status === 'Cancelled' ? 'Cancelled' : 
+                         a.status === 'Overdue' ? 'Overdue' : 'Remaining'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right pr-6">
@@ -596,7 +583,8 @@ export default function ConsultationView({
                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-0.5 ${
                       viewingAppt.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
                       viewingAppt.status === 'Confirmed' ? 'bg-indigo-50 text-indigo-600' : 
-                      viewingAppt.status === 'Cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                      viewingAppt.status === 'Cancelled' ? 'bg-red-50 text-red-600' : 
+                      viewingAppt.status === 'Overdue' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
                     }`}>
                       {viewingAppt.status}
                     </span>
@@ -619,6 +607,51 @@ export default function ConsultationView({
                   <div>
                     <span className="text-slate-400 font-semibold block uppercase text-[9px]">Demographics</span>
                     <span className="text-slate-850 mt-0.5 block">Age: {viewingAppt.age || 'N/A'} | {viewingAppt.patientGender || 'Unspecified'}</span>
+                  </div>
+                </div>
+
+                {/* Patient Database Registry integration status & trigger */}
+                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-extrabold uppercase text-[#007f6e] block tracking-wider">🧬 Registry Integration</span>
+                    <p className="text-[10px] text-slate-400">Synchronize this consultation's details with clinical databases.</p>
+                  </div>
+                  <div>
+                    {(() => {
+                      const isRegistered = (patients || []).some(p => 
+                        p.name.toLowerCase().trim() === viewingAppt.patientName.toLowerCase().trim() ||
+                        (viewingAppt.patientPhone && p.phone && p.phone.trim().replace(/[\s-+()]/g, '') === viewingAppt.patientPhone.trim().replace(/[\s-+()]/g, ''))
+                      );
+                      if (isRegistered) {
+                        return (
+                          <span className="text-[10px] font-bold text-[#007f6e] bg-[#e6f4f1] px-3.5 py-1.5 rounded-xl inline-flex items-center gap-1.5 border border-emerald-200 select-none">
+                            <CheckCircle2 size={12} /> Registry Active
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          onClick={() => {
+                            if (onAddPatient) {
+                              onAddPatient({
+                                name: viewingAppt.patientName,
+                                age: viewingAppt.age || 30,
+                                gender: viewingAppt.patientGender || 'Male',
+                                phone: viewingAppt.patientPhone || '',
+                                email: viewingAppt.patientEmail || '',
+                                dob: '',
+                                status: viewingAppt.type === 'Follow-up' ? 'Follow-up' : 'New',
+                                bloodGroup: '',
+                                address: ''
+                              });
+                            }
+                          }}
+                          className="text-[10px] font-black uppercase text-white bg-[#007f6e] hover:bg-[#006657] px-3.5 py-2 rounded-xl inline-flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                        >
+                          <UserPlus size={12} /> Add to Patients Directory
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -738,6 +771,7 @@ export default function ConsultationView({
                   <option value="Confirmed">Confirmed (In Progress)</option>
                   <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
+                  <option value="Overdue">Overdue</option>
                 </select>
               </div>
             </div>

@@ -28,15 +28,18 @@ import {
   AlertTriangle,
   Bell,
   CheckCheck,
-  Building
+  Building,
+  UserPlus
 } from 'lucide-react';
-import { Appointment, Doctor } from '../types';
+import { Appointment, Doctor, Patient } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface AppointmentsViewProps {
   appointments: Appointment[];
   doctors?: Doctor[];
+  patients?: Patient[];
   onAddAppointment: (appointment: Omit<Appointment, 'id'>) => void;
+  onAddPatient?: (patient: Omit<Patient, 'id' | 'registeredAt'> & { id?: string }) => void;
   onUpdateStatus: (id: string, status: Appointment['status']) => void;
   onUpdateAppointment?: (id: string, fields: Partial<Appointment>) => void;
   onDeleteAppointment?: (id: string) => void;
@@ -57,7 +60,9 @@ interface FollowUp {
 export default function AppointmentsView({
   appointments = [],
   doctors = [],
+  patients = [],
   onAddAppointment,
+  onAddPatient,
   onUpdateStatus,
   onUpdateAppointment,
   onDeleteAppointment,
@@ -81,9 +86,20 @@ export default function AppointmentsView({
   const [patientWhatsapp, setPatientWhatsapp] = useState('');
   const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [age, setAge] = useState<number>(30);
+  const [saveToPatientRegistry, setSaveToPatientRegistry] = useState(true);
+  const [isFollowUpFromCheckbox, setIsFollowUpFromCheckbox] = useState(false);
 
   const getTodayDateString = () => {
     const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getOffsetDateString = (daysOffset: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysOffset);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -102,7 +118,7 @@ export default function AppointmentsView({
   // General Filters for APPOINTMENTS MODE (Matches layout exactly!)
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState(() => getTodayDateString());
-  const [showAllAppointments, setShowAllAppointments] = useState(false);
+  const [showAllAppointments, setShowAllAppointments] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('All Status');
 
   // Export dropdown state
@@ -127,16 +143,24 @@ export default function AppointmentsView({
   // Initialize and seed default local storage followups so they always have realistic data matching image
   useEffect(() => {
     const saved = localStorage.getItem('hosp_followups');
+    let parsed: FollowUp[] = [];
     if (saved) {
-      setFollowUps(JSON.parse(saved));
-    } else {
+      try {
+        parsed = JSON.parse(saved);
+      } catch (e) {
+        parsed = [];
+      }
+    }
+
+    // Rewrite or seed if empty or contains old hardcoded static dates to guarantee correct tab visibility
+    if (parsed.length === 0 || parsed.some(p => p.date === '2026-06-15' || p.date === '2026-06-16' || p.date === '2026-06-12' || p.id === 'fol-103')) {
       const defaultFollowups: FollowUp[] = [
         {
           id: 'fol-101',
           patientName: 'M. Ramzan',
           doctorName: 'Dr. Anil Sharma',
           specialization: 'Cardiology',
-          date: '2026-06-15',
+          date: getOffsetDateString(0), // Exact Today
           status: 'Pending',
           phone: '+92 300 1234567',
           email: 'ramzan@gmail.com'
@@ -146,7 +170,7 @@ export default function AppointmentsView({
           patientName: 'Kiran Shah',
           doctorName: 'Dr. Priya Patel',
           specialization: 'Pediatrics',
-          date: '2026-06-16',
+          date: getOffsetDateString(2), // Exact Upcoming
           status: 'Pending',
           phone: '+92 321 9876543',
           email: 'kiran@gmail.com'
@@ -156,21 +180,35 @@ export default function AppointmentsView({
           patientName: 'Arshad Khan',
           doctorName: 'Dr. Sameer Khan',
           specialization: 'Orthopedics',
-          date: '2026-06-12',
-          status: 'Overdue',
+          date: getOffsetDateString(-3), // Exact Overdue
+          status: 'Pending',
           phone: '+92 345 1122334',
           email: 'arshad@gmail.com'
         }
       ];
       localStorage.setItem('hosp_followups', JSON.stringify(defaultFollowups));
       setFollowUps(defaultFollowups);
+    } else {
+      const normalized = parsed.map(f => {
+        if (f.date < getTodayDateString() && f.status !== 'Completed') {
+          return { ...f, status: 'Overdue' as any };
+        }
+        return f;
+      });
+      setFollowUps(normalized);
     }
   }, []);
 
   // Save followups state to localStorage whenever modified
   const saveFollowupsToStorage = (updatedList: FollowUp[]) => {
-    setFollowUps(updatedList);
-    localStorage.setItem('hosp_followups', JSON.stringify(updatedList));
+    const normalized = updatedList.map(f => {
+      if (f.date < getTodayDateString() && f.status !== 'Completed') {
+        return { ...f, status: 'Overdue' as any };
+      }
+      return f;
+    });
+    setFollowUps(normalized);
+    localStorage.setItem('hosp_followups', JSON.stringify(normalized));
   };
 
   // Drawer modal for viewing custom patient file details
@@ -320,6 +358,8 @@ export default function AppointmentsView({
     setEditingId(null);
     setIsNewAppointmentInsteadOfOverwrite(false);
     setIsExistingPatientSelected(false);
+    setSaveToPatientRegistry(true);
+    setIsFollowUpFromCheckbox(false);
     setPatientName('');
     setPatientEmail('');
     setPatientPassword('');
@@ -358,6 +398,8 @@ export default function AppointmentsView({
     setSpecialization(appt.specialization);
     setDate(appt.date);
     setTime(appt.time);
+    setIsFollowUpFromCheckbox(appt.type === 'Follow-up');
+    setSaveToPatientRegistry(true);
     
     // An edited appointment might be an existing clinical patient or a new clinical patient
     // We can assume it is an existing selected patient profile to make scheduling clean
@@ -392,8 +434,51 @@ export default function AppointmentsView({
   // Wizard Save/Submit
   const handleWizardSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patientName) {
+    if (!patientName.trim()) {
       alert('Patient name is required.');
+      return;
+    }
+    if (!patientEmail.trim()) {
+      alert('Patient email address is required.');
+      return;
+    }
+    if (!patientPassword.trim()) {
+      alert('Patient password credential is required.');
+      return;
+    }
+    if (!patientPhone.trim()) {
+      alert('Patient phone number is required.');
+      return;
+    }
+    if (!patientWhatsapp.trim()) {
+      alert('Patient WhatsApp contact number is required.');
+      return;
+    }
+    if (!age || age <= 0) {
+      alert('Valid patient age (greater than 0) is required.');
+      return;
+    }
+    if (!doctorName) {
+      alert('Practitioner selection is required (Step 2).');
+      return;
+    }
+    if (!specialization) {
+      alert('Practitioner specialization is required.');
+      return;
+    }
+    if (!date) {
+      alert('Consultation date is required (Step 3).');
+      return;
+    }
+    if (!time) {
+      alert('Time slot is required (Step 3).');
+      return;
+    }
+
+    // Force step-by-step complete review before final save submission is permitted
+    if (activeStep < 4) {
+      setActiveStep(4);
+      showToast('Form submission intercepted. Please review all details below before saving!');
       return;
     }
 
@@ -410,6 +495,7 @@ export default function AppointmentsView({
       patientWhatsapp?: string;
       patientGender?: 'Male' | 'Female' | 'Other';
       age?: number;
+      type?: 'Regular' | 'Follow-up';
     } = {
       patientName,
       doctorName,
@@ -422,8 +508,23 @@ export default function AppointmentsView({
       patientPhone,
       patientWhatsapp,
       patientGender,
-      age
+      age,
+      type: isFollowUpFromCheckbox ? 'Follow-up' : 'Regular'
     };
+
+    if (saveToPatientRegistry && onAddPatient) {
+      onAddPatient({
+        name: patientName,
+        age: age || 30,
+        gender: patientGender || 'Male',
+        phone: patientPhone || '',
+        email: patientEmail || '',
+        status: isFollowUpFromCheckbox ? 'Follow-up' : 'New',
+        dob: '',
+        bloodGroup: '',
+        address: ''
+      });
+    }
 
     if (editingId && !isNewAppointmentInsteadOfOverwrite) {
       if (onUpdateAppointment) {
@@ -519,6 +620,20 @@ export default function AppointmentsView({
     }
   });
 
+  if (patients && patients.length > 0) {
+    patients.forEach(pat => {
+      if (pat.name && !registeredPatientsList.some(p => p.name.toLowerCase() === pat.name.toLowerCase() || p.phone === pat.phone)) {
+        registeredPatientsList.push({
+          name: pat.name,
+          email: pat.email || `${pat.name.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+          phone: pat.phone || '+92 300 1234567',
+          gender: pat.gender || 'Male',
+          age: pat.age || 30
+        });
+      }
+    });
+  }
+
   const searchedPatientMatches = registeredPatientsList.filter(p => 
     p.name.toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
     p.email.toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
@@ -534,9 +649,9 @@ export default function AppointmentsView({
   const countRemainingAppts = appointments.filter(a => a.status === 'Scheduled' || a.status === 'Confirmed').length;
 
   // Followup Stats
-  const countTodayFollowups = followUps.filter(f => f.date === getTodayDateString() || f.date === '2026-06-15').length;
+  const countTodayFollowups = followUps.filter(f => f.date === getTodayDateString()).length;
   const countPendingFollowups = followUps.filter(f => f.status === 'Pending').length;
-  const countOverdueFollowups = followUps.filter(f => f.status === 'Overdue' || (f.date < getTodayDateString() && f.status !== 'Completed' && f.date !== '2026-06-15')).length;
+  const countOverdueFollowups = followUps.filter(f => f.date < getTodayDateString() && f.status !== 'Completed').length;
   const countCompletedFollowups = followUps.filter(f => f.status === 'Completed').length;
 
   // Robust date comparison helper
@@ -574,14 +689,13 @@ export default function AppointmentsView({
     // Tabs
     const todayStr = getTodayDateString();
     if (followupTab === 'today') {
-      return (f.date === todayStr || f.date === '2026-06-15') && matchesStatus;
+      return f.date === todayStr && matchesStatus;
     }
     if (followupTab === 'upcoming') {
-      return f.date > todayStr && f.date !== '2026-06-15' && matchesStatus;
+      return f.date > todayStr && matchesStatus;
     }
     if (followupTab === 'overdue') {
-      const isOverDate = f.date < todayStr && f.date !== '2026-06-15' && f.status !== 'Completed';
-      return (f.status === 'Overdue' || isOverDate) && matchesStatus;
+      return f.date < todayStr && f.status !== 'Completed' && matchesStatus;
     }
     return matchesStatus; // 'all'
   });
@@ -784,6 +898,7 @@ export default function AppointmentsView({
                   <option value="Confirmed">Confirmed</option>
                   <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
+                  <option value="Overdue">Overdue</option>
                 </select>
 
                 {/* 5. Clear buttons */}
@@ -896,6 +1011,48 @@ export default function AppointmentsView({
                             {a.patientPhone && <span className="flex items-center gap-1"><Phone size={10} /> {a.patientPhone}</span>}
                             {a.patientEmail && <span className="flex items-center gap-1"><Mail size={10} /> {a.patientEmail}</span>}
                           </div>
+                          
+                          {/* Registry verification / trigger button */}
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {(() => {
+                              const isRegistered = (patients || []).some(p => 
+                                p.name.toLowerCase().trim() === a.patientName.toLowerCase().trim() ||
+                                (a.patientPhone && p.phone && p.phone.trim().replace(/[\s-+()]/g, '') === a.patientPhone.trim().replace(/[\s-+()]/g, ''))
+                              );
+                              if (isRegistered) {
+                                return (
+                                  <span className="text-[8px] font-bold text-[#007f6e] bg-[#e6f4f1] px-2 py-0.5 rounded-md inline-flex items-center gap-1 cursor-default select-none border border-emerald-100/30 font-sans">
+                                    ✓ Saved Patient
+                                  </span>
+                                );
+                              }
+                              return (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onAddPatient) {
+                                      onAddPatient({
+                                        name: a.patientName,
+                                        age: a.age || 30,
+                                        gender: a.patientGender || 'Male',
+                                        phone: a.patientPhone || '',
+                                        email: a.patientEmail || '',
+                                        status: a.type === 'Follow-up' ? 'Follow-up' : 'New',
+                                        dob: '',
+                                        bloodGroup: '',
+                                        address: ''
+                                      });
+                                      showToast(`${a.patientName} has been stored in Patient Registry.`);
+                                    }
+                                  }}
+                                  className="text-[8px] font-black uppercase text-white bg-[#007f6e] hover:bg-[#006657] px-2 py-0.5 rounded-md inline-flex items-center gap-1 transition-all shadow-3xs cursor-pointer"
+                                  title="Click to register this appointment's patient in the database"
+                                >
+                                  <UserPlus size={8} /> Add to Patients Directory
+                                </button>
+                              );
+                            })()}
+                          </div>
                         </td>
 
                         {/* Specialist */}
@@ -934,7 +1091,9 @@ export default function AppointmentsView({
                               a.status === 'Scheduled' && 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
                             } ${a.status === 'Confirmed' && 'bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100'} ${
                               a.status === 'Completed' && 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                            } ${a.status === 'Cancelled' && 'bg-rose-50 text-rose-600 border-rose-100'}`}
+                            } ${a.status === 'Cancelled' && 'bg-rose-50 text-rose-600 border-rose-100'} ${
+                              a.status === 'Overdue' && 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'
+                            }`}
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                             <span>{a.status}</span>
@@ -1185,17 +1344,22 @@ export default function AppointmentsView({
 
                       <td className="px-6 py-4 font-mono">
                         <div className="font-semibold text-slate-700">{fol.date}</div>
-                        {(fol.date === getTodayDateString() || fol.date === '2026-06-15') && (
-                          <span className="text-[9px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Scheduled Today</span>
+                        {fol.date === getTodayDateString() && (
+                          <span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Scheduled Today</span>
                         )}
-                        {fol.date < getTodayDateString() && fol.date !== '2026-06-15' && fol.status !== 'Completed' && (
-                          <span className="text-[9px] bg-rose-50 text-rose-600 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Overdue sheet</span>
+                        {fol.date > getTodayDateString() && (
+                          <span className="text-[9px] bg-blue-50 text-blue-605 border border-blue-100 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Upcoming Visit</span>
+                        )}
+                        {fol.date < getTodayDateString() && fol.status !== 'Completed' && (
+                          <span className="text-[9px] bg-rose-50 text-rose-600 border border-rose-100 font-bold px-1.5 py-0.5 rounded mt-1 inline-block">Overdue sheet</span>
                         )}
                       </td>
 
                       <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          fol.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          fol.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                          fol.status === 'Overdue' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                          'bg-amber-50 text-amber-600 border border-amber-100'
                         }`}>
                           {fol.status}
                         </span>
@@ -1345,7 +1509,7 @@ export default function AppointmentsView({
                   }`}>
                     4
                   </span>
-                  <span>Confirm</span>
+                  <span>Review & Save</span>
                 </div>
               </button>
 
@@ -1441,6 +1605,7 @@ export default function AppointmentsView({
                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
                                   a.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
                                   a.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                  a.status === 'Overdue' ? 'bg-red-50 text-red-650 border border-red-100' :
                                   a.status === 'Confirmed' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
                                   a.status === 'Scheduled' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
                                   'bg-slate-100 text-slate-600 border border-slate-200'
@@ -1598,15 +1763,37 @@ export default function AppointmentsView({
                             </div>
 
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Phone Number *</label>
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase">Phone Number *</label>
+                                <span className="text-[9px] font-bold text-[#007f6e] animate-pulse">⚡ Auto-check system active</span>
+                              </div>
                               <input
                                 type="text"
                                 value={patientPhone}
-                                onChange={(e) => setPatientPhone(e.target.value)}
-                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
-                                placeholder="+92 300 0000000"
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setPatientPhone(val);
+                                  
+                                  // Clean phone number input to match robustly
+                                  const cleanVal = val.trim().replace(/[\s-+()]/g, '');
+                                  if (cleanVal && cleanVal.length >= 7) {
+                                    const matched = registeredPatientsList.find(p => {
+                                      const cleanPPhone = p.phone.trim().replace(/[\s-+()]/g, '');
+                                      return cleanPPhone === cleanVal || (cleanPPhone.substring(cleanPPhone.length - 7) === cleanVal.substring(cleanVal.length - 7));
+                                    });
+                                    if (matched) {
+                                      handleSelectExistingPatient(matched.name, matched.email, matched.phone, matched.gender, matched.age);
+                                      // Switch back from entering mode so we show the beautiful profile view
+                                      setIsEnteringNewPatient(false);
+                                      setIsExistingPatientSelected(true);
+                                    }
+                                  }
+                                }}
+                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e] font-mono"
+                                placeholder="+92 300 0055555"
                                 required
                               />
+                              <p className="text-[9px] text-[#007f6e]/80 font-semibold mt-1">⚡ Enter registered phone to auto-load & link folder instantly, otherwise type new details.</p>
                             </div>
 
                             <div>
@@ -1656,6 +1843,46 @@ export default function AppointmentsView({
                         </div>
                       )}
                     </>
+                  )}
+
+                  {/* Database Integration Options & Visit Type */}
+                  {(isExistingPatientSelected || isEnteringNewPatient || patientName) && (
+                    <div className="bg-[#f0fbf9] border border-teal-200/60 p-4 rounded-xl space-y-3 mt-2 animate-in fade-in duration-150">
+                      <div className="text-[10px] font-extrabold text-[#007f6e] uppercase tracking-wider block">
+                        ⚙️ Hospital Registry Options
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-4 pt-1">
+                        
+                        {/* Checkbox 1: Store in patient database */}
+                        <label className="flex items-start gap-2.5 cursor-pointer selection:bg-transparent flex-1">
+                          <input
+                            type="checkbox"
+                            checked={saveToPatientRegistry}
+                            onChange={(e) => setSaveToPatientRegistry(e.target.checked)}
+                            className="mt-0.5 h-4.5 w-4.5 text-[#007f6e] focus:ring-[#007f6e] border-slate-300 rounded cursor-pointer transition-colors"
+                          />
+                          <div className="space-y-0.5">
+                            <span className="text-xs font-bold text-slate-700 block">Save to Patients Registry</span>
+                            <span className="text-[9px] text-slate-500 block">Copy details to permanent patient files.</span>
+                          </div>
+                        </label>
+
+                        {/* Checkbox 2: Make follow-up visit */}
+                        <label className="flex items-start gap-2.5 cursor-pointer selection:bg-transparent flex-1">
+                          <input
+                            type="checkbox"
+                            checked={isFollowUpFromCheckbox}
+                            onChange={(e) => setIsFollowUpFromCheckbox(e.target.checked)}
+                            className="mt-0.5 h-4.5 w-4.5 text-[#007f6e] focus:ring-[#007f6e] border-slate-300 rounded cursor-pointer transition-colors"
+                          />
+                          <div className="space-y-0.5">
+                            <span className="text-xs font-bold text-slate-700 block text-teal-750">Mark as Follow-up Visit</span>
+                            <span className="text-[9px] text-slate-500 block">Check if this is a follow-up or subsequent visit.</span>
+                          </div>
+                        </label>
+
+                      </div>
+                    </div>
                   )}
 
                 </div>
@@ -1769,6 +1996,17 @@ export default function AppointmentsView({
               {activeStep === 4 && (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   
+                  {/* Review / Go Back Notice Banner */}
+                  <div className="bg-[#f0f9f6] border border-[#d1ebe4] p-3.5 rounded-xl flex items-start gap-2.5">
+                    <span className="text-lg">📋</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-[#007f6e]">Review Appointment Details</h4>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                        In case of any discrepancies or if you want to modify any details, you can click on the tabs above (Patient, Doctor, Schedule) or press the <strong>"Back Section"</strong> button at the bottom to edit the fields.
+                      </p>
+                    </div>
+                  </div>
+
                   {/* Conflict detection alert banner as described */}
                   {isConflictDetected() ? (
                     <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3">
@@ -1812,7 +2050,7 @@ export default function AppointmentsView({
                       </div>
                     </div>
 
-                    {/* Doctor detail */}
+                     {/* Doctor detail */}
                     <div className="p-4 grid grid-cols-2 gap-4 text-xs">
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase font-bold">Assigned Specialist</p>
@@ -1823,6 +2061,38 @@ export default function AppointmentsView({
                         <p className="text-[10px] text-slate-400 uppercase font-bold">Scheduled Framework</p>
                         <p className="font-bold text-slate-800 font-mono mt-1">{date}</p>
                         <p className="text-slate-500 font-mono text-[10px] mt-0.5">{time}</p>
+                      </div>
+                    </div>
+
+                    {/* Registry Status & Visit Category */}
+                    <div className="p-4 grid grid-cols-2 gap-4 text-xs bg-[#fbfdfd]">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Database Persistence Status</p>
+                        <div className="mt-1">
+                          {saveToPatientRegistry ? (
+                            <span className="inline-flex items-center gap-1 bg-[#e6f4f1] text-[#007f6e] text-[10px] font-bold px-2.5 py-1 rounded-md">
+                              <CheckCircle size={11} /> Save to Permanent Patients
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 text-[10px] font-bold px-2.5 py-1 rounded-md">
+                              Skip Patients Database
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Visit Classification</p>
+                        <div className="mt-1">
+                          {isFollowUpFromCheckbox ? (
+                            <span className="inline-flex items-center gap-1 bg-amber-55 text-amber-700 bg-amber-50 text-[10px] font-bold px-2.5 py-1 rounded-md border border-amber-200/50">
+                              <RefreshCw size={11} className="animate-spin" style={{ animationDuration: '4s' }} /> Follow-up Visit (Status: Follow-up)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-[#e0f2fe] text-[#0284c7] text-[10px] font-bold px-2.5 py-1 rounded-md border border-[#bae6fd]">
+                              Regular Consultation (Status: New)
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1984,6 +2254,45 @@ export default function AppointmentsView({
                         <span className="text-slate-500 text-xs font-bold font-mono">•••••••• (Secured Passport)</span>
                       </div>
                     )}
+
+                    {/* Registry Button/Indicator block */}
+                    <div className="pt-2">
+                      {(() => {
+                        const isRegistered = (patients || []).some(p => 
+                          p.name.toLowerCase().trim() === selectedAppointment.patientName.toLowerCase().trim() ||
+                          (selectedAppointment.patientPhone && p.phone && p.phone.trim().replace(/[\s-+()]/g, '') === selectedAppointment.patientPhone.trim().replace(/[\s-+()]/g, ''))
+                        );
+                        if (isRegistered) {
+                          return (
+                            <div className="w-full text-center text-[10px] font-bold text-[#007f6e] bg-[#e6f4f1] px-3 py-2.5 rounded-xl inline-flex items-center justify-center gap-1.5 border border-emerald-200 select-none">
+                              <CheckCircle2 size={12} /> Patient Registered in Database
+                            </div>
+                          );
+                        }
+                        return (
+                          <button
+                            onClick={() => {
+                              if (onAddPatient) {
+                                onAddPatient({
+                                  name: selectedAppointment.patientName,
+                                  age: selectedAppointment.age || 30,
+                                  gender: selectedAppointment.patientGender || 'Male',
+                                  phone: selectedAppointment.patientPhone || '',
+                                  email: selectedAppointment.patientEmail || '',
+                                  status: selectedAppointment.type === 'Follow-up' ? 'Follow-up' : 'New',
+                                  dob: '',
+                                  bloodGroup: '',
+                                  address: ''
+                                });
+                              }
+                            }}
+                            className="w-full text-center text-[10px] font-black uppercase text-white bg-[#007f6e] hover:bg-[#006657] px-3 py-2.5 rounded-xl inline-flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                          >
+                            <UserPlus size={12} /> Add to Patients Directory
+                          </button>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
 
@@ -2066,6 +2375,7 @@ export default function AppointmentsView({
                           <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${
                             appt.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                             appt.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                            appt.status === 'Overdue' ? 'bg-red-50 text-red-600 border-red-100' :
                             appt.status === 'Confirmed' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                             appt.status === 'Scheduled' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                             'bg-slate-200 text-slate-600 border-slate-300'

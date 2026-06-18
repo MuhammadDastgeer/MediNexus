@@ -101,7 +101,12 @@ export default function EnquiriesView({
 
   const handleSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!name || !query) return;
+    if (!name.trim()) { alert('Enquirer name is required.'); return; }
+    if (!phone.trim()) { alert('Phone number is required.'); return; }
+    if (!email.trim()) { alert('Email address is required.'); return; }
+    if (!query.trim()) { alert('Detailed query is required.'); return; }
+    if (!department) { alert('Department selection is required.'); return; }
+    if (!status) { alert('Status category is required.'); return; }
 
     onSaveEnquiry({
       id: currentId,

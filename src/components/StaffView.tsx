@@ -5,18 +5,28 @@ import {
   Trash2, Edit, Eye, X, Check, Mail, Phone, 
   MapPin, CreditCard, UserCheck, BarChart2, Camera, Download 
 } from 'lucide-react';
-import { Staff } from '../types';
+import { Staff, Department, SubDepartment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface StaffViewProps {
   staffList: Staff[];
+  departments?: Department[];
+  subDepartments?: SubDepartment[];
   onAddStaff: (s: Omit<Staff, 'id'> & { id?: string }) => void;
   onDeleteStaff: (id: string) => void;
   onRefresh: () => void;
   onNavigate?: (view: any) => void;
 }
 
-export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefresh, onNavigate }: StaffViewProps) {
+export default function StaffView({ 
+  staffList, 
+  departments = [], 
+  subDepartments = [], 
+  onAddStaff, 
+  onDeleteStaff, 
+  onRefresh, 
+  onNavigate 
+}: StaffViewProps) {
   const [activeTab, setActiveTab] = useState<'members' | 'overview'>('members');
   const [showForm, setShowForm] = useState<'add' | 'edit' | false>(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
@@ -56,7 +66,8 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
   const [address, setAddress] = useState('');
   
   const [role, setRole] = useState('Nurse');
-  const [department, setDepartment] = useState('Outpatient Department (OPD)');
+  const [department, setDepartment] = useState('');
+  const [subDepartment, setSubDepartment] = useState('');
   const [monthlySalary, setMonthlySalary] = useState<string | number>('0');
 
   const [bankName, setBankName] = useState('');
@@ -81,7 +92,23 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
     setWorkingDays(staff.workingDays !== undefined ? staff.workingDays : '26');
     setAddress(staff.address || '');
     setRole(staff.role || 'Nurse');
-    setDepartment(staff.department || 'Outpatient Department (OPD)');
+
+    let matchedParentDept = '';
+    let matchedSubDept = '';
+    const rawDept = staff.department || '';
+
+    // Check if department format is "DeptName (SubDeptName)"
+    const parenIndex = rawDept.indexOf('(');
+    if (parenIndex !== -1) {
+      matchedParentDept = rawDept.substring(0, parenIndex).trim();
+      matchedSubDept = rawDept.substring(parenIndex + 1, rawDept.length - 1).trim();
+    } else {
+      matchedParentDept = rawDept;
+    }
+
+    setDepartment(matchedParentDept || (departments.length > 0 ? departments[0].name : ''));
+    setSubDepartment(matchedSubDept);
+
     setMonthlySalary(staff.monthlySalary !== undefined ? staff.monthlySalary : '0');
     setBankName(staff.bankName || '');
     setBankAccountNo(staff.bankAccountNo || '');
@@ -103,7 +130,8 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
     setWorkingDays('26');
     setAddress('');
     setRole('Nurse');
-    setDepartment('Outpatient Department (OPD)');
+    setDepartment(departments.length > 0 ? departments[0].name : '');
+    setSubDepartment('');
     setMonthlySalary('0');
     setBankName('');
     setBankAccountNo('');
@@ -116,10 +144,49 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password || !role) {
-      alert("Please fill in all required fields marked with an asterisk (*). Name, Email, and Password are required.");
+    if (!name.trim()) { alert("Staff Full Name is required."); return; }
+    if (!email.trim()) { alert("Staff Email Address is required."); return; }
+    if (!password.trim()) { alert("Staff Password is required."); return; }
+    if (!role) { alert("Staff Role selection is required."); return; }
+    if (!phone.trim()) { alert("Staff Phone Number is required."); return; }
+    if (!joinDate) { alert("Join date is required."); return; }
+    if (!dob) { alert("Date of birth is required."); return; }
+    if (workingDays <= 0) { alert("Valid working days (more than 0) are required."); return; }
+    if (!address.trim()) { alert("Address is required."); return; }
+    if (monthlySalary <= 0) { alert("Valid monthly salary is required."); return; }
+    if (!bankName.trim()) { alert("Bank name is required."); return; }
+    if (!bankAccountNo.trim()) { alert("Bank account number is required."); return; }
+    if (!panNo.trim()) { alert("PAN card number is required."); return; }
+    if (!pfAccountNo.trim()) { alert("PF account number is required."); return; }
+    if (!pfUan.trim()) { alert("PF UAN is required."); return; }
+
+    if (!department) {
+      alert("Please select a Department from the saved list.");
       return;
     }
+    const matchingDept = (departments || []).find(d => d.name === department);
+    if (!matchingDept) {
+      alert("Please select a valid saved Department.");
+      return;
+    }
+
+    const availableSubs = (subDepartments || []).filter(s => s.departmentId === matchingDept.id);
+    if (availableSubs.length > 0) {
+      if (!subDepartment) {
+        alert("Sub Department is required. Please select one from the saved options.");
+        return;
+      }
+      const matchingSub = availableSubs.some(s => s.name === subDepartment);
+      if (!matchingSub) {
+        alert("Please select a valid saved Sub-department from the configured list.");
+        return;
+      }
+    } else {
+      alert(`Please configure at least one active Sub-department for department "${department}" under Departments tab first.`);
+      return;
+    }
+
+    const fullDeptValue = subDepartment ? `${department} (${subDepartment})` : department;
 
     const payload: Omit<Staff, 'id'> & { id?: string } = {
       name,
@@ -131,7 +198,7 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
       workingDays,
       address,
       role,
-      department,
+      department: fullDeptValue,
       monthlySalary,
       bankName,
       bankAccountNo,
@@ -687,20 +754,59 @@ export default function StaffView({ staffList, onAddStaff, onDeleteStaff, onRefr
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Department</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Department *</label>
                   <select
                     value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
+                    onChange={(e) => {
+                      setDepartment(e.target.value);
+                      setSubDepartment('');
+                    }}
                     className="w-full text-xs px-3.5 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e] h-10"
+                    required
                   >
-                    <option value="Outpatient Department (OPD)">Outpatient Department (OPD)</option>
-                    <option value="Emergency Care Ward">Emergency Care Ward</option>
-                    <option value="Intensive Care Unit (ICU)">Intensive Care Unit (ICU)</option>
-                    <option value="Billing & Reception">Billing & Reception Desk</option>
-                    <option value="Pharmacy">Pharmacy Department</option>
-                    <option value="Medical Laboratory">Medical Laboratory</option>
-                    <option value="— No Department —">— No Department —</option>
+                    <option value="">— Select Saved Department —</option>
+                    {(departments || []).filter(d => d.status === 'Active').map(d => (
+                      <option key={d.id} value={d.name}>{d.name} ({d.code})</option>
+                    ))}
                   </select>
+                  {(!departments || departments.length === 0) && (
+                    <p className="text-[10px] text-amber-600 font-medium mt-1">
+                      ⚠️ No saved departments found. Please configure them in Departments section.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Sub Department *</label>
+                  {(() => {
+                    const parentDept = (departments || []).find(d => d.name === department);
+                    const matchedSubs = parentDept ? (subDepartments || []).filter(sub => sub.departmentId === parentDept.id) : [];
+                    
+                    return (
+                      <>
+                        <select
+                          value={subDepartment}
+                          onChange={(e) => setSubDepartment(e.target.value)}
+                          className="w-full text-xs px-3.5 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e] h-10"
+                          required
+                          disabled={!department}
+                        >
+                          <option value="">— Select Sub Department —</option>
+                          {matchedSubs.map(sub => (
+                            <option key={sub.id} value={sub.name}>{sub.name} ({sub.code})</option>
+                          ))}
+                        </select>
+                        {!department ? (
+                          <p className="text-[9px] text-slate-400 mt-1">
+                            Please select a Department first.
+                          </p>
+                        ) : matchedSubs.length === 0 ? (
+                          <p className="text-[9px] text-rose-500 mt-1">
+                            ⚠️ No sub-departments configured. Please configure at least one under Departments tab first.
+                          </p>
+                        ) : null}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Monthly Salary (₹)</label>

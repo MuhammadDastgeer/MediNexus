@@ -168,10 +168,13 @@ export default function DepartmentsView({
   // Submit Dept Form
   const handleDeptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deptForm.name || !deptForm.code) {
-      alert("Please enter Name and Code.");
-      return;
-    }
+    if (!deptForm.name.trim()) { alert("Department name is required."); return; }
+    if (!deptForm.code.trim()) { alert("Department code is required."); return; }
+    if (!deptForm.description.trim()) { alert("Department description is required."); return; }
+    if (!deptForm.type) { alert("Department type is required."); return; }
+    if (!deptForm.location.trim()) { alert("Department location/building is required."); return; }
+    if (!deptForm.status) { alert("Department status is required."); return; }
+
     await onAddDepartment({
       ...deptForm,
       ...(selectedDept ? { id: selectedDept.id } : {})
@@ -182,10 +185,14 @@ export default function DepartmentsView({
   // Submit Sub Dept Form
   const handleSubSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subForm.name || !subForm.code || !subForm.departmentId) {
-      alert("Please enter Department, Name and Code.");
-      return;
-    }
+    if (!subForm.departmentId) { alert("Parent Department selection is required."); return; }
+    if (!subForm.name.trim()) { alert("Sub Department name is required."); return; }
+    if (!subForm.code.trim()) { alert("Sub Department code is required."); return; }
+    if (!subForm.description.trim()) { alert("Sub Department description is required."); return; }
+    if (!subForm.type) { alert("Sub Department type category is required."); return; }
+    if (!subForm.location.trim()) { alert("Sub Department room/wing location is required."); return; }
+    if (!subForm.status) { alert("Sub Department status is required."); return; }
+
     await onAddSubDepartment({
       ...subForm,
       ...(selectedSub ? { id: selectedSub.id } : {})

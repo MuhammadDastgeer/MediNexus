@@ -98,7 +98,16 @@ export default function IpdWardsView({
   const handleWardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!wardName.trim()) {
-      alert('Please provide a valid Ward name');
+      alert('Ward Name is required.');
+      return;
+    }
+    if (!wardType) {
+      alert('Ward Type is required.');
+      return;
+    }
+    const emptyRoom = roomsList.some(r => !r.name.trim() || !r.bedsCount || r.bedsCount <= 0);
+    if (emptyRoom) {
+      alert('All Rooms must have a valid Name and at least 1 Bed.');
       return;
     }
 

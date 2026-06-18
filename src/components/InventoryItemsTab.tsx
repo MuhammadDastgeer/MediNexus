@@ -90,10 +90,22 @@ export default function InventoryItemsTab({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) {
-      alert('Required field Item Name is missing.');
-      return;
-    }
+    if (!name.trim()) { alert('Item Name is required.'); return; }
+    if (!genericName.trim()) { alert('Generic Name is required.'); return; }
+    if (!brandName.trim()) { alert('Brand/Manufacturer Name is required.'); return; }
+    if (!category) { alert('Category selection is required.'); return; }
+    if (!subCategory.trim()) { alert('Sub Category is required.'); return; }
+    if (!unit) { alert('Unit of measure is required.'); return; }
+    if (!preferredSupplier.trim()) { alert('Preferred Supplier is required.'); return; }
+    if (!hsnCode.trim()) { alert('HSN Code is required.'); return; }
+    if (!barcode.trim()) { alert('Barcode identifier is required.'); return; }
+    if (!description.trim()) { alert('Item description is required.'); return; }
+    
+    if (purchasePrice === '' || parseFloat(purchasePrice) <= 0) { alert('Valid Purchase Price (greater than 0) is required.'); return; }
+    if (mrp === '' || parseFloat(mrp) <= 0) { alert('Valid MRP (greater than 0) is required.'); return; }
+    if (sellingPrice === '' || parseFloat(sellingPrice) <= 0) { alert('Valid Selling Price (greater than 0) is required.'); return; }
+    if (gst === '' || parseFloat(gst) < 0) { alert('Valid GST percentage rate is required.'); return; }
+    if (minStock === '' || parseInt(minStock) < 0) { alert('Valid Minimum Stock level is required.'); return; }
     
     // We pass 0 stock on initial addition, the restock tab will update stock via Purchases PO form.
     onAddInventoryItem({
@@ -143,6 +155,22 @@ export default function InventoryItemsTab({
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
+    if (!editingItem.name.trim()) { alert('Item Name is required.'); return; }
+    if (!editingItem.genericName?.trim()) { alert('Generic Name is required.'); return; }
+    if (!editingItem.brandName?.trim()) { alert('Brand Name is required.'); return; }
+    if (!editingItem.category) { alert('Category selection is required.'); return; }
+    if (!editingItem.subCategory?.trim()) { alert('Sub Category is required.'); return; }
+    if (!editingItem.unit) { alert('Unit is required.'); return; }
+    if (!editingItem.preferredSupplier?.trim()) { alert('Preferred Supplier is required.'); return; }
+    if (!editingItem.hsnCode?.trim()) { alert('HSN Code is required.'); return; }
+    if (!editingItem.barcode?.trim()) { alert('Barcode is required.'); return; }
+    if (!editingItem.description?.trim()) { alert('Description is required.'); return; }
+    if (editingItem.purchasePrice === undefined || editingItem.purchasePrice <= 0) { alert('Valid Purchase Price is required.'); return; }
+    if (editingItem.mrp === undefined || editingItem.mrp <= 0) { alert('Valid MRP is required.'); return; }
+    if (editingItem.sellingPrice === undefined || editingItem.sellingPrice <= 0) { alert('Valid Selling Price is required.'); return; }
+    if (editingItem.gst === undefined || editingItem.gst < 0) { alert('Valid GST rate is required.'); return; }
+    if (editingItem.minStock === undefined || editingItem.minStock < 0) { alert('Valid Minimum Stock level is required.'); return; }
+
     onUpdateInventoryItem(editingItem);
     setEditingItem(null);
   };

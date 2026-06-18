@@ -79,6 +79,30 @@ export default function InventoryPurchasesTab({
       alert('Must select a medical vendor.');
       return;
     }
+    if (!purchaseDate) {
+      alert('Purchase date is required.');
+      return;
+    }
+    if (!dueDate) {
+      alert('Due date is required.');
+      return;
+    }
+    if (!paymentStatus) {
+      alert('Payment status category is required.');
+      return;
+    }
+    if (!invoiceNo.trim()) {
+      alert('Invoice Number is required.');
+      return;
+    }
+    if (!remarks.trim()) {
+      alert('Remarks / Purpose details are required.');
+      return;
+    }
+    if (paidAmount === '') {
+      alert('Paid amount is required.');
+      return;
+    }
     const selectedSupplier = suppliers.find((s) => s.id === supplierId);
     if (!selectedSupplier) return;
 
@@ -120,6 +144,31 @@ export default function InventoryPurchasesTab({
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPurchase) return;
+    if (!editingPurchase.invoiceNo || !editingPurchase.invoiceNo.trim()) {
+      alert('Invoice Number is required.');
+      return;
+    }
+    if (!editingPurchase.purchaseDate) {
+      alert('Purchase date is required.');
+      return;
+    }
+    if (!editingPurchase.dueDate) {
+      alert('Due date is required.');
+      return;
+    }
+    if (editingPurchase.amount === undefined || editingPurchase.amount <= 0) {
+      alert('Valid purchase amount is required.');
+      return;
+    }
+    if (editingPurchase.paidAmount === undefined || editingPurchase.paidAmount < 0) {
+      alert('Valid paid amount is required.');
+      return;
+    }
+    if (!editingPurchase.remarks || !editingPurchase.remarks.trim()) {
+      alert('Remarks are required.');
+      return;
+    }
+
     onUpdatePurchase(editingPurchase);
     setEditingPurchase(null);
   };

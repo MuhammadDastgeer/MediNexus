@@ -38,10 +38,14 @@ export default function InventoryStockTab({
 
   const handleAdjustSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adjustingItem || !adjustQty) return;
+    if (!adjustingItem) return;
+    if (!adjustQty) {
+      alert('Adjustment quantity is required.');
+      return;
+    }
     const qty = parseInt(adjustQty);
     if (isNaN(qty) || qty < 0) {
-      alert('Invalid quantity.');
+      alert('Invalid quantity. Please enter a positive integer.');
       return;
     }
 

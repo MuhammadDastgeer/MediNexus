@@ -55,7 +55,10 @@ export default function BlogsView({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !description) return;
+    if (!title.trim()) { alert('Article title is required.'); return; }
+    if (!category) { alert('Specialist category selection is required.'); return; }
+    if (!description.trim()) { alert('Article body content description is required.'); return; }
+    if (!status) { alert('Status category is required.'); return; }
     
     if (onSaveBlog) {
       onSaveBlog({

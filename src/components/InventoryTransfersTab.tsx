@@ -69,6 +69,27 @@ export default function InventoryTransfersTab({
 
   const handleWizardSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!department) {
+      alert('Department selection is required.');
+      return;
+    }
+    if (!transferDate) {
+      alert('Transfer date is required.');
+      return;
+    }
+    if (!status) {
+      alert('Status category is required.');
+      return;
+    }
+    if (!priority) {
+      alert('Priority ranking is required.');
+      return;
+    }
+    if (!notes.trim()) {
+      alert('Notes description details are required.');
+      return;
+    }
+
     const emptyLine = transferLines.some((line) => !line.name || line.quantity <= 0);
     if (emptyLine) {
       alert('Must select a valid clinical item and positive quantity.');

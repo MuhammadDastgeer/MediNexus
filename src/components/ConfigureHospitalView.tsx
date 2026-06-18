@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Check, HelpCircle, Save, Info, QrCode } from 'lucide-react';
+import { Settings, Check, HelpCircle, Save, Info } from 'lucide-react';
 
 interface ConfigureHospitalViewProps {
   settings: Record<string, string>;
@@ -40,6 +40,17 @@ export default function ConfigureHospitalView({ settings, onSaveSettings, onNavi
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hospitalName.trim()) { alert('Hospital Name is required.'); return; }
+    if (!website.trim()) { alert('Website address is required.'); return; }
+    if (!bookingSlug.trim()) { alert('Online booking slug prefix is required.'); return; }
+    if (!bookingUrl.trim()) { alert('Complete online booking referral link is required.'); return; }
+    if (!address.trim()) { alert('Hospital physical mailing address is required.'); return; }
+    if (!phone.trim()) { alert('Hospital corporate/inquiry phone number is required.'); return; }
+    if (!email.trim()) { alert('Hospital inquiries email address is required.'); return; }
+    if (!timezone.trim()) { alert('Primary hospital operating timezone is required.'); return; }
+    if (!gst.trim()) { alert('GST tax details are required.'); return; }
+    if (!regNo.trim()) { alert('Hospital Board Registration number is required.'); return; }
+
     onSaveSettings({
       hospitalName,
       website,
@@ -128,46 +139,6 @@ export default function ConfigureHospitalView({ settings, onSaveSettings, onNavi
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                   className="w-full text-xs px-3.5 py-2 hover:border-slate-300 border border-slate-200 rounded-lg focus:outline-none focus:border-[#007f6e]"
-                />
-              </div>
-
-              {/* Booking slug */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Hospital Booking Domain Slug</label>
-                <div className="flex rounded-lg overflow-hidden border border-slate-200">
-                  <span className="bg-slate-50 text-[10px] text-slate-400 border-r border-slate-200 px-3 flex items-center shrink-0">
-                    booking.com/
-                  </span>
-                  <input
-                    type="text"
-                    value={bookingSlug}
-                    onChange={(e) => setBookingSlug(e.target.value)}
-                    className="w-full text-xs px-3 py-2 hover:border-slate-300 focus:outline-none focus:border-[#007f6e]"
-                  />
-                </div>
-              </div>
-
-              {/* Space for QR code on side */}
-              <div className="md:row-span-2 bg-[#f8fafc]/50 border border-slate-100/80 rounded-xl p-4 flex gap-4 items-center">
-                <div className="w-20 h-20 bg-white border border-slate-200/50 rounded-lg flex items-center justify-center p-1.5 shadow-xs shrink-0">
-                  <QrCode size={64} className="text-slate-800" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-slate-800">Appointment QR Code</h4>
-                  <p className="text-[10px] text-slate-400 leading-normal">
-                    Display this barcode at your clinic desk reception to let visiting check-in patients book fast appointments instantly through their smartphones.
-                  </p>
-                </div>
-              </div>
-
-              {/* Full booking slug info */}
-              <div className="md:col-span-2">
-                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Global Patient Appointment Booking Link</label>
-                <input
-                  type="text"
-                  value={bookingUrl}
-                  readOnly
-                  className="w-full text-xs px-3.5 py-2 bg-slate-50 border border-slate-200 text-slate-500 rounded-lg cursor-not-allowed select-all"
                 />
               </div>
             </div>

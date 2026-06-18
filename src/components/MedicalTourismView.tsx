@@ -97,7 +97,14 @@ export default function MedicalTourismView({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !country || !treatment) return;
+    if (!name.trim()) { alert('Patient name is required.'); return; }
+    if (!country.trim()) { alert('Country of origin is required.'); return; }
+    if (!treatment.trim()) { alert('Treatment sought is required.'); return; }
+    if (!status) { alert('Status category is required.'); return; }
+    if (!phone.trim()) { alert('Contact phone number is required.'); return; }
+    if (!email.trim()) { alert('Contact email address is required.'); return; }
+    if (!passportNumber.trim()) { alert('Passport Identification Number is required.'); return; }
+    if (!notes.trim()) { alert('Clinical case details and general queries are required.'); return; }
 
     onSaveEnquiry({
       id: currentId,

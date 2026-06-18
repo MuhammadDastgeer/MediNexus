@@ -108,6 +108,18 @@ export default function PatientsView({
       alert("Please select a Doctor.");
       return;
     }
+    if (!drawerBookingDate) {
+      alert("Please select an Appointment Date.");
+      return;
+    }
+    if (!drawerBookingSlot) {
+      alert("Please select a Time Slot.");
+      return;
+    }
+    if (!drawerBookingReason.trim()) {
+      alert("Please specify a reason/notes for this booking.");
+      return;
+    }
 
     const chosenDoc = doctors.find((d) => d.name === drawerBookingDoc);
     onAddAppointment({
@@ -196,9 +208,32 @@ export default function PatientsView({
   // Form submit handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !gender || !email || !password) {
-      alert('Please fill in Name, Phone, Gender, Email, and Password to register the patient.');
-      return;
+    if (!name.trim()) { alert('Patient Name is required.'); return; }
+    if (!phone.trim()) { alert('Patient Phone is required.'); return; }
+    if (!gender) { alert('Patient Gender selection is required.'); return; }
+    if (!email.trim()) { alert('Patient Email Address is required.'); return; }
+    if (!password.trim()) { alert('Patient Login Password is required.'); return; }
+    if (!dob) { alert('Date of birth is required.'); return; }
+    if (!bloodGroup) { alert('Blood Group selection is required.'); return; }
+    if (!address.trim()) { alert('Home Address is required.'); return; }
+
+    if (bookAppointmentNow && showForm === 'add') {
+      if (!selectedDoctorName) {
+        alert('Please choose a doctor for this inline appointment booking.');
+        return;
+      }
+      if (!appointmentDate) {
+        alert('Please specify a date for this inline appointment.');
+        return;
+      }
+      if (!appointmentSlot) {
+        alert('Please choose an appointment time slot.');
+        return;
+      }
+      if (!appointmentReason.trim()) {
+        alert('Please specify an appointment reason/symptoms.');
+        return;
+      }
     }
 
     // Age calculation helper based on Date of Birth

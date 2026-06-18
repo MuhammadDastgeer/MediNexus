@@ -147,10 +147,13 @@ export default function InventorySuppliersTab({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !email) {
-      alert('Company Profile, Hotline and Email are mandatory fields.');
-      return;
-    }
+    if (!name.trim()) { alert('Supplier/Company name is required.'); return; }
+    if (!phone.trim()) { alert('Supplier phone number is required.'); return; }
+    if (!email.trim()) { alert('Supplier email address is required.'); return; }
+    if (!address.trim()) { alert('Company address is required.'); return; }
+    if (!gstNumber.trim()) { alert('GST registered tax identification number is required.'); return; }
+    if (!status) { alert('Status is required.'); return; }
+
     if (!certifyCorrect) {
       alert('Please check the verification checkbox to certify this listing.');
       return;
@@ -175,10 +178,13 @@ export default function InventorySuppliersTab({
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSupplier) return;
-    if (!editingSupplier.name || !editingSupplier.phone || !editingSupplier.email) {
-      alert('Profile details, Email and Phone Hotline are required.');
-      return;
-    }
+    if (!editingSupplier.name.trim()) { alert('Supplier name is required.'); return; }
+    if (!editingSupplier.phone.trim()) { alert('Supplier phone number is required.'); return; }
+    if (!editingSupplier.email.trim()) { alert('Supplier email address is required.'); return; }
+    if (!editingSupplier.address.trim()) { alert('Company address is required.'); return; }
+    if (!editingSupplier.gstNumber.trim()) { alert('GST registered tax identification number is required.'); return; }
+    if (!editingSupplier.status) { alert('Status is required.'); return; }
+
     if (!editCertifyCorrect) {
       alert('Please check the confirmation check to verify your update.');
       return;

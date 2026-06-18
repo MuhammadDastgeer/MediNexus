@@ -150,12 +150,28 @@ export default function FinanceView({
 
     // Validate and submit
     for (const row of formRows) {
+      if (!row.type) {
+        alert("Transaction Type is required.");
+        return;
+      }
+      if (!row.category) {
+        alert("Transaction Category is required.");
+        return;
+      }
+      if (row.category === 'Other (Custom...)' && (!row.customCategory || !row.customCategory.trim())) {
+        alert("Please specify details for the custom category.");
+        return;
+      }
       if (!row.amount || isNaN(Number(row.amount)) || Number(row.amount) <= 0) {
         alert("Please enter a valid amount greater than 0");
         return;
       }
       if (!row.date) {
         alert("Please enter a valid date");
+        return;
+      }
+      if (!row.description || !row.description.trim()) {
+        alert("Description/Remarks are required for each financial entry.");
         return;
       }
     }

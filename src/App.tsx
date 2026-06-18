@@ -115,6 +115,41 @@ export default function App() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [subDepartments, setSubDepartments] = useState<SubDepartment[]>([]);
 
+  // Robust date comparison helper to verify past dates
+  const isDateInPast = (dateStr: string) => {
+    if (!dateStr) return false;
+    let parsed: Date | null = null;
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) { // YYYY-MM-DD
+        parsed = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else { // DD-MM-YYYY
+        parsed = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      }
+    } else {
+      const slashParts = dateStr.split('/');
+      if (slashParts.length === 3) {
+        if (slashParts[0].length === 4) { // YYYY/MM/DD
+          parsed = new Date(parseInt(slashParts[0]), parseInt(slashParts[1]) - 1, parseInt(slashParts[2]));
+        } else { // DD/MM/YYYY
+          parsed = new Date(parseInt(slashParts[2]), parseInt(slashParts[1]) - 1, parseInt(slashParts[0]));
+        }
+      }
+    }
+
+    if (!parsed || isNaN(parsed.getTime())) {
+      parsed = new Date(dateStr);
+    }
+
+    if (isNaN(parsed.getTime())) return false;
+
+    parsed.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return parsed.getTime() < today.getTime();
+  };
+
   // Global Refresh Routine
   const handleRefreshAll = async () => {
     try {
@@ -128,8 +163,15 @@ export default function App() {
       // Appointments
       const apptsRes = await fetch('/api/appointments');
       if (apptsRes.ok) {
-        const data = await apptsRes.json();
-        setAppointments(data);
+        const data: Appointment[] = await apptsRes.json();
+        // Automatically check if any appointment with past date should be Overdue
+        const normalized = data.map((a) => {
+          if (isDateInPast(a.date) && a.status !== 'Completed' && a.status !== 'Cancelled') {
+            return { ...a, status: 'Overdue' as any };
+          }
+          return a;
+        });
+        setAppointments(normalized);
       }
 
       // Bills
@@ -313,8 +355,14 @@ export default function App() {
 
   // Post Appointment
   const handleAddAppointment = async (apptInput: Omit<Appointment, 'id'>) => {
+    const isPast = isDateInPast(apptInput.date);
+    const resolvedStatus = isPast && apptInput.status !== 'Completed' && apptInput.status !== 'Cancelled'
+      ? 'Overdue' 
+      : (apptInput.status || 'Scheduled');
+
     const newAppt: Appointment = {
       ...apptInput,
+      status: resolvedStatus as any,
       id: `apt-${Date.now().toString().slice(-4)}`,
     };
 
@@ -358,22 +406,48 @@ export default function App() {
 
   // Full Update / Edit Appointment
   const handleUpdateAppointment = async (id: string, fields: Partial<Appointment>) => {
+    let finalFields = { ...fields };
+    if (fields.date !== undefined) {
+      const isPast = isDateInPast(fields.date);
+      if (isPast) {
+        const currentAppt = appointments.find(a => a.id === id);
+        const resolvedStatus = fields.status !== undefined ? fields.status : (currentAppt?.status || 'Scheduled');
+        if (resolvedStatus !== 'Completed' && resolvedStatus !== 'Cancelled') {
+          finalFields.status = 'Overdue' as any;
+        }
+      } else {
+        const currentAppt = appointments.find(a => a.id === id);
+        const resolvedStatus = fields.status !== undefined ? fields.status : (currentAppt?.status || 'Scheduled');
+        if (resolvedStatus === 'Overdue') {
+          finalFields.status = 'Scheduled' as any;
+        }
+      }
+    } else if (fields.status !== undefined) {
+      const currentAppt = appointments.find(a => a.id === id);
+      const apptDate = currentAppt?.date;
+      if (apptDate && isDateInPast(apptDate)) {
+        if (fields.status !== 'Completed' && fields.status !== 'Cancelled') {
+          finalFields.status = 'Overdue' as any;
+        }
+      }
+    }
+
     try {
       const res = await fetch(`/api/appointments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fields),
+        body: JSON.stringify(finalFields),
       });
       if (res.ok) {
         handleRefreshAll();
       } else {
         setAppointments((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, ...fields } : a))
+          prev.map((a) => (a.id === id ? { ...a, ...finalFields } : a))
         );
       }
     } catch {
       setAppointments((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, ...fields } : a))
+        prev.map((a) => (a.id === id ? { ...a, ...finalFields } : a))
       );
     }
   };
@@ -1083,6 +1157,11 @@ export default function App() {
             bills={bills}
             doctors={doctors}
             staffList={staffList}
+            enquiries={enquiries}
+            blogPosts={blogPosts}
+            departments={departments}
+            subDepartments={subDepartments}
+            transactions={transactions}
           />
         );
       case 'patients':
@@ -1104,7 +1183,9 @@ export default function App() {
           <AppointmentsView
             appointments={appointments}
             doctors={doctors}
+            patients={patients}
             onAddAppointment={handleAddAppointment}
+            onAddPatient={handleAddPatient}
             onUpdateStatus={handleUpdateAppointmentStatus}
             onUpdateAppointment={handleUpdateAppointment}
             onDeleteAppointment={handleDeleteAppointment}
@@ -1137,6 +1218,8 @@ export default function App() {
         return (
           <DoctorsView
             doctors={doctors}
+            departments={departments}
+            subDepartments={subDepartments}
             onAddDoctor={handleAddDoctor}
             onToggleStatus={handleToggleDoctorStatus}
             onUpdateDoctor={handleUpdateDoctor}
@@ -1148,6 +1231,8 @@ export default function App() {
         return (
           <StaffView
             staffList={staffList}
+            departments={departments}
+            subDepartments={subDepartments}
             onAddStaff={handleAddStaff}
             onDeleteStaff={handleDeleteStaff}
             onRefresh={handleRefreshAll}
@@ -1172,6 +1257,9 @@ export default function App() {
           <ConsultationView
             appointments={appointments}
             doctors={doctors}
+            departments={departments}
+            patients={patients}
+            onAddPatient={handleAddPatient}
             onAddAppointment={handleAddAppointment}
             onUpdateAppointment={handleUpdateAppointment}
             onDeleteAppointment={handleDeleteAppointment}

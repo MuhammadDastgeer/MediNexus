@@ -35,11 +35,13 @@ import {
   ArrowLeft,
   RefreshCw
 } from 'lucide-react';
-import { Doctor } from '../types';
+import { Doctor, Department, SubDepartment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
 interface DoctorsViewProps {
   doctors: Doctor[];
+  departments?: Department[];
+  subDepartments?: SubDepartment[];
   onAddDoctor: (doc: Omit<Doctor, 'id'>) => void;
   onToggleStatus: (id: string) => void;
   onUpdateDoctor: (id: string, fields: Partial<Doctor>) => void;
@@ -49,6 +51,8 @@ interface DoctorsViewProps {
 
 export default function DoctorsView({ 
   doctors, 
+  departments = [],
+  subDepartments = [],
   onAddDoctor, 
   onToggleStatus,
   onUpdateDoctor,
@@ -151,16 +155,86 @@ export default function DoctorsView({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name) {
+    if (!formData.name.trim()) {
       triggerToast('Doctor Full Name is required.');
       return;
     }
-    if (!formData.email) {
+    if (!formData.email.trim()) {
       triggerToast('Doctor Email Address is required.');
       return;
     }
-    if (!formData.password) {
+    if (!formData.password.trim()) {
       triggerToast('Doctor Password is required.');
+      return;
+    }
+    if (!formData.phone.trim()) {
+      triggerToast('Doctor Phone Number is required.');
+      return;
+    }
+    if (!formData.gender) {
+      triggerToast('Doctor Gender identification is required.');
+      return;
+    }
+    if (!formData.dob) {
+      triggerToast('Doctor Date of Birth is required.');
+      return;
+    }
+    if (!formData.bloodGroup) {
+      triggerToast('Doctor Blood Group is required.');
+      return;
+    }
+    if (!formData.address.trim()) {
+      triggerToast('Doctor Living/Clinic Address is required.');
+      return;
+    }
+    if (!formData.qualification.trim()) {
+      triggerToast('Doctor Qualification is required.');
+      return;
+    }
+    if (!formData.experience || Number(formData.experience) <= 0) {
+      triggerToast('Valid Doctor Experience (years) is required.');
+      return;
+    }
+    if (!formData.medicalRegNo.trim()) {
+      triggerToast('Doctor Medical Registration Number is required.');
+      return;
+    }
+    if (!formData.licenseNumber.trim()) {
+      triggerToast('Doctor License Number is required.');
+      return;
+    }
+    if (!formData.consultationFee || Number(formData.consultationFee) <= 0) {
+      triggerToast('Valid Consultation Fee is required.');
+      return;
+    }
+    if (!formData.followUpFee || Number(formData.followUpFee) < 0) {
+      triggerToast('Valid Follow-up Fee is required.');
+      return;
+    }
+
+    if (!formData.department) {
+      triggerToast('Department is required. Please select one from the saved list.');
+      return;
+    }
+    const matchingDept = (departments || []).find(d => d.name === formData.department);
+    if (!matchingDept) {
+      triggerToast('Please select a valid saved Department.');
+      return;
+    }
+
+    const availableSubs = (subDepartments || []).filter(s => s.departmentId === matchingDept.id);
+    if (availableSubs.length > 0) {
+      if (!formData.specialization) {
+        triggerToast('Sub Department / Specialization is required. Please select one from the saved options.');
+        return;
+      }
+      const matchingSub = availableSubs.some(s => s.name === formData.specialization);
+      if (!matchingSub) {
+        triggerToast('Please select a valid saved Sub-department from the configured list.');
+        return;
+      }
+    } else {
+      triggerToast(`Please configure at least one active Sub-department for department "${formData.department}" under Departments tab first.`);
       return;
     }
 
@@ -485,9 +559,8 @@ export default function DoctorsView({
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => {
-                        setIsEditingId(viewingDoctor.id);
                         setViewingDoctor(null);
-                        setShowForm(true);
+                        handleOpenEditForm(viewingDoctor);
                       }}
                       className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
                       title="Edit this doctor's profile"
@@ -854,16 +927,38 @@ export default function DoctorsView({
                 {/* Specialization */}
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                    Specialization
+                    Sub Department (Specialization) <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.specialization}
-                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                    placeholder="e.g. Cardiology, Ortho"
-                    className="w-full text-xs px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white text-slate-800 border border-slate-200 rounded-lg transition-all focus:border-[#007f6e] focus:outline-none"
-                    id="doctor-input-specialization"
-                  />
+                  {(() => {
+                    const parentDept = (departments || []).find(d => d.name === formData.department);
+                    const matchedSubs = parentDept ? (subDepartments || []).filter(sub => sub.departmentId === parentDept.id) : [];
+                    
+                    return (
+                      <>
+                        <select
+                          value={formData.specialization}
+                          onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                          className="w-full text-xs px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 transition-all focus:border-[#007f6e] focus:outline-none"
+                          id="doctor-input-specialization"
+                          required
+                        >
+                          <option value="">— Select Sub Department —</option>
+                          {matchedSubs.map(sub => (
+                            <option key={sub.id} value={sub.name}>{sub.name} ({sub.code})</option>
+                          ))}
+                        </select>
+                        {!formData.department ? (
+                          <p className="text-[9px] text-slate-400 mt-1">
+                            Please select a Department first to view its Sub-departments.
+                          </p>
+                        ) : matchedSubs.length === 0 ? (
+                          <p className="text-[9px] text-rose-500 mt-1">
+                            ⚠️ No sub-departments configured for "{formData.department}". Please configure at least one first in Departments menu.
+                          </p>
+                        ) : null}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Qualification */}
@@ -945,22 +1040,27 @@ export default function DoctorsView({
               {/* Department Option */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                  Department
+                  Department <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, department: e.target.value, specialization: '' });
+                  }}
                   className="w-full text-xs px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 transition-all focus:border-[#007f6e] focus:outline-none"
                   id="doctor-input-dept"
+                  required
                 >
-                  <option value="">— Select Department —</option>
-                  <option value="Cardiology">Cardiology</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                  <option value="Orthopedics">Orthopedics</option>
-                  <option value="Neurology">Neurology</option>
-                  <option value="Dermatology">Dermatology</option>
-                  <option value="General Medicine">General Medicine</option>
+                  <option value="">— Select Saved Department —</option>
+                  {(departments || []).filter(d => d.status === 'Active').map(d => (
+                    <option key={d.id} value={d.name}>{d.name} ({d.code})</option>
+                  ))}
                 </select>
+                {(!departments || departments.length === 0) && (
+                  <p className="text-[10px] text-amber-600 font-medium mt-1">
+                    ⚠️ No saved departments found. Please configure them in Departments section first.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

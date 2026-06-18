@@ -42,7 +42,7 @@ export interface Appointment {
   specialization: string;
   date: string;
   time: string;
-  status: 'Scheduled' | 'Confirmed' | 'Completed' | 'Cancelled';
+  status: 'Scheduled' | 'Confirmed' | 'Completed' | 'Cancelled' | 'Overdue';
   type?: 'Regular' | 'Follow-up';
   patientEmail?: string;
   patientPassword?: string;
