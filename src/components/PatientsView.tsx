@@ -628,7 +628,13 @@ export default function PatientsView({
                             <td className="px-4 py-3 font-bold text-[#007f6e]">{a.doctorName}</td>
                             <td className="px-4 py-3 text-slate-500">{a.specialization}</td>
                             <td className="px-4 py-3">
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-extrabold rounded-md border border-emerald-100">{a.status}</span>
+                              <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-md border ${
+                                a.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                a.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                a.status === 'Confirmed' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                a.status === 'Scheduled' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                'bg-slate-100 text-slate-650 border-slate-200'
+                              }`}>{a.status}</span>
                             </td>
                           </tr>
                         ))}
@@ -1743,7 +1749,13 @@ export default function PatientsView({
                                 <span className="font-semibold text-slate-600">{a.date}</span> • <span className="text-slate-400">{a.time}</span>
                               </td>
                               <td className="px-4 py-2">
-                                <span className="px-1.5 py-0.2 bg-emerald-50 text-emerald-600 text-[9px] font-black rounded-md">
+                                <span className={`px-2 py-0.5 text-[9px] font-bold rounded-md border ${
+                                  a.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                  a.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                  a.status === 'Confirmed' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                  a.status === 'Scheduled' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                  'bg-slate-100 text-slate-650 border-slate-200'
+                                }`}>
                                   {a.status}
                                 </span>
                               </td>

@@ -1416,6 +1416,45 @@ export default function AppointmentsView({
                           <strong>Active Vault Lock:</strong> Previous historical appointments and ledger records for <strong>{patientName}</strong> are preserved in full. We will only request the new scheduled appointment parameters.
                         </p>
                       </div>
+
+                      {/* Saved Appointment History timeline ledger inside wizard step 1 */}
+                      <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between border-b pb-1.5 border-slate-200/50">
+                          <span className="text-[10px] font-black text-slate-550 uppercase tracking-wider flex items-center gap-1">
+                            <CalendarCheck size={12} className="text-[#007f6e]" /> All Saved Appointments History ({appointments.filter(a => a.patientName.toLowerCase().trim() === patientName.toLowerCase().trim()).length})
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                          {appointments
+                            .filter(a => a.patientName.toLowerCase().trim() === patientName.toLowerCase().trim())
+                            .map((a, i) => (
+                              <div key={a.id || i} className="flex justify-between items-center p-2 bg-white rounded-lg border border-slate-100 text-[11px] text-slate-650 hover:bg-slate-50 transition-colors">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1 text-[#0f172a] font-bold">
+                                    <span>{a.doctorName}</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">({a.specialization})</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono">
+                                    {a.date} &bull; {a.time || 'N/A'}
+                                  </div>
+                                </div>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                  a.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                  a.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                  a.status === 'Confirmed' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                                  a.status === 'Scheduled' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                                  'bg-slate-100 text-slate-600 border border-slate-200'
+                                }`}>
+                                  {a.status}
+                                </span>
+                              </div>
+                            ))
+                          }
+                          {appointments.filter(a => a.patientName.toLowerCase().trim() === patientName.toLowerCase().trim()).length === 0 && (
+                            <p className="text-[10px] text-slate-400 italic text-center py-2">No past appointments found in system matching this name.</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <>
@@ -1977,6 +2016,70 @@ export default function AppointmentsView({
                   </div>
                 </div>
 
+              </div>
+
+              {/* Patient's All Appointments History List inside Details Dialg */}
+              <div className="border-t border-slate-100 pt-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar size={12} className="text-[#007f6e]" /> Saved Patient Appointment History ({appointments.filter(appt => appt.patientName.toLowerCase().trim() === selectedAppointment.patientName.toLowerCase().trim()).length})
+                  </h4>
+                  <span className="text-[10px] font-bold text-slate-400">All registered visits across clinical ledgers</span>
+                </div>
+                
+                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                  {appointments
+                    .filter(appt => appt.patientName.toLowerCase().trim() === selectedAppointment.patientName.toLowerCase().trim())
+                    .map((appt, i) => (
+                      <div 
+                        key={appt.id || i} 
+                        className={`p-3 rounded-xl border transition-all flex justify-between items-center ${
+                          appt.id === selectedAppointment.id 
+                            ? 'bg-[#f0f9f6] border-[#007f6e]/30 text-slate-800' 
+                            : 'bg-slate-50 hover:bg-slate-100/70 border-slate-100 hover:border-slate-200 text-slate-650'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            appt.id === selectedAppointment.id 
+                              ? 'bg-[#007f6e] text-white' 
+                              : 'bg-slate-200 text-slate-500'
+                          }`}>
+                            <CalendarCheck size={14} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-800">{appt.doctorName}</span>
+                              <span className="text-[10px] text-slate-500 font-medium">({appt.specialization})</span>
+                              {appt.id === selectedAppointment.id && (
+                                <span className="text-[9px] font-bold text-[#007f6e] bg-[#d1ebe4] px-1.5 py-0.5 rounded-sm">Current</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-1">
+                              <span>Date: {appt.date}</span>
+                              <span>&bull;</span>
+                              <span>Time: {appt.time || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${
+                            appt.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            appt.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                            appt.status === 'Confirmed' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                            appt.status === 'Scheduled' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                            'bg-slate-200 text-slate-600 border-slate-300'
+                          }`}>
+                            {appt.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  }
+                  {appointments.filter(appt => appt.patientName.toLowerCase().trim() === selectedAppointment.patientName.toLowerCase().trim()).length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-4">No past or current clinical appointments found matching this patient.</p>
+                  )}
+                </div>
               </div>
               
             </div>
