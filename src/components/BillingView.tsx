@@ -31,6 +31,7 @@ interface BillingViewProps {
   onUpdateBill?: (bill: Bill) => void;
   onDeleteBill?: (id: string) => void;
   onRefresh: () => void;
+  isReadOnly?: boolean;
 }
 
 export default function BillingView({ 
@@ -39,7 +40,8 @@ export default function BillingView({
   onAddBill, 
   onUpdateBill, 
   onDeleteBill, 
-  onRefresh 
+  onRefresh,
+  isReadOnly = false,
 }: BillingViewProps) {
   const getTodayDateString = () => {
     const d = new Date();
@@ -299,24 +301,26 @@ export default function BillingView({
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {/* Add Bill Button (Trigger Wizard) */}
-          <button
-            onClick={() => {
-              setWizardStep(1);
-              setSelectedPatientId('');
-              setCustomPatientName('');
-              setItems([{ name: 'Consultation Fee', value: 500 }]);
-              setNewItemName('');
-              setNewItemValue('');
-              setBillStatus('Pending');
-              setBillDiscount(0);
-              setWizardOpen(true);
-            }}
-            className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-md transition-colors cursor-pointer"
-            id="btn-add-bill"
-          >
-            <Plus size={14} />
-            <span>Add Bill</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={() => {
+                setWizardStep(1);
+                setSelectedPatientId('');
+                setCustomPatientName('');
+                setItems([{ name: 'Consultation Fee', value: 500 }]);
+                setNewItemName('');
+                setNewItemValue('');
+                setBillStatus('Pending');
+                setBillDiscount(0);
+                setWizardOpen(true);
+              }}
+              className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-md transition-colors cursor-pointer"
+              id="btn-add-bill"
+            >
+              <Plus size={14} />
+              <span>Add Bill</span>
+            </button>
+          )}
 
           {/* Today Filter Button */}
           <button
@@ -558,27 +562,31 @@ export default function BillingView({
                             <Eye size={12} />
                             <span>View</span>
                           </button>
-                          <button
-                            onClick={() => startEdit(b)}
-                            className="p-1 px-2 text-[10px] font-semibold text-sky-600 hover:bg-sky-50 rounded-lg flex items-center gap-0.5 transition-colors border border-transparent hover:border-sky-100 cursor-pointer"
-                            title="Edit bill"
-                          >
-                            <Edit2 size={12} />
-                            <span>Edit</span>
-                          </button>
-                          {onDeleteBill && (
-                            <button
-                              onClick={() => {
-                                if (confirm(`Are you sure you want to delete bill ${b.id}?`)) {
-                                  onDeleteBill(b.id);
-                                }
-                              }}
-                              className="p-1 px-2 text-[10px] font-semibold text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg flex items-center gap-0.5 transition-colors border border-transparent hover:border-rose-100 cursor-pointer"
-                              title="Delete bill"
-                            >
-                              <Trash2 size={12} />
-                              <span>Delete</span>
-                            </button>
+                          {!isReadOnly && (
+                            <>
+                              <button
+                                onClick={() => startEdit(b)}
+                                className="p-1 px-2 text-[10px] font-semibold text-sky-600 hover:bg-sky-50 rounded-lg flex items-center gap-0.5 transition-colors border border-transparent hover:border-sky-100 cursor-pointer"
+                                title="Edit bill"
+                              >
+                                <Edit2 size={12} />
+                                <span>Edit</span>
+                              </button>
+                              {onDeleteBill && (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete bill ${b.id}?`)) {
+                                      onDeleteBill(b.id);
+                                    }
+                                  }}
+                                  className="p-1 px-2 text-[10px] font-semibold text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg flex items-center gap-0.5 transition-colors border border-transparent hover:border-rose-100 cursor-pointer"
+                                  title="Delete bill"
+                                >
+                                  <Trash2 size={12} />
+                                  <span>Delete</span>
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>

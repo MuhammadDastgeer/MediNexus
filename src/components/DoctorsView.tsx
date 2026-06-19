@@ -47,6 +47,7 @@ interface DoctorsViewProps {
   onUpdateDoctor: (id: string, fields: Partial<Doctor>) => void;
   onDeleteDoctor: (id: string) => void;
   onNavigate?: (view: any) => void;
+  isReadOnly?: boolean;
 }
 
 export default function DoctorsView({ 
@@ -57,7 +58,8 @@ export default function DoctorsView({
   onToggleStatus,
   onUpdateDoctor,
   onDeleteDoctor,
-  onNavigate
+  onNavigate,
+  isReadOnly = false
 }: DoctorsViewProps) {
   const [activeTab, setActiveTab] = useState<'roster' | 'overview'>('overview');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
@@ -557,30 +559,34 @@ export default function DoctorsView({
                 <div className="flex items-center justify-between border-b pb-3 mb-4">
                   <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Clinical Specialist Profile</h3>
                   <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        setViewingDoctor(null);
-                        handleOpenEditForm(viewingDoctor);
-                      }}
-                      className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Edit this doctor's profile"
-                    >
-                      <Edit3 size={11} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Are you absolutely sure you want to remove ${viewingDoctor.name}?`)) {
-                          onDeleteDoctor(viewingDoctor.id);
-                          setViewingDoctor(null);
-                        }
-                      }}
-                      className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Delete profile record"
-                    >
-                      <Trash2 size={11} />
-                      <span>Delete</span>
-                    </button>
+                    {!isReadOnly && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setViewingDoctor(null);
+                            handleOpenEditForm(viewingDoctor);
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Edit this doctor's profile"
+                        >
+                          <Edit3 size={11} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you absolutely sure you want to remove ${viewingDoctor.name}?`)) {
+                              onDeleteDoctor(viewingDoctor.id);
+                              setViewingDoctor(null);
+                            }
+                          }}
+                          className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Delete profile record"
+                        >
+                          <Trash2 size={11} />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={handleDownloadDoctorCardPDF}
                       className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#007f6e] rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
@@ -1208,14 +1214,16 @@ export default function DoctorsView({
                   >
                     Manage Doctors
                   </button>
-                  <button
-                    onClick={handleOpenAddForm}
-                    className="bg-[#007f6e] hover:bg-[#006657] text-white rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-xs transition-all flex items-center gap-1"
-                    id="add-doc-shortcut"
-                  >
-                    <Plus size={14} />
-                    <span>Add New Doctor</span>
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      onClick={handleOpenAddForm}
+                      className="bg-[#007f6e] hover:bg-[#006657] text-white rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-xs transition-all flex items-center gap-1"
+                      id="add-doc-shortcut"
+                    >
+                      <Plus size={14} />
+                      <span>Add New Doctor</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1573,22 +1581,26 @@ export default function DoctorsView({
                     )}
                   </div>
 
-                  <button
-                    onClick={handleSendAllInvites}
-                    className="flex items-center gap-1.5 bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] px-3 py-2 rounded-xl border border-[#007f6e]/10 font-bold text-xs transition-colors"
-                  >
-                    <Send size={13} />
-                    <span>Send All Invites</span>
-                  </button>
+                  {!isReadOnly && (
+                    <>
+                      <button
+                        onClick={handleSendAllInvites}
+                        className="flex items-center gap-1.5 bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] px-3 py-2 rounded-xl border border-[#007f6e]/10 font-bold text-xs transition-colors"
+                      >
+                        <Send size={13} />
+                        <span>Send All Invites</span>
+                      </button>
 
-                  {/* Trigger Main Form Enroll */}
-                  <button
-                    onClick={handleOpenAddForm}
-                    className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all"
-                  >
-                    <Plus size={14} />
-                    <span>Add Doctor</span>
-                  </button>
+                      {/* Trigger Main Form Enroll */}
+                      <button
+                        onClick={handleOpenAddForm}
+                        className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all"
+                      >
+                        <Plus size={14} />
+                        <span>Add Doctor</span>
+                      </button>
+                    </>
+                  )}
 
                 </div>
 
@@ -1685,25 +1697,29 @@ export default function DoctorsView({
                                     <Eye size={15} />
                                   </button>
 
-                                  {/* Edit custom profile records form */}
-                                  <button
-                                    onClick={() => handleOpenEditForm(doc)}
-                                    className="p-1.5 text-slate-400 hover:text-[#007f6e] hover:bg-slate-100 rounded-lg transition-colors"
-                                    title="Edit Specialist Profile"
-                                    id={`edit-btn-${doc.id}`}
-                                  >
-                                    <Edit3 size={15} />
-                                  </button>
+                                  {!isReadOnly && (
+                                    <>
+                                      {/* Edit custom profile records form */}
+                                      <button
+                                        onClick={() => handleOpenEditForm(doc)}
+                                        className="p-1.5 text-slate-400 hover:text-[#007f6e] hover:bg-slate-100 rounded-lg transition-colors"
+                                        title="Edit Specialist Profile"
+                                        id={`edit-btn-${doc.id}`}
+                                      >
+                                        <Edit3 size={15} />
+                                      </button>
 
-                                  {/* Delete specialist record */}
-                                  <button
-                                    onClick={() => handleDeleteClick(doc.id, doc.name)}
-                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                    title="Delete Specialist Dossier"
-                                    id={`delete-btn-${doc.id}`}
-                                  >
-                                    <Trash2 size={15} />
-                                  </button>
+                                      {/* Delete specialist record */}
+                                      <button
+                                        onClick={() => handleDeleteClick(doc.id, doc.name)}
+                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                        title="Delete Specialist Dossier"
+                                        id={`delete-btn-${doc.id}`}
+                                      >
+                                        <Trash2 size={15} />
+                                      </button>
+                                    </>
+                                  )}
 
                                 </div>
                               </td>

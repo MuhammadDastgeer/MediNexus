@@ -38,6 +38,7 @@ interface ConsultationViewProps {
   onDeleteAppointment?: (id: string) => void;
   onRefresh: () => void;
   onOpenBooking: () => void;
+  isReadOnly?: boolean;
 }
 
 export default function ConsultationView({
@@ -50,7 +51,8 @@ export default function ConsultationView({
   onUpdateAppointment,
   onDeleteAppointment,
   onRefresh,
-  onOpenBooking
+  onOpenBooking,
+  isReadOnly = false,
 }: ConsultationViewProps) {
   // Helper to parse date string into local timezone Date safely without shifts
   const parseLocalDate = (dateStr: string) => {
@@ -503,23 +505,27 @@ export default function ConsultationView({
                           <Eye size={14} />
                         </button>
 
-                        {/* Edit Button */}
-                        <button
-                          onClick={() => handleOpenEdit(a)}
-                          className="p-1.5 text-slate-400 hover:text-[#007f6e] hover:bg-emerald-50/50 rounded-lg transition-colors"
-                          title="Edit Date/Time/Status"
-                        >
-                          <Edit2 size={14} />
-                        </button>
+                        {!isReadOnly && (
+                          <>
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => handleOpenEdit(a)}
+                              className="p-1.5 text-slate-400 hover:text-[#007f6e] hover:bg-emerald-50/50 rounded-lg transition-colors"
+                              title="Edit Date/Time/Status"
+                            >
+                              <Edit2 size={14} />
+                            </button>
 
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => setDeletingID(a.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete Action"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => setDeletingID(a.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Action"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -660,28 +666,32 @@ export default function ConsultationView({
             {/* Footer buttons */}
             <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    setEditingAppt(viewingAppt);
-                    setViewingAppt(null);
-                  }}
-                  className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
-                >
-                  <Edit3 size={12} />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`Are you sure you want to delete appointment clinical log for ${viewingAppt.patientName}?`)) {
-                      if (onDeleteAppointment) onDeleteAppointment(viewingAppt.id);
-                      setViewingAppt(null);
-                    }
-                  }}
-                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
-                >
-                  <Trash2 size={12} />
-                  <span>Delete</span>
-                </button>
+                {!isReadOnly && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setEditingAppt(viewingAppt);
+                        setViewingAppt(null);
+                      }}
+                      className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to delete appointment clinical log for ${viewingAppt.patientName}?`)) {
+                          if (onDeleteAppointment) onDeleteAppointment(viewingAppt.id);
+                          setViewingAppt(null);
+                        }
+                      }}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1"
+                    >
+                      <Trash2 size={12} />
+                      <span>Delete</span>
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">

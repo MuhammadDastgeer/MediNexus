@@ -18,6 +18,7 @@ interface PatientsViewProps {
   onDeletePatient: (id: string) => void;
   onAddAppointment: (appt: Omit<Appointment, 'id'>) => void;
   onRefresh: () => void;
+  isReadOnly?: boolean;
 }
 
 export default function PatientsView({
@@ -29,7 +30,8 @@ export default function PatientsView({
   onAddPatient,
   onDeletePatient,
   onAddAppointment,
-  onRefresh
+  onRefresh,
+  isReadOnly = false,
 }: PatientsViewProps) {
   const [activeTab, setActiveTab] = useState<'members' | 'overview'>('members');
   const [showForm, setShowForm] = useState<'add' | 'edit' | false>(false);
@@ -544,30 +546,34 @@ export default function PatientsView({
                 <div className="flex items-center justify-between border-b pb-3 mb-4">
                   <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Personal Information</h3>
                   <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        startEdit(viewingPatient);
-                        setViewingPatient(null);
-                      }}
-                      className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Edit this patient record"
-                    >
-                      <Edit size={11} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Are you absolutely sure you want to delete patient ${viewingPatient.name}?`)) {
-                          onDeletePatient(viewingPatient.id);
-                          setViewingPatient(null);
-                        }
-                      }}
-                      className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Permanently remove profile"
-                    >
-                      <Trash2 size={11} />
-                      <span>Delete</span>
-                    </button>
+                    {!isReadOnly && (
+                      <>
+                        <button
+                          onClick={() => {
+                            startEdit(viewingPatient);
+                            setViewingPatient(null);
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Edit this patient record"
+                        >
+                          <Edit size={11} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you absolutely sure you want to delete patient ${viewingPatient.name}?`)) {
+                              onDeletePatient(viewingPatient.id);
+                              setViewingPatient(null);
+                            }
+                          }}
+                          className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Permanently remove profile"
+                        >
+                          <Trash2 size={11} />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={handleDownloadPatientCardPDF}
                       className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#007f6e] rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
@@ -1226,12 +1232,14 @@ export default function PatientsView({
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={startAdd}
-                className="bg-[#00473e] hover:bg-[#003d35] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
-              >
-                Register Patient
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={startAdd}
+                  className="bg-[#00473e] hover:bg-[#003d35] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  Register Patient
+                </button>
+              )}
               <button
                 onClick={onRefresh}
                 className="bg-[#0c6b60] hover:bg-[#0a5c52] text-white p-2 rounded-xl"
@@ -1613,27 +1621,31 @@ export default function PatientsView({
                                 <Eye size={13} />
                               </button>
                               
-                              {/* Edit details */}
-                              <button
-                                onClick={() => startEdit(p)}
-                                className="p-1.5 border border-slate-200 bg-white hover:bg-[#e6f4f1] text-[#007f6e] rounded-lg transition-colors"
-                                title="Edit particulars"
-                              >
-                                <Edit size={13} />
-                              </button>
+                              {!isReadOnly && (
+                                <>
+                                  {/* Edit details */}
+                                  <button
+                                    onClick={() => startEdit(p)}
+                                    className="p-1.5 border border-slate-200 bg-white hover:bg-[#e6f4f1] text-[#007f6e] rounded-lg transition-colors"
+                                    title="Edit particulars"
+                                  >
+                                    <Edit size={13} />
+                                  </button>
 
-                              {/* Delete patient profile entry */}
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Are you sure you want to completely remove patient profile for "${p.name}"?`)) {
-                                    onDeletePatient(p.id);
-                                  }
-                                }}
-                                className="p-1.5 border border-red-105 bg-white hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                                title="Delete patient history"
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                                  {/* Delete patient profile entry */}
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Are you sure you want to completely remove patient profile for "${p.name}"?`)) {
+                                        onDeletePatient(p.id);
+                                      }
+                                    }}
+                                    className="p-1.5 border border-red-105 bg-white hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                    title="Delete patient history"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

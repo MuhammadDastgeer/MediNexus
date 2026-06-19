@@ -22,32 +22,43 @@ import FinanceView from './components/FinanceView';
 import ConfigureHospitalView from './components/ConfigureHospitalView';
 import ReportsView from './components/ReportsView';
 import SupportView from './components/SupportView';
+import LandingPageView from './components/LandingPageView';
 
 export default function App() {
-  const [activeView, setActiveViewState] = useState<ActiveView>('dashboard');
+  const [loggedInUser, setLoggedInUser] = useState<{ role: 'patient' | 'doctor' | 'staff'; data: any } | null>(null);
+  const [activeView, setActiveViewState] = useState<ActiveView>('landing');
+
+  const isStaff = loggedInUser?.role === 'staff';
+  const isDoctor = loggedInUser?.role === 'doctor';
+  const isPatient = loggedInUser?.role === 'patient';
+  const prefix = isStaff ? 'staff' : (isDoctor ? 'doctor' : (isPatient ? 'patient' : 'admin'));
 
   const viewToPathMap: Record<ActiveView, string> = {
-    'dashboard': '/admin/dashboard',
-    'appointments': '/admin/appointments',
-    'consultation': '/admin/consultation',
-    'billing': '/admin/billing',
-    'inventory': '/admin/inventory',
-    'ipd-wards': '/admin/ipd-wards',
-    'staff': '/admin/staff',
-    'doctors': '/admin/doctors',
-    'patients': '/admin/patients',
-    'departments': '/admin/departments',
-    'enquiries': '/admin/enquiries',
-    'medical-tourism': '/admin/medical-tourism',
-    'blogs': '/admin/blogs',
-    'reports': '/admin/reports',
-    'finance': '/admin/finance',
-    'configure-hospital': '/admin/configure-hospital',
-    'support': '/admin/support',
+    'landing': '/',
+    'dashboard': `/${prefix}/dashboard`,
+    'appointments': `/${prefix}/appointments`,
+    'consultation': `/${prefix}/consultation`,
+    'billing': `/${prefix}/billing`,
+    'inventory': `/${prefix}/inventory`,
+    'ipd-wards': `/${prefix}/ipd-wards`,
+    'staff': `/${prefix}/staff`,
+    'doctors': `/${prefix}/doctors`,
+    'patients': `/${prefix}/patients`,
+    'departments': `/${prefix}/departments`,
+    'enquiries': `/${prefix}/enquiries`,
+    'medical-tourism': `/${prefix}/medical-tourism`,
+    'blogs': `/${prefix}/blogs`,
+    'reports': `/${prefix}/reports`,
+    'finance': `/${prefix}/finance`,
+    'configure-hospital': `/${prefix}/configure-hospital`,
+    'support': `/${prefix}/support`,
   };
 
   const getViewFromPath = (pathname: string): ActiveView => {
     const cleanPath = pathname.toLowerCase().replace(/^\/+/g, '').replace(/\/+$/g, '');
+    if (cleanPath === '' || cleanPath === 'home' || cleanPath === 'about' || cleanPath === 'contact' || cleanPath === 'doctor' || cleanPath === 'doctors' || cleanPath === 'blog' || cleanPath === 'blogs') {
+      return (loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor' || loggedInUser?.role === 'patient') ? 'dashboard' : 'landing';
+    }
     if (cleanPath.includes('dashboard') || cleanPath.includes('desboard')) return 'dashboard';
     if (cleanPath.includes('appointment')) return 'appointments';
     if (cleanPath.includes('consultation')) return 'consultation';
@@ -71,7 +82,7 @@ export default function App() {
 
   const setActiveView = (view: ActiveView) => {
     setActiveViewState(view);
-    const targetPath = viewToPathMap[view] || `/admin/${view}`;
+    const targetPath = viewToPathMap[view] || `/${prefix}/${view}`;
     if (window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
     }
@@ -95,7 +106,7 @@ export default function App() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, []);
+  }, [loggedInUser]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -1146,17 +1157,69 @@ export default function App() {
 
   // Switch rendered view dynamically to match user clicks
   const renderActiveView = () => {
+    const isStaffReadOnly = loggedInUser?.role === 'staff';
+    const isDoctor = loggedInUser?.role === 'doctor';
+    const isPatient = loggedInUser?.role === 'patient';
+    const isReadOnly = isStaffReadOnly || isDoctor || isPatient;
+    const doctorName = isDoctor ? loggedInUser?.data?.name : null;
+    const patientName = isPatient ? loggedInUser?.data?.name : null;
+
+    // Filter variables for doctor and patient
+    const getFilteredAppointments = () => {
+      if (isDoctor && doctorName) {
+        return appointments.filter(
+          (a) => a.doctorName?.trim().toLowerCase() === doctorName.trim().toLowerCase()
+        );
+      }
+      if (isPatient && patientName) {
+        return appointments.filter(
+          (a) => a.patientName?.trim().toLowerCase() === patientName.trim().toLowerCase()
+        );
+      }
+      return appointments;
+    };
+
+    const getFilteredPatientsAndBills = () => {
+      if (isDoctor && doctorName) {
+        const docAppts = appointments.filter(
+          (a) => a.doctorName?.trim().toLowerCase() === doctorName.trim().toLowerCase()
+        );
+        const patientNames = new Set(docAppts.map((a) => a.patientName?.trim().toLowerCase()));
+        const filteredPatients = patients.filter((p) => patientNames.has(p.name?.trim().toLowerCase()));
+        const filteredBills = bills.filter((b) => patientNames.has(b.patientName?.trim().toLowerCase()));
+        return { filteredPatients, filteredBills };
+      }
+      if (isPatient && patientName) {
+        // Patients view only shows their own profile
+        const filteredPatients = patients.filter(
+          (p) => p.id === loggedInUser?.data?.id || (p.email && p.email.trim().toLowerCase() === loggedInUser?.data?.email?.trim().toLowerCase())
+        );
+        // Billing view only shows their own bills
+        const filteredBills = bills.filter(
+          (b) => b.patientName?.trim().toLowerCase() === patientName.trim().toLowerCase()
+        );
+        return { filteredPatients, filteredBills };
+      }
+      return { filteredPatients: patients, filteredBills: bills };
+    };
+
+    const { filteredPatients, filteredBills } = getFilteredPatientsAndBills();
+    const filteredAppts = getFilteredAppointments();
+    
+    // For doctor, they only see themselves on the roster. Patients and Admins/Staff can see all doctors.
+    const filteredDoctors = isDoctor ? doctors.filter((d) => d.id === loggedInUser?.data?.id) : doctors;
+
     switch (activeView) {
       case 'dashboard':
         return (
           <DashboardView
-            appointments={appointments}
-            patients={patients}
+            appointments={filteredAppts}
+            patients={filteredPatients}
             inventory={inventory}
             onNavigate={setActiveView}
-            bills={bills}
-            doctors={doctors}
-            staffList={staffList}
+            bills={filteredBills}
+            doctors={filteredDoctors}
+            staffList={isDoctor || isPatient ? [] : staffList}
             enquiries={enquiries}
             blogPosts={blogPosts}
             departments={departments}
@@ -1167,40 +1230,43 @@ export default function App() {
       case 'patients':
         return (
           <PatientsView
-            patients={patients}
-            doctors={doctors}
+            patients={filteredPatients}
+            doctors={filteredDoctors}
             wards={wards}
-            bills={bills}
-            appointments={appointments}
+            bills={filteredBills}
+            appointments={filteredAppts}
             onAddPatient={handleAddPatient}
             onDeletePatient={handleDeletePatient}
             onAddAppointment={handleAddAppointment}
             onRefresh={handleRefreshAll}
+            isReadOnly={isReadOnly}
           />
         );
       case 'appointments':
         return (
           <AppointmentsView
-            appointments={appointments}
-            doctors={doctors}
-            patients={patients}
+            appointments={filteredAppts}
+            doctors={filteredDoctors}
+            patients={filteredPatients}
             onAddAppointment={handleAddAppointment}
             onAddPatient={handleAddPatient}
             onUpdateStatus={handleUpdateAppointmentStatus}
             onUpdateAppointment={handleUpdateAppointment}
             onDeleteAppointment={handleDeleteAppointment}
             onRefresh={handleRefreshAll}
+            isReadOnly={isReadOnly}
           />
         );
       case 'billing':
         return (
           <BillingView
-            bills={bills}
-            patients={patients}
+            bills={filteredBills}
+            patients={filteredPatients}
             onAddBill={handleAddBill}
             onUpdateBill={handleUpdateBill}
             onDeleteBill={handleDeleteBill}
             onRefresh={handleRefreshAll}
+            isReadOnly={isReadOnly}
           />
         );
       case 'inventory':
@@ -1217,7 +1283,7 @@ export default function App() {
       case 'doctors':
         return (
           <DoctorsView
-            doctors={doctors}
+            doctors={filteredDoctors}
             departments={departments}
             subDepartments={subDepartments}
             onAddDoctor={handleAddDoctor}
@@ -1225,12 +1291,13 @@ export default function App() {
             onUpdateDoctor={handleUpdateDoctor}
             onDeleteDoctor={handleDeleteDoctor}
             onNavigate={setActiveView}
+            isReadOnly={isReadOnly}
           />
         );
       case 'staff':
         return (
           <StaffView
-            staffList={staffList}
+            staffList={isStaffReadOnly ? staffList.filter((s) => s.id === loggedInUser?.data?.id) : staffList}
             departments={departments}
             subDepartments={subDepartments}
             onAddStaff={handleAddStaff}
@@ -1255,16 +1322,17 @@ export default function App() {
       case 'consultation':
         return (
           <ConsultationView
-            appointments={appointments}
-            doctors={doctors}
+            appointments={filteredAppts}
+            doctors={filteredDoctors}
             departments={departments}
-            patients={patients}
+            patients={filteredPatients}
             onAddPatient={handleAddPatient}
             onAddAppointment={handleAddAppointment}
             onUpdateAppointment={handleUpdateAppointment}
             onDeleteAppointment={handleDeleteAppointment}
             onRefresh={handleRefreshAll}
             onOpenBooking={() => setActiveView('appointments')}
+            isReadOnly={isReadOnly}
           />
         );
       case 'ipd-wards':
@@ -1354,6 +1422,24 @@ export default function App() {
     }
   };
 
+  if (activeView === 'landing') {
+    return (
+      <LandingPageView
+        doctors={doctors}
+        blogPosts={blogPosts}
+        patients={patients}
+        staffList={staffList}
+        bills={bills}
+        appointments={appointments}
+        hospitalSettings={hospitalSettings}
+        onNavigateToAdmin={() => setActiveView('dashboard')}
+        onAddEnquiry={handleAddEnquiry}
+        loggedInUser={loggedInUser}
+        setLoggedInUser={setLoggedInUser}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen w-screen bg-[#f4f7f6] overflow-hidden select-none font-sans" id="hospital-admin-app">
       {/* 1. Left Navigation Drawer */}
@@ -1362,6 +1448,11 @@ export default function App() {
         setActiveView={setActiveView}
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
+        loggedInUser={loggedInUser}
+        setLoggedInUser={setLoggedInUser}
+        onUpdateStaff={handleAddStaff}
+        onUpdateDoctor={handleUpdateDoctor}
+        onUpdatePatient={handleUpdatePatient}
       />
 
       {/* 2. Primary Admin Workspace */}

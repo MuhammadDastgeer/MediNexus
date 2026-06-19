@@ -44,6 +44,7 @@ interface AppointmentsViewProps {
   onUpdateAppointment?: (id: string, fields: Partial<Appointment>) => void;
   onDeleteAppointment?: (id: string) => void;
   onRefresh?: () => void;
+  isReadOnly?: boolean;
 }
 
 interface FollowUp {
@@ -67,6 +68,7 @@ export default function AppointmentsView({
   onUpdateAppointment,
   onDeleteAppointment,
   onRefresh,
+  isReadOnly = false,
 }: AppointmentsViewProps) {
   // Mode toggle between 'appointments' and 'followups'
   const [activeMode, setActiveMode] = useState<'appointments' | 'followups'>('appointments');
@@ -742,14 +744,16 @@ export default function AppointmentsView({
         </div>
 
         {/* Global Action Booker */}
-        <button
-          onClick={handleOpenNewWizard}
-          className="flex items-center justify-center gap-2 bg-[#007f6e] hover:bg-[#006657] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
-          id="trigger-quick-booking-btn"
-        >
-          <Plus size={16} />
-          <span>Book Appointment</span>
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={handleOpenNewWizard}
+            className="flex items-center justify-center gap-2 bg-[#007f6e] hover:bg-[#006657] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
+            id="trigger-quick-booking-btn"
+          >
+            <Plus size={16} />
+            <span>Book Appointment</span>
+          </button>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -1112,32 +1116,36 @@ export default function AppointmentsView({
                               <Eye size={13} />
                             </button>
 
-                            {/* Overlap schedule edit */}
-                            <button
-                              onClick={() => handleOpenEditWizard(a)}
-                              className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"
-                              title="Edit schedule details"
-                            >
-                              <Edit2 size={13} />
-                            </button>
+                            {!isReadOnly && (
+                              <>
+                                {/* Overlap schedule edit */}
+                                <button
+                                  onClick={() => handleOpenEditWizard(a)}
+                                  className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"
+                                  title="Edit schedule details"
+                                >
+                                  <Edit2 size={13} />
+                                </button>
 
-                            {/* Create Followup option */}
-                            <button
-                              onClick={() => handleCreateFollowupFromAppointment(a)}
-                              className="p-1.5 rounded-lg bg-emerald-50 text-[#007f6e] hover:bg-emerald-100 transition-all font-semibold"
-                              title="Schedule a Follow-up visit"
-                            >
-                              <RefreshCw size={13} />
-                            </button>
+                                {/* Create Followup option */}
+                                <button
+                                  onClick={() => handleCreateFollowupFromAppointment(a)}
+                                  className="p-1.5 rounded-lg bg-emerald-50 text-[#007f6e] hover:bg-emerald-100 transition-all font-semibold"
+                                  title="Schedule a Follow-up visit"
+                                >
+                                  <RefreshCw size={13} />
+                                </button>
 
-                            {/* Cancel shift */}
-                            <button
-                              onClick={() => handleDeleteAppointmentRecord(a.id)}
-                              className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-semibold"
-                              title="Cancel / Delete patient fold permanent"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                                {/* Cancel shift */}
+                                <button
+                                  onClick={() => handleDeleteAppointmentRecord(a.id)}
+                                  className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-semibold"
+                                  title="Cancel / Delete patient fold permanent"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
 
@@ -1367,31 +1375,37 @@ export default function AppointmentsView({
 
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1.5">
-                          {fol.status !== 'Completed' && (
-                            <button
-                              onClick={() => handleCompleteFollowup(fol.id)}
-                              className="px-2.5 py-1 rounded bg-[#e6f4f1] text-[#007f6e] hover:bg-[#d5eee8] transition-colors font-bold text-[10px]"
-                              title="Mark Done"
-                            >
-                              Clear Complete
-                            </button>
+                          {!isReadOnly ? (
+                            <>
+                              {fol.status !== 'Completed' && (
+                                <button
+                                  onClick={() => handleCompleteFollowup(fol.id)}
+                                  className="px-2.5 py-1 rounded bg-[#e6f4f1] text-[#007f6e] hover:bg-[#d5eee8] transition-colors font-bold text-[10px]"
+                                  title="Mark Done"
+                                >
+                                  Clear Complete
+                                </button>
+                              )}
+                              {fol.phone && (
+                                <button
+                                  onClick={() => handleSendReminder(fol.patientName, fol.phone)}
+                                  className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                  title="Send WhatsApp Communication Link"
+                                >
+                                  <MessageCircle size={13} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteFollowup(fol.id)}
+                                className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                                title="Remove"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-medium">View Only</span>
                           )}
-                          {fol.phone && (
-                            <button
-                              onClick={() => handleSendReminder(fol.patientName, fol.phone)}
-                              className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
-                              title="Send WhatsApp Communication Link"
-                            >
-                              <MessageCircle size={13} />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteFollowup(fol.id)}
-                            className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
-                            title="Remove"
-                          >
-                            <Trash2 size={13} />
-                          </button>
                         </div>
                       </td>
 
@@ -2397,25 +2411,29 @@ export default function AppointmentsView({
             {/* Footer with Edit, Delete, Download Report PDF, Follow-Up, and Close buttons */}
             <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    handleOpenEditWizard(selectedAppointment);
-                    setSelectedAppointment(null);
-                  }}
-                  className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <Edit2 size={12} />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => {
-                    handleDeleteAppointmentRecord(selectedAppointment.id);
-                  }}
-                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <Trash2 size={12} />
-                  <span>Delete</span>
-                </button>
+                {!isReadOnly && (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleOpenEditWizard(selectedAppointment);
+                        setSelectedAppointment(null);
+                      }}
+                      className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit2 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDeleteAppointmentRecord(selectedAppointment.id);
+                      }}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                      <span>Delete</span>
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">

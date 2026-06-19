@@ -1,4 +1,5 @@
 export type ActiveView =
+  | 'landing'
   | 'dashboard'
   | 'appointments'
   | 'consultation'
