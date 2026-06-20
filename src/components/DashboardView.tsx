@@ -26,6 +26,7 @@ interface DashboardViewProps {
   departments?: Department[];
   subDepartments?: SubDepartment[];
   transactions?: any[];
+  loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
 }
 
 export default function DashboardView({
@@ -41,6 +42,7 @@ export default function DashboardView({
   departments = [],
   subDepartments = [],
   transactions = [],
+  loggedInUser = null,
 }: DashboardViewProps) {
   const getTodayDateString = () => {
     const d = new Date();
@@ -119,6 +121,14 @@ export default function DashboardView({
   };
 
   // Compute live states
+  const isPatient = loggedInUser?.role === 'patient';
+  const patientProfile = isPatient ? (patients[0] || loggedInUser.data) : null;
+
+  // Patient billing sums
+  const patientPaidSum = bills.filter(b => b.status === 'Paid').reduce((sum, b) => sum + b.amount, 0);
+  const patientPendingSum = bills.filter(b => b.status === 'Pending').reduce((sum, b) => sum + b.amount, 0);
+  const patientTotalInvoiced = bills.reduce((sum, b) => sum + b.amount, 0);
+
   const totalPatientsCount = patients.length;
   const staffAndDoctorsCount = doctors.length + staffList.length;
   const activeDoctorsCount = doctors.filter(
@@ -146,6 +156,9 @@ export default function DashboardView({
 
   // Dynamic live system notice / alert generator
   const getLiveAlerts = () => {
+    const isPatient = loggedInUser?.role === 'patient';
+    const patientName = isPatient ? loggedInUser?.data?.name : null;
+
     const list: Array<{
       id: string;
       title: string;
@@ -157,9 +170,12 @@ export default function DashboardView({
 
     // 1. Appointments
     (appointments || []).forEach(a => {
+      if (isPatient && patientName && a.patientName?.trim().toLowerCase() !== patientName.trim().toLowerCase()) {
+        return;
+      }
       list.push({
         id: `appt-${a.id}`,
-        title: `Appointment Booked: ${a.patientName} (${a.type || 'Consultation'}) with Dr. ${a.doctorName}`,
+        title: `Appointment ${a.status || 'Booked'}: ${a.patientName} (${a.type || 'Consultation'}) with Dr. ${a.doctorName}`,
         time: a.date ? `${a.date} @ ${a.time}` : 'Scheduled',
         type: 'Appointment',
         color: 'emerald',
@@ -169,11 +185,14 @@ export default function DashboardView({
 
     // 2. Patients
     (patients || []).forEach(p => {
+      if (isPatient && patientName && p.name?.trim().toLowerCase() !== patientName.trim().toLowerCase()) {
+        return;
+      }
       list.push({
         id: `pat-${p.id}`,
-        title: `New Patient Enrolled: ${p.name} (${p.gender}, ${p.age} yrs)`,
+        title: `Medical Profile Active: ${p.name} (${p.gender}, ${p.age} yrs)`,
         time: p.registeredAt ? new Date(p.registeredAt).toLocaleDateString() : 'Just registered',
-        type: 'Patient',
+        type: 'Patient Profile',
         color: 'sky',
         icon: 'UserCheck'
       });
@@ -181,86 +200,105 @@ export default function DashboardView({
 
     // 3. Bills
     (bills || []).forEach(b => {
+      if (isPatient && patientName && b.patientName?.trim().toLowerCase() !== patientName.trim().toLowerCase()) {
+        return;
+      }
       list.push({
         id: `bill-${b.id}`,
-        title: `Billing Invoice Generated: ₹${b.amount} for ${b.patientName} (${b.status})`,
+        title: `Billing Invoice ${b.status || 'Generated'}: ₹${b.amount} for ${b.patientName}`,
         time: b.date || 'Today',
-        type: 'Billing',
+        type: 'Billing Invoice',
         color: 'amber',
         icon: 'IndianRupee'
       });
     });
 
-    // 4. Doctors
-    (doctors || []).forEach(d => {
-      list.push({
-        id: `doc-${d.id}`,
-        title: `Specialist Enrolled: Dr. ${d.name} (${d.specialization})`,
-        time: 'Registered with On-duty profile',
-        type: 'Clinical Registry',
-        color: 'indigo',
-        icon: 'Users'
+    if (!isPatient) {
+      // 4. Doctors
+      (doctors || []).forEach(d => {
+        list.push({
+          id: `doc-${d.id}`,
+          title: `Specialist Enrolled: Dr. ${d.name} (${d.specialization})`,
+          time: 'Registered with On-duty profile',
+          type: 'Clinical Registry',
+          color: 'indigo',
+          icon: 'Users'
+        });
       });
-    });
 
-    // 5. Staff
-    (staffList || []).forEach(s => {
-      list.push({
-        id: `staff-${s.id}`,
-        title: `Staff Recruited: ${s.name} (${s.role}) for ${s.department}`,
-        time: s.joinDate || 'Access Configured',
-        type: 'HR Staff',
-        color: 'teal',
-        icon: 'Users'
+      // 5. Staff
+      (staffList || []).forEach(s => {
+        list.push({
+          id: `staff-${s.id}`,
+          title: `Staff Recruited: ${s.name} (${s.role}) for ${s.department}`,
+          time: s.joinDate || 'Access Configured',
+          type: 'HR Staff',
+          color: 'teal',
+          icon: 'Users'
+        });
       });
-    });
 
-    // 6. Enquiries
-    (enquiries || []).forEach(enq => {
-      list.push({
-        id: `enq-${enq.id}`,
-        title: `New Enquiry Received: "${enq.query || 'Inquiry description'}" from ${enq.name || 'Anonymous'}`,
-        time: enq.date || 'Support Inquiry',
-        type: 'Helpdesk Enquiry',
-        color: 'rose',
-        icon: 'Bell'
+      // 6. Enquiries
+      (enquiries || []).forEach(enq => {
+        list.push({
+          id: `enq-${enq.id}`,
+          title: `New Enquiry Received: "${enq.query || 'Inquiry description'}" from ${enq.name || 'Anonymous'}`,
+          time: enq.date || 'Support Inquiry',
+          type: 'Helpdesk Enquiry',
+          color: 'rose',
+          icon: 'Bell'
+        });
       });
-    });
 
-    // 7. Blog Posts
-    (blogPosts || []).forEach(post => {
-      list.push({
-        id: `blog-${post.id}`,
-        title: `New Article: "${post.title}"`,
-        time: post.date ? new Date(post.date).toLocaleDateString() : 'Healthcare Blog',
-        type: 'Health Blog',
-        color: 'purple',
-        icon: 'Activity'
+      // 7. Blog Posts
+      (blogPosts || []).forEach(post => {
+        list.push({
+          id: `blog-${post.id}`,
+          title: `New Article: "${post.title}"`,
+          time: post.date ? new Date(post.date).toLocaleDateString() : 'Healthcare Blog',
+          type: 'Health Blog',
+          color: 'purple',
+          icon: 'Activity'
+        });
       });
-    });
 
-    // 8. Departments & Sub-Depts
-    (departments || []).forEach(dept => {
-      list.push({
-        id: `dept-${dept.id}`,
-        title: `Medical Department Added: "${dept.name}" (${dept.code})`,
-        time: dept.type || 'Clinical Unit',
-        type: 'Infrastructure',
-        color: 'violet',
-        icon: 'HeartPlus'
+      // 8. Departments & Sub-Depts
+      (departments || []).forEach(dept => {
+        list.push({
+          id: `dept-${dept.id}`,
+          title: `Medical Department Added: "${dept.name}" (${dept.code})`,
+          time: dept.type || 'Clinical Unit',
+          type: 'Infrastructure',
+          color: 'violet',
+          icon: 'HeartPlus'
+        });
       });
-    });
 
-    (subDepartments || []).forEach(sub => {
-      list.push({
-        id: `sub-${sub.id}`,
-        title: `Clinical Sub-department Registered: "${sub.name}" (${sub.code})`,
-        time: 'Active Procedure Clinic',
-        type: 'Infrastructure',
-        color: 'cyan',
-        icon: 'HeartPlus'
+      (subDepartments || []).forEach(sub => {
+        list.push({
+          id: `sub-${sub.id}`,
+          title: `Clinical Sub-department Registered: "${sub.name}" (${sub.code})`,
+          time: 'Active Procedure Clinic',
+          type: 'Infrastructure',
+          color: 'cyan',
+          icon: 'HeartPlus'
+        });
       });
-    });
+    } else {
+      // Patients get their own specific enquiries / tickets if any
+      (enquiries || []).forEach(enq => {
+        if (patientName && enq.name?.trim().toLowerCase() === patientName.trim().toLowerCase()) {
+          list.push({
+            id: `enq-${enq.id}`,
+            title: `Your Helpdesk Inquiry: "${enq.query || 'Status updated'}" - ${enq.status || 'Received'}`,
+            time: enq.date || 'Support Ticket',
+            type: 'Helpdesk Ticket',
+            color: 'rose',
+            icon: 'Bell'
+          });
+        }
+      });
+    }
 
     // Weight parser for timestamps / numeric sorting to bubble up freshest entries
     const getWeight = (itemId: string) => {
@@ -278,7 +316,7 @@ export default function DashboardView({
     if (list.length === 0) {
       list.push({
         id: 'fallback-system',
-        title: 'Hospital Core Systems Operational & Verified',
+        title: isPatient ? 'Your clinical file timeline is empty & up-to-date.' : 'Hospital Core Systems Operational & Verified',
         time: 'Real-time normal telemetry stream',
         type: 'System Integrity Logs',
         color: 'emerald',
@@ -391,21 +429,36 @@ export default function DashboardView({
             <Users size={20} />
           </div>
           <div>
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Staff & Doctors</h4>
-            <div className="text-2xl font-bold text-slate-800 mt-0.5">{staffAndDoctorsCount}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{activeDoctorsCount} active doctors</p>
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              {isPatient ? 'Clinic Specialists' : 'Staff & Doctors'}
+            </h4>
+            <div className="text-2xl font-bold text-slate-800 mt-0.5">
+              {isPatient ? doctors.length : staffAndDoctorsCount}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">
+              {isPatient ? `${activeDoctorsCount} specialists on-duty` : `${activeDoctorsCount} active doctors`}
+            </p>
           </div>
         </div>
 
-        {/* Card 2: Total Patients */}
+        {/* Card 2: Total Patients / My ID */}
         <div className="bg-[#ecf7f1] border border-[#d3ecd7] rounded-xl p-4 flex items-center gap-4 transition-all hover:scale-[1.01]" id="kpi-total-patients">
           <div className="w-11 h-11 bg-[#00a85a] text-white rounded-xl flex items-center justify-center shadow-sm">
             <UserCheck size={20} />
           </div>
           <div>
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Patients</h4>
-            <div className="text-2xl font-bold text-slate-800 mt-0.5">{totalPatientsCount}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">+{totalPatientsCount} this month</p>
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              {isPatient ? 'My Patient ID' : 'Total Patients'}
+            </h4>
+            <div className="text-2xl font-bold text-slate-800 mt-0.5">
+              {isPatient ? (patientProfile?.id || 'P-Active') : totalPatientsCount}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">
+              {isPatient 
+                ? `${patientProfile?.gender || 'Profile'} · ${patientProfile?.age || 'Main'} yrs` 
+                : `+${totalPatientsCount} this month`
+              }
+            </p>
           </div>
         </div>
 
@@ -415,9 +468,18 @@ export default function DashboardView({
             <Calendar size={20} />
           </div>
           <div>
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Today Appointments</h4>
-            <div className="text-2xl font-bold text-slate-800 mt-0.5">{todayAppointmentsCount}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{completedCount} completed</p>
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              {isPatient ? 'My Appointments' : 'Today Appointments'}
+            </h4>
+            <div className="text-2xl font-bold text-slate-800 mt-0.5">
+              {isPatient ? appointments.length : todayAppointmentsCount}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">
+              {isPatient 
+                ? `Today: ${appointments.filter(a => isToday(a.date)).length} due` 
+                : `${completedCount} completed`
+              }
+            </p>
           </div>
         </div>
 
@@ -427,13 +489,24 @@ export default function DashboardView({
             <IndianRupee size={20} />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Earned Revenue</h4>
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              {isPatient ? 'My Billing Summary' : 'Total Earned Revenue'}
+            </h4>
             <div className="text-2xl font-bold text-[#e67e22] mt-0.5" id="dashboard-total-earned-revenue-display">
-              ₹{totalEarnedRevenue.toLocaleString()}
+              ₹{isPatient ? patientTotalInvoiced.toLocaleString() : totalEarnedRevenue.toLocaleString()}
             </div>
             <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-400 font-medium mt-1">
-              <span>Today: <strong className="text-slate-700">₹{totalRevenueCollected.toLocaleString()}</strong></span>
-              <span>This Month: <strong className="text-slate-700">₹{revenueThisMonth.toLocaleString()}</strong></span>
+              {isPatient ? (
+                <>
+                  <span>Paid: <strong className="text-emerald-600">₹{patientPaidSum.toLocaleString()}</strong></span>
+                  <span>Unpaid: <strong className="text-rose-500">₹{patientPendingSum.toLocaleString()}</strong></span>
+                </>
+              ) : (
+                <>
+                  <span>Today: <strong className="text-slate-700">₹{totalRevenueCollected.toLocaleString()}</strong></span>
+                  <span>This Month: <strong className="text-slate-700">₹{revenueThisMonth.toLocaleString()}</strong></span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -585,9 +658,14 @@ export default function DashboardView({
           <div>
             <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="registered-patients-header">
               <div>
-                <h3 className="text-xs font-bold text-slate-800">Recently Registered Patients</h3>
+                <h3 className="text-xs font-bold text-slate-800">
+                  {isPatient ? 'My Registered Patient Profile' : 'Recently Registered Patients'}
+                </h3>
                 <p className="text-[10px] text-slate-400 font-medium">
-                  {totalPatientsCount} total · {patients.filter(p => new Date(p.registeredAt).toDateString() === new Date().toDateString()).length} registered today
+                  {isPatient 
+                    ? 'Your active clinical file record details' 
+                    : `${totalPatientsCount} total · ${patients.filter(p => new Date(p.registeredAt).toDateString() === new Date().toDateString()).length} registered today`
+                  }
                 </p>
               </div>
               <button
@@ -645,9 +723,14 @@ export default function DashboardView({
           <div>
             <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="followups-header">
               <div>
-                <h3 className="text-xs font-bold text-slate-800">Follow-Up Appointments</h3>
+                <h3 className="text-xs font-bold text-slate-800">
+                  {isPatient ? 'My Follow-Up Appointments' : 'Follow-Up Appointments'}
+                </h3>
                 <p className="text-[10px] text-slate-400 font-medium">
-                  {followUpAppointments.length} total follow-ups booked · {followUpAppointments.filter(a => isToday(a.date)).length} due today
+                  {isPatient 
+                    ? `You have ${followUpAppointments.length} follow-up appointments scheduled` 
+                    : `${followUpAppointments.length} total follow-ups booked · ${followUpAppointments.filter(a => isToday(a.date)).length} due today`
+                  }
                 </p>
               </div>
               <button
@@ -679,7 +762,7 @@ export default function DashboardView({
                     {followUpAppointments.slice(0, 4).map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50/50">
                         <td className="px-3 py-2.5 font-semibold text-slate-800">{a.patientName}</td>
-                        <td className="px-3 py-2.5 text-slate-600 font-medium">Dr. {a.doctorName}</td>
+                        <td className="px-3 py-2.5 text-slate-600 font-medium font-sans">Dr. {a.doctorName}</td>
                         <td className="px-3 py-2.5 text-slate-400 text-[11px]">{a.specialization}</td>
                         <td className="px-3 py-2.5 text-right font-mono text-[10px]">
                           <span className="text-[#007f6e] font-bold block">{a.date}</span>
@@ -696,83 +779,85 @@ export default function DashboardView({
       </div>
 
       {/* Two Bottom Row Navigation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4" id="quick-navigation-grid">
-        {/* Card A: Services & Treatment Dashboard */}
-        <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex items-center justify-between" id="quick-nav-services">
-          <div className="space-y-3 flex-1">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800">Services & Treatment Dashboard</h4>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                Service packages, treatment plan stats, session completion
-              </p>
+      {!isPatient && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" id="quick-navigation-grid">
+          {/* Card A: Services & Treatment Dashboard */}
+          <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex items-center justify-between" id="quick-nav-services">
+            <div className="space-y-3 flex-1">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800">Services & Treatment Dashboard</h4>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                  Service packages, treatment plan stats, session completion
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2" id="nav-services-actions">
+                <button
+                  onClick={() => onNavigate('consultation')}
+                  className="bg-sky-50 text-sky-600 border border-sky-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-sky-100 transition-colors"
+                >
+                  Service Packages
+                </button>
+                <button
+                  onClick={() => onNavigate('consultation')}
+                  className="bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-emerald-100 transition-colors"
+                >
+                  Treatment Plans
+                </button>
+                <button
+                  onClick={() => onNavigate('configure-hospital')}
+                  className="bg-violet-50 text-violet-600 border border-violet-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-violet-100 transition-colors"
+                >
+                  Permissions
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2" id="nav-services-actions">
-              <button
-                onClick={() => onNavigate('consultation')}
-                className="bg-sky-50 text-sky-600 border border-sky-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-sky-100 transition-colors"
-              >
-                Service Packages
-              </button>
-              <button
-                onClick={() => onNavigate('consultation')}
-                className="bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-emerald-100 transition-colors"
-              >
-                Treatment Plans
-              </button>
-              <button
-                onClick={() => onNavigate('configure-hospital')}
-                className="bg-violet-50 text-violet-600 border border-violet-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-violet-100 transition-colors"
-              >
-                Permissions
-              </button>
-            </div>
+            <button
+              onClick={() => onNavigate('consultation')}
+              className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-50 rounded-full"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
-          <button
-            onClick={() => onNavigate('consultation')}
-            className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-50 rounded-full"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
 
-        {/* Card B: Departments & Sub-Depts */}
-        <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex items-center justify-between" id="quick-nav-depts">
-          <div className="space-y-3 flex-1">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800">Departments & Sub-Depts</h4>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                Manage departments, sub-departments and procedures
-              </p>
+          {/* Card B: Departments & Sub-Depts */}
+          <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex items-center justify-between" id="quick-nav-depts">
+            <div className="space-y-3 flex-1">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800">Departments & Sub-Depts</h4>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                  Manage departments, sub-departments and procedures
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2" id="nav-depts-actions">
+                <button
+                  onClick={() => onNavigate('departments')}
+                  className="bg-blue-50 text-blue-600 border border-blue-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-blue-100 transition-colors"
+                >
+                  Departments
+                </button>
+                <button
+                  onClick={() => onNavigate('departments')}
+                  className="bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-emerald-100 transition-colors"
+                >
+                  Sub-Depts
+                </button>
+                <button
+                  onClick={() => onNavigate('staff')}
+                  className="bg-slate-50 text-slate-600 border border-slate-150 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-slate-100 transition-colors"
+                >
+                  Staff
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2" id="nav-depts-actions">
-              <button
-                onClick={() => onNavigate('departments')}
-                className="bg-blue-50 text-blue-600 border border-blue-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-blue-100 transition-colors"
-              >
-                Departments
-              </button>
-              <button
-                onClick={() => onNavigate('departments')}
-                className="bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-emerald-100 transition-colors"
-              >
-                Sub-Depts
-              </button>
-              <button
-                onClick={() => onNavigate('staff')}
-                className="bg-slate-50 text-slate-600 border border-slate-150 rounded-lg px-2.5 py-1 text-[10px] font-bold hover:bg-slate-100 transition-colors"
-              >
-                Staff
-              </button>
-            </div>
+            <button
+              onClick={() => onNavigate('departments')}
+              className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-50 rounded-full"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
-          <button
-            onClick={() => onNavigate('departments')}
-            className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-50 rounded-full"
-          >
-            <ChevronRight size={16} />
-          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

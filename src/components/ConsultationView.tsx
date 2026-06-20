@@ -39,6 +39,7 @@ interface ConsultationViewProps {
   onRefresh: () => void;
   onOpenBooking: () => void;
   isReadOnly?: boolean;
+  loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
 }
 
 export default function ConsultationView({
@@ -53,6 +54,7 @@ export default function ConsultationView({
   onRefresh,
   onOpenBooking,
   isReadOnly = false,
+  loggedInUser = null,
 }: ConsultationViewProps) {
   // Helper to parse date string into local timezone Date safely without shifts
   const parseLocalDate = (dateStr: string) => {
@@ -81,6 +83,9 @@ export default function ConsultationView({
   const [currentDate, setCurrentDate] = useState<Date>(parseLocalDate(TODAY_DATE_STR));
   const [showAllDates, setShowAllDates] = useState(true);
   
+  const isPatient = loggedInUser?.role === 'patient';
+  const patientProfileName = isPatient ? loggedInUser?.data?.name : null;
+  
   // Filter states
   const [selectedDept, setSelectedDept] = useState('All Departments');
   const [selectedDoc, setSelectedDoc] = useState('All Doctors');
@@ -97,6 +102,8 @@ export default function ConsultationView({
   const [editTime, setEditTime] = useState('');
   const [editStatus, setEditStatus] = useState<'Scheduled' | 'Confirmed' | 'Completed' | 'Cancelled'>('Scheduled');
   const [editType, setEditType] = useState<'Regular' | 'Follow-up'>('Regular');
+  const [editDoctorName, setEditDoctorName] = useState('');
+  const [editSpecialization, setEditSpecialization] = useState('');
 
   // Date Formatting Helpers
   const formatFullDate = (date: Date) => {
@@ -159,9 +166,12 @@ export default function ConsultationView({
   ])).filter(Boolean);
 
   // Compute live card counts for the selected date or all dates (Only includes active 'new' appointments: Scheduled & Confirmed)
-  const selectedActiveAppts = (showAllDates 
-    ? appointments 
-    : appointments.filter(a => matchDate(a.date, currentDate))
+  const selectedActiveAppts = (isPatient
+    ? appointments.filter(a => isPatient && patientProfileName && a.patientName?.trim().toLowerCase() === patientProfileName.trim().toLowerCase())
+    : (showAllDates 
+      ? appointments 
+      : appointments.filter(a => matchDate(a.date, currentDate))
+    )
   ).filter(a => a.status === 'Scheduled' || a.status === 'Confirmed');
   
   const activeConsultationsCount = selectedActiveAppts.length;
@@ -170,11 +180,16 @@ export default function ConsultationView({
 
   // Filtered Appointments list to display in table (Only showing new active consultations, excluding completed/cancelled ones)
   const filteredAppointments = appointments.filter((a) => {
+    // If patient is logged in, strictly enforce they can only see themselves
+    if (isPatient && patientProfileName && a.patientName?.trim().toLowerCase() !== patientProfileName.trim().toLowerCase()) {
+      return false;
+    }
+
     // "consultation ma jo new ho es ke only new he show ho old wal ni"
     if (a.status === 'Completed' || a.status === 'Cancelled') return false;
 
-    // Must match current selected date
-    if (!showAllDates && !matchDate(a.date, currentDate)) return false;
+    // Must match current selected date (ignored for patients so all dates are visible)
+    if (!isPatient && !showAllDates && !matchDate(a.date, currentDate)) return false;
 
     // Search filter
     const matchSearch =
@@ -209,13 +224,15 @@ export default function ConsultationView({
       const p = appt.date.split('/');
       if (p.length === 3) {
         // dd/mm/yyyy -> yyyy-mm-dd
-        parsedIso = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+         parsedIso = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
       }
     }
     setEditDate(parsedIso);
     setEditTime(appt.time || '');
     setEditStatus(appt.status || 'Scheduled');
     setEditType(appt.type || 'Regular');
+    setEditDoctorName(appt.doctorName || '');
+    setEditSpecialization(appt.specialization || '');
   };
 
   // Action: Save Edit modal
@@ -226,7 +243,9 @@ export default function ConsultationView({
       date: editDate,
       time: editTime,
       status: editStatus,
-      type: editType
+      type: editType,
+      doctorName: editDoctorName,
+      specialization: editSpecialization
     });
 
     setEditingAppt(null);
@@ -505,26 +524,24 @@ export default function ConsultationView({
                           <Eye size={14} />
                         </button>
 
-                        {!isReadOnly && (
-                          <>
-                            {/* Edit Button */}
-                            <button
-                              onClick={() => handleOpenEdit(a)}
-                              className="p-1.5 text-slate-400 hover:text-[#007f6e] hover:bg-emerald-50/50 rounded-lg transition-colors"
-                              title="Edit Date/Time/Status"
-                            >
-                              <Edit2 size={14} />
-                            </button>
+                        {(!isReadOnly || isPatient) && (
+                          <button
+                            onClick={() => handleOpenEdit(a)}
+                            className="p-1.5 text-slate-400 hover:text-[#007f6e] hover:bg-emerald-50/50 rounded-lg transition-colors"
+                            title="Edit Date/Time/Specialist"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        )}
 
-                            {/* Delete Button */}
-                            <button
-                              onClick={() => setDeletingID(a.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete Action"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => setDeletingID(a.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Action"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -736,54 +753,117 @@ export default function ConsultationView({
 
             {/* Form Inputs */}
             <div className="p-6 space-y-4">
-              <div className="bg-[#f0f9f6]/80 border border-emerald-150 p-3 rounded-xl flex items-start gap-2 mb-2">
-                <Stethoscope size={15} className="text-[#007f6e] mt-0.5 shrink-0" />
-                <p className="text-[11px] text-emerald-800 leading-relaxed font-medium">
-                  <strong>Consultation Mode:</strong> Only appointment status can be modified here. Clinical details, date, and doctor slots are preserved to prevent changes to medical records.
-                </p>
-              </div>
+              {isPatient ? (
+                <div className="space-y-4">
+                  <div className="bg-[#f0f9f6]/80 border border-emerald-150 p-3 rounded-xl flex items-start gap-1">
+                    <p className="text-[10px] text-emerald-800 leading-normal font-semibold">
+                      Please customize your assigned practitioner, appointment date, or booking time slot below.
+                    </p>
+                  </div>
 
-              {/* Consultation Info (Read-Only) */}
-              <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl space-y-2.5 text-xs text-slate-600">
-                <div className="flex justify-between border-b border-slate-100/60 pb-2">
-                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Patient Name</span>
-                  <span className="font-semibold text-slate-800 capitalize">{editingAppt.patientName}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100/60 pb-2">
-                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Assigned Specialist</span>
-                  <span className="font-semibold text-slate-700">{editingAppt.doctorName} ({editingAppt.specialization})</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100/60 pb-2">
-                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Original Date</span>
-                  <span className="font-mono font-bold text-slate-700">{editingAppt.date}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100/60 pb-2">
-                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Scheduled Time</span>
-                  <span className="font-mono text-slate-700">{editingAppt.time || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Appointment Type</span>
-                  <span className="font-semibold text-slate-705 bg-slate-100 px-2 py-0.5 rounded text-[10px]">{editingAppt.type || 'Regular / General'}</span>
-                </div>
-              </div>
+                  {/* Select Doctor */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5">
+                      Select Doctor *
+                    </label>
+                    <select
+                      value={editDoctorName}
+                      onChange={(e) => {
+                        const dName = e.target.value;
+                        setEditDoctorName(dName);
+                        const matched = doctors.find(doc => doc.name === dName);
+                        if (matched) {
+                          setEditSpecialization(matched.specialization);
+                        }
+                      }}
+                      className="w-full text-xs px-3.5 py-2 bg-white border border-slate-200 text-slate-800 rounded-lg focus:outline-none focus:border-[#007f6e] font-semibold"
+                    >
+                      {doctors.map((d) => (
+                        <option key={d.id} value={d.name}>
+                          {d.name} ({d.specialization})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {/* Status Select dropdown */}
-              <div>
-                <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5 flex items-center gap-1">
-                  <span>Modify Status State *</span>
-                </label>
-                <select
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as any)}
-                  className="w-full text-xs px-3.5 py-2.5 bg-white border-2 border-[#007f6e] text-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-semibold cursor-pointer shadow-xs"
-                >
-                  <option value="Scheduled">Scheduled (Remaining)</option>
-                  <option value="Confirmed">Confirmed (In Progress)</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                  <option value="Overdue">Overdue</option>
-                </select>
-              </div>
+                  {/* Schedule Date */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5">
+                      Appointment Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="w-full text-xs px-3.5 py-2 border border-slate-200 text-slate-800 rounded-lg focus:outline-none focus:border-[#007f6e] font-sans"
+                    />
+                  </div>
+
+                  {/* Schedule Time */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5">
+                      Time Slot *
+                    </label>
+                    <input
+                      type="time"
+                      value={editTime}
+                      onChange={(e) => setEditTime(e.target.value)}
+                      className="w-full text-xs px-3.5 py-2 border border-slate-200 text-slate-800 rounded-lg focus:outline-none focus:border-[#007f6e] font-sans"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-[#f0f9f6]/80 border border-emerald-150 p-3 rounded-xl flex items-start gap-2 mb-2">
+                    <Stethoscope size={15} className="text-[#007f6e] mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-emerald-800 leading-relaxed font-medium">
+                      <strong>Consultation Mode:</strong> Only appointment status can be modified here. Clinical details, date, and doctor slots are preserved to prevent changes to medical records.
+                    </p>
+                  </div>
+
+                  {/* Consultation Info (Read-Only) */}
+                  <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl space-y-2.5 text-xs text-slate-600">
+                    <div className="flex justify-between border-b border-slate-100/60 pb-2">
+                      <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Patient Name</span>
+                      <span className="font-semibold text-slate-800 capitalize">{editingAppt.patientName}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-100/60 pb-2">
+                      <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Assigned Specialist</span>
+                      <span className="font-semibold text-slate-700">{editingAppt.doctorName} ({editingAppt.specialization})</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-100/60 pb-2">
+                      <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Original Date</span>
+                      <span className="font-mono font-bold text-slate-700">{editingAppt.date}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-100/60 pb-2">
+                      <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Scheduled Time</span>
+                      <span className="font-mono text-slate-700">{editingAppt.time || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Appointment Type</span>
+                      <span className="font-semibold text-slate-705 bg-slate-100 px-2 py-0.5 rounded text-[10px]">{editingAppt.type || 'Regular / General'}</span>
+                    </div>
+                  </div>
+
+                  {/* Status Select dropdown */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                      <span>Modify Status State *</span>
+                    </label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as any)}
+                      className="w-full text-xs px-3.5 py-2.5 bg-white border-2 border-[#007f6e] text-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-semibold cursor-pointer shadow-xs"
+                    >
+                      <option value="Scheduled">Scheduled (Remaining)</option>
+                      <option value="Confirmed">Confirmed (In Progress)</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                      <option value="Overdue">Overdue</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Footer Buttons */}

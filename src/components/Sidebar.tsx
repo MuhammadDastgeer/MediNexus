@@ -104,8 +104,8 @@ export default function Sidebar({
     generalItems = allGeneralItems.filter((item) => doctorAllowedLocalTabs.includes(item.id));
     systemItems = []; // Doctors have no system administration access
   } else if (isPatient) {
-    // Patient displays: Dashboard, Appointments, Consultations, Billing, Patients (own profile), Doctors (all), Public Website
-    const patientAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'consultation', 'billing', 'patients', 'doctors'];
+    // Patient displays: Dashboard, Appointments, Billing, Patients (own profile), Doctors (all), Public Website
+    const patientAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'billing', 'patients', 'doctors'];
     generalItems = allGeneralItems.filter((item) => patientAllowedLocalTabs.includes(item.id));
     systemItems = []; // Patients have no system administration access
   }

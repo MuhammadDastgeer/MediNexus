@@ -45,6 +45,7 @@ interface AppointmentsViewProps {
   onDeleteAppointment?: (id: string) => void;
   onRefresh?: () => void;
   isReadOnly?: boolean;
+  loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
 }
 
 interface FollowUp {
@@ -69,7 +70,39 @@ export default function AppointmentsView({
   onDeleteAppointment,
   onRefresh,
   isReadOnly = false,
+  loggedInUser = null,
 }: AppointmentsViewProps) {
+  const isPatient = loggedInUser?.role === 'patient';
+  const patientProfileName = isPatient ? loggedInUser?.data?.name : null;
+
+  const handlePatientEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!doctorName) {
+      alert('Specialist doctor is required.');
+      return;
+    }
+    if (!date) {
+      alert('Appointment date is required.');
+      return;
+    }
+    if (!time) {
+      alert('Scheduled time is required.');
+      return;
+    }
+
+    if (editingId && onUpdateAppointment) {
+      onUpdateAppointment(editingId, {
+        doctorName,
+        specialization,
+        date,
+        time
+      });
+      showToast('Appointment rescheduled successfully.');
+    }
+
+    setShowModal(false);
+    if (onRefresh) onRefresh();
+  };
   // Mode toggle between 'appointments' and 'followups'
   const [activeMode, setActiveMode] = useState<'appointments' | 'followups'>('appointments');
 
@@ -666,6 +699,11 @@ export default function AppointmentsView({
 
   // Filtering Logic for Appointments list table
   const filteredAppointments = appointments.filter(a => {
+    // If patient is logged in, strictly enforce they can only see themselves
+    if (isPatient && patientProfileName && a.patientName?.trim().toLowerCase() !== patientProfileName.trim().toLowerCase()) {
+      return false;
+    }
+
     // Search query check
     const matchesSearch = searchQuery === '' || 
       a.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -685,6 +723,11 @@ export default function AppointmentsView({
 
   // Filtering Logic for Followups
   const filteredFollowUps = followUps.filter(f => {
+    // If patient is logged in, strictly enforce they can only see themselves
+    if (isPatient && patientProfileName && f.patientName?.trim().toLowerCase() !== patientProfileName.trim().toLowerCase()) {
+      return false;
+    }
+
     // Mode status dropdown
     const matchesStatus = followupStatusFilter === 'All Status' || f.status === followupStatusFilter;
 
@@ -744,7 +787,7 @@ export default function AppointmentsView({
         </div>
 
         {/* Global Action Booker */}
-        {!isReadOnly && (
+        {(!isReadOnly && !isPatient) && (
           <button
             onClick={handleOpenNewWizard}
             className="flex items-center justify-center gap-2 bg-[#007f6e] hover:bg-[#006657] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
@@ -823,24 +866,26 @@ export default function AppointmentsView({
           </div>
 
           {/* B. Book New Appointment Dashed Banner target (Exactly matching Image 2!) */}
-          <div 
-            onClick={handleOpenNewWizard}
-            className="group cursor-pointer bg-emerald-50/20 border-2 border-dashed border-[#007f6e]/30 hover:border-[#007f6e]/75 hover:bg-emerald-50/45 p-4 rounded-2xl shadow-xs transition-all flex items-center justify-between"
-            id="dashed-booking-banner-action"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-full bg-[#007f6e] text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
-                <Plus size={18} />
+          {!isPatient && (
+            <div 
+              onClick={handleOpenNewWizard}
+              className="group cursor-pointer bg-emerald-50/20 border-2 border-dashed border-[#007f6e]/30 hover:border-[#007f6e]/75 hover:bg-emerald-50/45 p-4 rounded-2xl shadow-xs transition-all flex items-center justify-between"
+              id="dashed-booking-banner-action"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-full bg-[#007f6e] text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
+                  <Plus size={18} />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">Book New Appointment</h4>
+                  <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Click to open the quick slot booking wizard layout.</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">Book New Appointment</h4>
-                <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Click to open the quick slot booking wizard layout.</p>
-              </div>
+              <span className="text-[#007f6e] text-xs font-semibold mr-2 group-hover:translate-x-1 duration-150 transition-transform">
+                &rarr;
+              </span>
             </div>
-            <span className="text-[#007f6e] text-xs font-semibold mr-2 group-hover:translate-x-1 duration-150 transition-transform">
-              &rarr;
-            </span>
-          </div>
+          )}
 
           {/* C. Master List container Card (Exactly matching Image 2 style & Filters!) */}
           <div className="bg-white border border-slate-150 rounded-2xl overflow-hidden shadow-xs" id="appointments-master-list-card">
@@ -971,12 +1016,14 @@ export default function AppointmentsView({
                   Try adjusting the date, uncheck Show All or apply a different selection query.
                 </p>
                 <div className="mt-4 flex justify-center gap-2">
-                  <button
-                    onClick={handleOpenNewWizard}
-                    className="bg-[#007f6e] text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-[#006657]"
-                  >
-                    Book Slot
-                  </button>
+                  {!isPatient && (
+                    <button
+                      onClick={handleOpenNewWizard}
+                      className="bg-[#007f6e] text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-[#006657]"
+                    >
+                      Book Slot
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowAllAppointments(true)}
                     className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-200"
@@ -1116,17 +1163,18 @@ export default function AppointmentsView({
                               <Eye size={13} />
                             </button>
 
+                            {(!isReadOnly || isPatient) && (
+                              <button
+                                onClick={() => handleOpenEditWizard(a)}
+                                className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"
+                                title="Edit schedule details"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                            )}
+
                             {!isReadOnly && (
                               <>
-                                {/* Overlap schedule edit */}
-                                <button
-                                  onClick={() => handleOpenEditWizard(a)}
-                                  className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"
-                                  title="Edit schedule details"
-                                >
-                                  <Edit2 size={13} />
-                                </button>
-
                                 {/* Create Followup option */}
                                 <button
                                   onClick={() => handleCreateFollowupFromAppointment(a)}
@@ -1424,7 +1472,89 @@ export default function AppointmentsView({
       {/* ========================================================================= */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+          {isPatient ? (
+            /* Patient edit form */
+            <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 flex flex-col animate-in fade-in zoom-in duration-200">
+              <div className="bg-[#e6f4f1]/50 px-6 py-4 border-b border-[#007f6e]/10 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Reschedule Appointment</h3>
+                  <p className="text-[10px] text-slate-400 font-medium">Modify assigned doctor, date or time slot</p>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-7 h-7 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full border border-slate-150 flex items-center justify-center transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handlePatientEditSubmit} className="p-6 space-y-4">
+                {/* Doctor select */}
+                <div>
+                  <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5">
+                    Select Specialist Doctor *
+                  </label>
+                  <select
+                    value={doctorName}
+                    onChange={(e) => handleDoctorChange(e.target.value)}
+                    className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-[#007f6e] font-semibold"
+                  >
+                    {activeDoctors.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name} ({d.specialization})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date picker */}
+                <div>
+                  <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5">
+                    Appointment Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#007f6e] font-sans"
+                    required
+                  />
+                </div>
+
+                {/* Time picker */}
+                <div>
+                  <label className="block text-[10px] font-bold text-[#007f6e] uppercase tracking-widest mb-1.5">
+                    Time Slot *
+                  </label>
+                  <input
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#007f6e] font-sans"
+                    required
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="pt-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-[#007f6e] text-white rounded-xl text-xs font-bold hover:bg-[#006657]"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
             
             {/* Header portion */}
             <div className="bg-[#e6f4f1]/50 px-6 py-4 border-b border-[#007f6e]/10 flex items-center justify-between">
@@ -2187,6 +2317,7 @@ export default function AppointmentsView({
             </form>
 
           </div>
+          )}
         </div>
       )}
 

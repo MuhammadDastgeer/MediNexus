@@ -1225,6 +1225,7 @@ export default function App() {
             departments={departments}
             subDepartments={subDepartments}
             transactions={transactions}
+            loggedInUser={loggedInUser}
           />
         );
       case 'patients':
@@ -1255,6 +1256,7 @@ export default function App() {
             onDeleteAppointment={handleDeleteAppointment}
             onRefresh={handleRefreshAll}
             isReadOnly={isReadOnly}
+            loggedInUser={loggedInUser}
           />
         );
       case 'billing':
@@ -1333,6 +1335,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             onOpenBooking={() => setActiveView('appointments')}
             isReadOnly={isReadOnly}
+            loggedInUser={loggedInUser}
           />
         );
       case 'ipd-wards':
