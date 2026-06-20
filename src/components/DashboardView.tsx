@@ -124,6 +124,7 @@ export default function DashboardView({
   // Compute live states
   const isPatient = loggedInUser?.role === 'patient';
   const isStaff = loggedInUser?.role === 'staff';
+  const isDoctor = loggedInUser?.role === 'doctor';
   const patientProfile = isPatient ? (patients[0] || loggedInUser.data) : null;
 
   // Patient billing sums
@@ -849,7 +850,7 @@ export default function DashboardView({
       </div>
 
       {/* Two Bottom Row Navigation Cards */}
-      {!isPatient && !isStaff && (
+      {!isPatient && !isStaff && !isDoctor && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4" id="quick-navigation-grid">
           {/* Card A: Services & Treatment Dashboard */}
           <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex items-center justify-between" id="quick-nav-services">

@@ -73,7 +73,7 @@ export default function Sidebar({
     { id: 'billing' as ActiveView, label: 'Billing', icon: Receipt },
     { id: 'inventory' as ActiveView, label: 'Inventory', icon: ClipboardList },
     { id: 'ipd-wards' as ActiveView, label: 'IPD / Wards', icon: Bed },
-    { id: 'staff' as ActiveView, label: 'Staff Profile', icon: Users },
+    { id: 'staff' as ActiveView, label: 'Staff', icon: Users },
     { id: 'doctors' as ActiveView, label: 'Doctors', icon: UserCheck },
     { id: 'patients' as ActiveView, label: 'Patients', icon: User },
     { id: 'departments' as ActiveView, label: 'Departments', icon: Building2 },
@@ -98,13 +98,13 @@ export default function Sidebar({
   const isPatient = loggedInUser?.role === 'patient';
 
   if (isStaff) {
-    // Staff displays: Dashboard, Appointments, Consultations, Billing, Staff (Profile), Patients, Public Website
-    const staffAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'consultation', 'billing', 'staff', 'patients'];
+    // Staff displays: Dashboard, Appointments, Consultations, Billing, Staff, Patients, Blogs, Public Website
+    const staffAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'consultation', 'billing', 'staff', 'patients', 'blogs'];
     generalItems = allGeneralItems.filter((item) => staffAllowedLocalTabs.includes(item.id));
     systemItems = []; // Staff has no system administration access
   } else if (isDoctor) {
-    // Doctor displays: Dashboard, Appointments, Consultations, Billing, Doctors (own profile), Patients, Public Website
-    const doctorAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'consultation', 'billing', 'doctors', 'patients'];
+    // Doctor displays: Dashboard, Appointments, Consultations, Billing, Doctors (own profile), Patients, Public Website, Staff
+    const doctorAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'consultation', 'billing', 'doctors', 'patients', 'staff', 'blogs'];
     generalItems = allGeneralItems.filter((item) => doctorAllowedLocalTabs.includes(item.id));
     systemItems = []; // Doctors have no system administration access
   } else if (isPatient) {

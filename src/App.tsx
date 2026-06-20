@@ -1270,7 +1270,7 @@ export default function App() {
             onUpdateBill={handleUpdateBill}
             onDeleteBill={handleDeleteBill}
             onRefresh={handleRefreshAll}
-            isReadOnly={loggedInUser?.role === 'staff' ? false : isReadOnly}
+            isReadOnly={(loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor') ? false : isReadOnly}
             loggedInUser={loggedInUser}
           />
         );
@@ -1303,13 +1303,14 @@ export default function App() {
       case 'staff':
         return (
           <StaffView
-            staffList={isStaffReadOnly ? staffList.filter((s) => s.id === loggedInUser?.data?.id) : staffList}
+            staffList={staffList}
             departments={departments}
             subDepartments={subDepartments}
             onAddStaff={handleAddStaff}
             onDeleteStaff={handleDeleteStaff}
             onRefresh={handleRefreshAll}
             onNavigate={setActiveView}
+            isReadOnly={loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor'}
           />
         );
       case 'departments':
@@ -1380,6 +1381,8 @@ export default function App() {
             onSaveBlog={handleSaveBlog}
             onDeleteBlog={handleDeleteBlog}
             onRefresh={handleRefreshAll}
+            isReadOnly={loggedInUser?.role === 'patient'}
+            loggedInUser={loggedInUser}
           />
         );
       case 'finance':

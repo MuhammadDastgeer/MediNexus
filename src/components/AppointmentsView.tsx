@@ -1203,7 +1203,7 @@ export default function AppointmentsView({
                               <Eye size={13} />
                             </button>
 
-                            {(!isReadOnly || isPatient || loggedInUser?.role === 'staff') && (
+                            {(!isReadOnly || isPatient || loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor') && (
                               <button
                                 onClick={() => handleOpenEditWizard(a)}
                                 className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"
@@ -1589,6 +1589,80 @@ export default function AppointmentsView({
                     className="flex-1 py-2.5 bg-[#007f6e] text-white rounded-xl text-xs font-bold hover:bg-[#006657]"
                   >
                     Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : loggedInUser?.role === 'doctor' && editingId ? (
+            /* Special doctor status-only edit form modal */
+            <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 flex flex-col animate-in fade-in zoom-in duration-200">
+              <div className="bg-[#e6f4f1]/50 px-6 py-4 border-b border-[#007f6e]/10 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Update Appointment Status</h3>
+                  <p className="text-[10px] text-slate-400 font-medium">Doctor Status Update Portal</p>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-7 h-7 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full border border-slate-150 flex items-center justify-center transition-all cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+              <form onSubmit={handleWizardSubmit} className="p-6 space-y-4">
+                {/* Static displays */}
+                <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <div>
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Patient Name</span>
+                    <span className="text-xs font-bold text-slate-800">{patientName}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">Assigned Doctor</span>
+                    <span className="text-xs font-bold text-slate-800">{doctorName} ({specialization})</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Date</span>
+                      <span className="text-xs font-semibold text-slate-700">{date}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Time Slot</span>
+                      <span className="text-xs font-semibold text-slate-700">{time}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status selector */}
+                <div>
+                  <label className="block text-[10px] font-bold text-[#007f6e] uppercase mb-1.5">
+                    Select Appointment Status *
+                  </label>
+                  <select
+                    value={statusVal}
+                    onChange={(e) => setStatusVal(e.target.value as any)}
+                    className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-205 text-slate-800 rounded-xl focus:outline-none focus:border-[#007f6e] font-semibold cursor-pointer"
+                  >
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Overdue">Overdue</option>
+                  </select>
+                </div>
+
+                {/* Action buttons */}
+                <div className="pt-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-[#007f6e] text-white rounded-xl text-xs font-bold hover:bg-[#006657] cursor-pointer"
+                  >
+                    Save Status
                   </button>
                 </div>
               </form>
@@ -2615,7 +2689,7 @@ export default function AppointmentsView({
             {/* Footer with Edit, Delete, Download Report PDF, Follow-Up, and Close buttons */}
             <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                {(!isReadOnly || loggedInUser?.role === 'staff') && (
+                {(!isReadOnly || loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor') && (
                   <button
                     onClick={() => {
                       handleOpenEditWizard(selectedAppointment);

@@ -16,6 +16,7 @@ interface StaffViewProps {
   onDeleteStaff: (id: string) => void;
   onRefresh: () => void;
   onNavigate?: (view: any) => void;
+  isReadOnly?: boolean;
 }
 
 export default function StaffView({ 
@@ -25,7 +26,8 @@ export default function StaffView({
   onAddStaff, 
   onDeleteStaff, 
   onRefresh, 
-  onNavigate 
+  onNavigate,
+  isReadOnly = false,
 }: StaffViewProps) {
   const [activeTab, setActiveTab] = useState<'members' | 'overview'>('members');
   const [showForm, setShowForm] = useState<'add' | 'edit' | false>(false);
@@ -443,32 +445,36 @@ export default function StaffView({
             {detailActiveTab === 'overview' && (
               <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-2xs" id="personal-info-block">
                 <div className="flex items-center justify-between border-b pb-3 mb-4">
-                  <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Clinical Staff Record</h3>
+                  <h3 className="text-xs font-bold text-slate-850 uppercase tracking-wider">Clinical Staff Record</h3>
                   <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        startEdit(viewingStaff);
-                        setViewingStaff(null);
-                      }}
-                      className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Edit this staff profile"
-                    >
-                      <Edit size={11} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Are you absolutely sure you want to remove staff member ${viewingStaff.name}?`)) {
-                          onDeleteStaff(viewingStaff.id);
-                          setViewingStaff(null);
-                        }
-                      }}
-                      className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Permanently delete recorded info"
-                    >
-                      <Trash2 size={11} />
-                      <span>Delete</span>
-                    </button>
+                    {!isReadOnly && (
+                      <>
+                        <button
+                          onClick={() => {
+                            startEdit(viewingStaff);
+                            setViewingStaff(null);
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Edit this staff profile"
+                        >
+                          <Edit size={11} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you absolutely sure you want to remove staff member ${viewingStaff.name}?`)) {
+                              onDeleteStaff(viewingStaff.id);
+                              setViewingStaff(null);
+                            }
+                          }}
+                          className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Permanently delete recorded info"
+                        >
+                          <Trash2 size={11} />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={handleDownloadStaffCardPDF}
                       className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#007f6e] rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
@@ -944,12 +950,14 @@ export default function StaffView({
               </p>
             </div>
             <div className="flex items-center gap-2 self-start md:self-auto">
-              <button
-                onClick={startAdd}
-                className="bg-[#00473e] hover:bg-[#003d35] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
-              >
-                Manage Staff
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={startAdd}
+                  className="bg-[#00473e] hover:bg-[#003d35] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  Manage Staff
+                </button>
+              )}
               <button
                 onClick={onRefresh}
                 className="bg-[#0c6b60] hover:bg-[#0a5c52] text-white p-2 rounded-xl"
@@ -1121,23 +1129,25 @@ export default function StaffView({
           </div>
 
           {/* Quick Tasks Bottom cards exactly matching Image 1 layout */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5" id="overview-ctas">
-            <div className="bg-[#0a6659] text-white border border-[#09574c] rounded-2xl p-5 flex flex-col justify-between space-y-4">
-              <div>
-                <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white mb-3">
-                  <Users size={16} />
+          <div className={`grid grid-cols-1 ${isReadOnly ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-5`} id="overview-ctas">
+            {!isReadOnly && (
+              <div className="bg-[#0a6659] text-white border border-[#09574c] rounded-2xl p-5 flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white mb-3">
+                    <Users size={16} />
+                  </div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider">Add New Staff</h4>
+                  <p className="text-[11px] text-teal-100 mt-1">Onboard a new staff member to your hospital team</p>
                 </div>
-                <h4 className="text-xs font-bold uppercase tracking-wider">Add New Staff</h4>
-                <p className="text-[11px] text-teal-100 mt-1">Onboard a new staff member to your hospital team</p>
+                <button 
+                  onClick={startAdd}
+                  className="w-full py-2 bg-[#004d44] hover:bg-[#003d35] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1"
+                >
+                  <span>Add Staff</span>
+                  <span>→</span>
+                </button>
               </div>
-              <button 
-                onClick={startAdd}
-                className="w-full py-2 bg-[#004d44] hover:bg-[#003d35] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1"
-              >
-                <span>Add Staff</span>
-                <span>→</span>
-              </button>
-            </div>
+            )}
 
             <div className="bg-[#6b5cd8] text-white border border-[#5a4cc2] rounded-2xl p-5 flex flex-col justify-between space-y-4">
               <div>
@@ -1185,15 +1195,17 @@ export default function StaffView({
               <p className="text-xs text-slate-400 mt-0.5">Manage all hospital staff — add, edit, assign roles, and control portal access.</p>
             </div>
             
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                onClick={startAdd}
-                className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-97"
-              >
-                <Plus size={14} />
-                <span>Add Staff</span>
-              </button>
-            </div>
+            {!isReadOnly && (
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  onClick={startAdd}
+                  className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-97"
+                >
+                  <Plus size={14} />
+                  <span>Add Staff</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Stats Bar */}
@@ -1355,24 +1367,28 @@ export default function StaffView({
                             >
                               <Eye size={13} />
                             </button>
-                            <button
-                              onClick={() => startEdit(s)}
-                              className="p-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-indigo-600 rounded-lg transition-colors"
-                              title="Edit particulars"
-                            >
-                              <Edit size={13} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Are you sure you want to delete staff member "${s.name}"?`)) {
-                                  onDeleteStaff(s.id);
-                                }
-                              }}
-                              className="p-1.5 border border-red-100 bg-white hover:bg-red-50/50 text-red-500 rounded-lg transition-colors"
-                              title="Delete record"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            {!isReadOnly && (
+                              <>
+                                <button
+                                  onClick={() => startEdit(s)}
+                                  className="p-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-indigo-600 rounded-lg transition-colors"
+                                  title="Edit particulars"
+                                >
+                                  <Edit size={13} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete staff member "${s.name}"?`)) {
+                                      onDeleteStaff(s.id);
+                                    }
+                                  }}
+                                  className="p-1.5 border border-red-100 bg-white hover:bg-red-50/50 text-red-500 rounded-lg transition-colors"
+                                  title="Delete record"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

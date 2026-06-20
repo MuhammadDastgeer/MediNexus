@@ -65,6 +65,13 @@ export default function DoctorsView({
   loggedInUser = null
 }: DoctorsViewProps) {
   const isPatient = loggedInUser?.role === 'patient';
+  const canEditDoctor = (doc: Doctor) => {
+    if (!isReadOnly) return true;
+    if (loggedInUser?.role === 'doctor') {
+      return doc.id === loggedInUser?.data?.id || doc.name === loggedInUser?.data?.name;
+    }
+    return false;
+  };
   const [activeTab, setActiveTab] = useState<'roster' | 'overview'>('overview');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -563,33 +570,33 @@ export default function DoctorsView({
                 <div className="flex items-center justify-between border-b pb-3 mb-4">
                   <h3 className="text-xs font-bold text-slate-805 uppercase tracking-wider">Clinical Specialist Profile</h3>
                   <div className="flex items-center gap-1.5">
+                    {viewingDoctor && canEditDoctor(viewingDoctor) && (
+                      <button
+                        onClick={() => {
+                          setViewingDoctor(null);
+                          handleOpenEditForm(viewingDoctor);
+                        }}
+                        className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Edit this doctor's profile"
+                      >
+                        <Edit3 size={11} />
+                        <span>Edit</span>
+                      </button>
+                    )}
                     {!isReadOnly && (
-                      <>
-                        <button
-                          onClick={() => {
+                      <button
+                        onClick={() => {
+                          if (confirm(`Are you absolutely sure you want to remove ${viewingDoctor.name}?`)) {
+                            onDeleteDoctor(viewingDoctor.id);
                             setViewingDoctor(null);
-                            handleOpenEditForm(viewingDoctor);
-                          }}
-                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-205 text-slate-600 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                          title="Edit this doctor's profile"
-                        >
-                          <Edit3 size={11} />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Are you absolutely sure you want to remove ${viewingDoctor.name}?`)) {
-                              onDeleteDoctor(viewingDoctor.id);
-                              setViewingDoctor(null);
-                            }
-                          }}
-                          className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                          title="Delete profile record"
-                        >
-                          <Trash2 size={11} />
-                          <span>Delete</span>
-                        </button>
-                      </>
+                          }
+                        }}
+                        className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-650 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Delete profile record"
+                      >
+                        <Trash2 size={11} />
+                        <span>Delete</span>
+                      </button>
                     )}
                     <button
                       onClick={handleDownloadDoctorCardPDF}
@@ -1403,7 +1410,7 @@ export default function DoctorsView({
                             </span>
                           </div>
                         </div>
-                        {!isReadOnly && (
+                        {canEditDoctor(doc) && (
                           <button
                             onClick={() => handleOpenEditForm(doc)}
                             className="p-1 text-slate-400 hover:text-[#007f6e]"
@@ -1789,7 +1796,7 @@ export default function DoctorsView({
                                     <Eye size={15} />
                                   </button>
 
-                                  {!isReadOnly && (
+                                  {canEditDoctor(doc) && (
                                     <>
                                       {/* Edit custom profile records form */}
                                       <button
@@ -1976,32 +1983,32 @@ export default function DoctorsView({
              {/* Footer with Edit, Delete, Download Report PDF, and Close buttons */}
             <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
+                {viewingDoctor && canEditDoctor(viewingDoctor) && (
+                  <button
+                    onClick={() => {
+                      setViewingDoctor(null);
+                      handleOpenEditForm(viewingDoctor);
+                    }}
+                    className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    id="edit-from-modal-btn"
+                  >
+                    <Edit3 size={12} />
+                    <span>Edit</span>
+                  </button>
+                )}
                 {!isReadOnly && (
-                  <>
-                    <button
-                      onClick={() => {
+                  <button
+                    onClick={() => {
+                      if (confirm(`Are you absolutely sure you want to remove Dr. ${viewingDoctor.name}?`)) {
+                        onDeleteDoctor(viewingDoctor.id);
                         setViewingDoctor(null);
-                        handleOpenEditForm(viewingDoctor);
-                      }}
-                      className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                      id="edit-from-modal-btn"
-                    >
-                      <Edit3 size={12} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Are you absolutely sure you want to remove Dr. ${viewingDoctor.name}?`)) {
-                          onDeleteDoctor(viewingDoctor.id);
-                          setViewingDoctor(null);
-                        }
-                      }}
-                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <Trash2 size={12} />
-                      <span>Delete</span>
-                    </button>
-                  </>
+                      }
+                    }}
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 size={12} />
+                    <span>Delete</span>
+                  </button>
                 )}
               </div>
 

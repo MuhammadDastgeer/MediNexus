@@ -191,3 +191,17 @@ export interface SubDepartment {
   location: string;
   status: 'Active' | 'Inactive';
 }
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+  summary: string;
+  author: string;
+  authorRole: string;
+  category: string;
+  publishedAt: string;
+  coverImage?: string;
+  tags?: string[];
+  status: 'Published' | 'Draft';
+}
