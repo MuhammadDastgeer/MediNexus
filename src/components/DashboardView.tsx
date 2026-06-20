@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import {
   Users,
   UserCheck,
@@ -395,7 +396,7 @@ export default function DashboardView({
   const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-full select-none" id="dashboard-view-root">
+    <div className="p-4 sm:p-6 space-y-6 overflow-y-auto h-full select-none" id="dashboard-view-root">
       {/* Title Header */}
       <div className="flex items-center justify-between" id="dashboard-header-intro">
         <div className="flex items-center gap-3">
@@ -424,8 +425,16 @@ export default function DashboardView({
       {/* KPI Cards (4 cards, horizontal row layout) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-cards-grid">
         {/* Card 1: Staff & Doctors */}
-        <div className="bg-[#e6f4f1] border border-[#d1ebe5] rounded-xl p-4 flex items-center gap-4 transition-all hover:scale-[1.01]" id="kpi-staff-doctors">
-          <div className="w-11 h-11 bg-[#007f6e] text-white rounded-xl flex items-center justify-center shadow-sm">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05, ease: "easeOut" }}
+          whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 20px -5px rgba(0,0,0,0.05)" }}
+          whileTap={{ scale: 0.98 }}
+          className="bg-[#e6f4f1] border border-[#d1ebe5] rounded-xl p-4 flex items-center gap-4 transition-shadow group cursor-pointer" 
+          id="kpi-staff-doctors"
+        >
+          <div className="w-11 h-11 bg-[#007f6e] text-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
             <Users size={20} />
           </div>
           <div>
@@ -439,11 +448,19 @@ export default function DashboardView({
               {isPatient ? `${activeDoctorsCount} specialists on-duty` : `${activeDoctorsCount} active doctors`}
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Card 2: Total Patients / My ID */}
-        <div className="bg-[#ecf7f1] border border-[#d3ecd7] rounded-xl p-4 flex items-center gap-4 transition-all hover:scale-[1.01]" id="kpi-total-patients">
-          <div className="w-11 h-11 bg-[#00a85a] text-white rounded-xl flex items-center justify-center shadow-sm">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+          whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 20px -5px rgba(0,0,0,0.05)" }}
+          whileTap={{ scale: 0.98 }}
+          className="bg-[#ecf7f1] border border-[#d3ecd7] rounded-xl p-4 flex items-center gap-4 transition-shadow group cursor-pointer" 
+          id="kpi-total-patients"
+        >
+          <div className="w-11 h-11 bg-[#00a85a] text-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
             <UserCheck size={20} />
           </div>
           <div>
@@ -460,11 +477,19 @@ export default function DashboardView({
               }
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Card 3: Today Appointments */}
-        <div className="bg-[#f4effc] border border-[#e3d8f8] rounded-xl p-4 flex items-center gap-4 transition-all hover:scale-[1.01]" id="kpi-today-appointments">
-          <div className="w-11 h-11 bg-[#8e52e9] text-white rounded-xl flex items-center justify-center shadow-sm">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
+          whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 20px -5px rgba(0,0,0,0.05)" }}
+          whileTap={{ scale: 0.98 }}
+          className="bg-[#f4effc] border border-[#e3d8f8] rounded-xl p-4 flex items-center gap-4 transition-shadow group cursor-pointer" 
+          id="kpi-today-appointments"
+        >
+          <div className="w-11 h-11 bg-[#8e52e9] text-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
             <Calendar size={20} />
           </div>
           <div>
@@ -481,11 +506,19 @@ export default function DashboardView({
               }
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Card 4: Earned Revenue */}
-        <div className="bg-[#fdf3e7] border border-[#fae5cc] rounded-xl p-4 flex items-center gap-4 transition-all hover:scale-[1.01]" id="kpi-revenue-today">
-          <div className="w-11 h-11 bg-[#f39c12] text-white rounded-xl flex items-center justify-center shadow-sm">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+          whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 20px -5px rgba(0,0,0,0.05)" }}
+          whileTap={{ scale: 0.98 }}
+          className="bg-[#fdf3e7] border border-[#fae5cc] rounded-xl p-4 flex items-center gap-4 transition-shadow group cursor-pointer" 
+          id="kpi-revenue-today"
+        >
+          <div className="w-11 h-11 bg-[#f39c12] text-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
             <IndianRupee size={20} />
           </div>
           <div className="flex-1 min-w-0">
@@ -509,7 +542,7 @@ export default function DashboardView({
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* 7 Stats Accent Pills */}
@@ -523,19 +556,34 @@ export default function DashboardView({
           { label: 'Active Plans', value: 0, color: 'border-cyan-500 text-cyan-600' },
           { label: 'Plans Done', value: 0, color: 'border-green-500 text-green-600' },
         ].map((pill, idx) => (
-          <div key={idx} className={`bg-white border-t-4 ${pill.color} rounded-lg p-3 text-center shadow-xs`} id={`stat-pill-${idx}`}>
+          <motion.div 
+            key={idx} 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: idx * 0.04 }}
+            whileHover={{ scale: 1.05, y: -2 }}
+            className={`bg-white border-t-4 ${pill.color} rounded-lg p-3 text-center shadow-xs cursor-pointer`} 
+            id={`stat-pill-${idx}`}
+          >
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block">
               {pill.label}
             </span>
             <span className="text-lg font-bold block mt-1">{pill.value}</span>
-          </div>
+          </motion.div>
         ))}
       </div>
 
       {/* Row with Monthly Trend & Live Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" id="trends-row-container">
         {/* Monthly Activity Trends Graphic */}
-        <div className="lg:col-span-2 bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" id="trends-chart-card">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25, ease: "easeOut" }}
+          whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.03)" }}
+          className="lg:col-span-2 bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" 
+          id="trends-chart-card"
+        >
           <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="trends-chart-header">
             <div>
               <h3 className="text-xs font-bold text-slate-800">Monthly Activity Trends</h3>
@@ -615,10 +663,17 @@ export default function DashboardView({
               <span key={month} className="w-12 text-center">{month}</span>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Live Alerts Panel */}
-        <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" id="trends-alerts-card">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+          whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.03)" }}
+          className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between animate-pulse-once" 
+          id="trends-alerts-card"
+        >
           <div className="flex items-center justify-between border-b border-slate-50 pb-3 h-10" id="alerts-card-header">
             <div>
               <h3 className="text-xs font-bold text-slate-800">Live Alerts</h3>
@@ -632,9 +687,9 @@ export default function DashboardView({
 
           <div className="flex-1 mt-4 overflow-y-auto max-h-[190px] pr-1 space-y-3 select-none" id="alerts-notices-feed">
             {getLiveAlerts().map((alert) => (
-              <div key={alert.id} className="flex gap-3 items-start hover:bg-slate-50 p-1.5 rounded-lg transition-colors border-b border-slate-50/50">
+              <div key={alert.id} className="flex gap-3 items-start hover:bg-slate-50 p-1.5 rounded-lg transition-colors border-b border-slate-50/50 group">
                 {renderAlertIcon(alert.icon, alert.color)}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 transition-transform duration-200 group-hover:translate-x-1">
                   <span className="text-[10px] uppercase font-extrabold text-[#007f6e]/95 tracking-tight block leading-none mb-0.5">
                     {alert.type}
                   </span>
@@ -648,13 +703,20 @@ export default function DashboardView({
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Dynamic Patients & Follow-Up Appointments Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" id="patients-followups-row">
         {/* Recently Registered Patients Container */}
-        <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" id="registered-patients-card">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35, ease: "easeOut" }}
+          whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.03)" }}
+          className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" 
+          id="registered-patients-card"
+        >
           <div>
             <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="registered-patients-header">
               <div>
@@ -670,7 +732,7 @@ export default function DashboardView({
               </div>
               <button
                 onClick={() => onNavigate('patients')}
-                className="w-7 h-7 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+                className="w-7 h-7 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                 id="all-patients-link-btn"
               >
                 <ChevronRight size={14} />
@@ -695,13 +757,13 @@ export default function DashboardView({
                   <tbody className="divide-y divide-slate-50">
                     {patients.slice(0, 4).map((p) => {
                       return (
-                        <tr key={p.id} className="hover:bg-slate-50/50">
+                        <tr key={p.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                           <td className="px-3 py-2.5 font-semibold text-slate-800">{p.name}</td>
                           <td className="px-3 py-2.5 text-slate-500">{p.gender} · {p.age} yrs</td>
                           <td className="px-3 py-2.5 text-slate-400 font-mono text-[11px]">{p.phone}</td>
                           <td className="px-3 py-2.5">
                             <span
-                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold transition-all duration-300 hover:scale-105 ${
                                 p.status === 'New' ? 'bg-[#e6f7ec]/80 text-[#00a85a]' : 'bg-[#f4effc]/80 text-[#8e52e9]'
                               }`}
                             >
@@ -716,10 +778,17 @@ export default function DashboardView({
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Follow-up Appointments Panel */}
-        <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" id="followups-card">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
+          whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.03)" }}
+          className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" 
+          id="followups-card"
+        >
           <div>
             <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="followups-header">
               <div>
@@ -735,7 +804,7 @@ export default function DashboardView({
               </div>
               <button
                 onClick={() => onNavigate('appointments')}
-                className="w-7 h-7 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+                className="w-7 h-7 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                 id="all-followups-link-btn"
               >
                 <ChevronRight size={14} />
@@ -744,7 +813,7 @@ export default function DashboardView({
 
             {followUpAppointments.length === 0 ? (
               <div className="py-12 flex flex-col items-center justify-center text-xs text-slate-400 font-medium" id="followups-empty">
-                <HeartPlus size={24} className="text-[#007f6e]/30 mb-2" />
+                <HeartPlus size={24} className="text-[#007f6e]/30 mb-2 animate-bounce" />
                 <span>No follow-up appointments scheduled</span>
               </div>
             ) : (
@@ -775,7 +844,7 @@ export default function DashboardView({
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Two Bottom Row Navigation Cards */}

@@ -1,10 +1,11 @@
-import { Search, Bell, ChevronDown } from 'lucide-react';
+import { Search, Bell, ChevronDown, Menu } from 'lucide-react';
 
 interface HeaderProps {
   loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
+  onMenuClick?: () => void;
 }
 
-export default function Header({ loggedInUser = null }: HeaderProps) {
+export default function Header({ loggedInUser = null, onMenuClick }: HeaderProps) {
   const getInitials = (name: string) => {
     if (!name) return "MH";
     const parts = name.trim().split(/\s+/);
@@ -26,10 +27,19 @@ export default function Header({ loggedInUser = null }: HeaderProps) {
   const initials = loggedInUser?.data?.name ? getInitials(loggedInUser.data.name) : "AD";
 
   return (
-    <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-6 select-none" id="app-header">
-      <div className="flex items-center gap-4">
+    <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 sm:px-6 select-none shrink-0" id="app-header">
+      <div className="flex items-center gap-2 sm:gap-4 flex-1">
+        {onMenuClick && (
+          <button 
+            onClick={onMenuClick} 
+            className="md:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 mr-1 shrink-0"
+            title="Toggle Sidebar Menu"
+          >
+            <Menu size={20} />
+          </button>
+        )}
         {/* Search Bar */}
-        <div className="relative w-80" id="search-bar-container">
+        <div className="relative w-full max-w-[150px] sm:max-w-[240px] md:max-w-[320px]" id="search-bar-container">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
             <Search size={16} />
           </span>

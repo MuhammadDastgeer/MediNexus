@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { 
   Calendar, 
   Plus, 
@@ -747,7 +748,7 @@ export default function AppointmentsView({
   });
 
   return (
-    <div className="p-6 h-full overflow-y-auto space-y-6 bg-[#f4f7f6] relative font-sans" id="appointments-module-wrapper">
+    <div className="p-4 sm:p-6 h-full overflow-y-auto space-y-6 bg-[#f4f7f6] relative font-sans" id="appointments-module-wrapper">
       
       {/* Toast Alert popup popup */}
       {toastMessage && (
@@ -810,59 +811,89 @@ export default function AppointmentsView({
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" id="appointments-stats-cards">
             
             {/* Today's Appointments Counter */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#007f6e] flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.05 }}
+              whileHover={{ scale: 1.04, y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.04)" }}
+              className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs flex items-center gap-4 cursor-pointer group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#007f6e] flex items-center justify-center group-hover:bg-[#007f6e] group-hover:text-white transition-all duration-300">
                 <Clock size={20} />
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Today's Appointments</span>
                 <span className="text-xl font-black text-slate-800 tracking-tight block mt-0.5">{countTodayAppts}</span>
               </div>
-            </div>
+            </motion.div>
 
             {/* Completed */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#e6f4f1] text-[#007f6e] flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.1 }}
+              whileHover={{ scale: 1.04, y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.04)" }}
+              className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs flex items-center gap-4 cursor-pointer group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-[#e6f4f1] text-[#007f6e] flex items-center justify-center group-hover:bg-[#007f6e] group-hover:text-white transition-all duration-300">
                 <CheckCircle2 size={20} />
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
                 <span className="text-xl font-black text-[#007f6e] tracking-tight block mt-0.5">{countCompletedAppts}</span>
               </div>
-            </div>
+            </motion.div>
 
             {/* Remaining */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.15 }}
+              whileHover={{ scale: 1.04, y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.04)" }}
+              className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs flex items-center gap-4 cursor-pointer group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all duration-300">
                 <CalendarCheck size={20} />
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Remaining</span>
                 <span className="text-xl font-black text-amber-600 tracking-tight block mt-0.5">{countRemainingAppts}</span>
               </div>
-            </div>
+            </motion.div>
 
             {/* Total */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.2 }}
+              whileHover={{ scale: 1.04, y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.04)" }}
+              className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs flex items-center gap-4 cursor-pointer group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center group-hover:bg-violet-600 group-hover:text-white transition-all duration-300">
                 <FileText size={20} />
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Appointments</span>
                 <span className="text-xl font-black text-violet-700 tracking-tight block mt-0.5">{countTotalAppts}</span>
               </div>
-            </div>
+            </motion.div>
 
             {/* Cancelled */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex items-center gap-4 col-span-2 lg:col-span-1">
-              <div className="w-12 h-12 rounded-xl bg-rose-50 text-[#e11d48] flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.25 }}
+              whileHover={{ scale: 1.04, y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.04)" }}
+              className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs flex items-center gap-4 col-span-2 lg:col-span-1 cursor-pointer group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-rose-50 text-[#e11d48] flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-all duration-300">
                 <X size={20} className="stroke-[3]" />
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Cancelled</span>
                 <span className="text-xl font-black text-rose-600 tracking-tight block mt-0.5">{countCancelledAppts}</span>
               </div>
-            </div>
+            </motion.div>
 
           </div>
 

@@ -297,7 +297,7 @@ export default function BillingView({
   );
 
   return (
-    <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-700 font-sans" id="billing-queue-view">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-700 font-sans" id="billing-queue-view">
       
       {/* Header Row (Same to same header as requested!) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" id="billing-header">

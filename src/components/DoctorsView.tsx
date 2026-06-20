@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   UserCheck, 
   Plus, 
@@ -696,7 +697,7 @@ export default function DoctorsView({
   }
 
   return (
-    <div className="p-6 h-full overflow-y-auto select-none space-y-6 bg-[#f8fafc]/90" id="doctors-unified-view">
+    <div className="p-4 sm:p-6 h-full overflow-y-auto select-none space-y-6 bg-[#f8fafc]/90" id="doctors-unified-view">
       
       {/* Toast Alert Banner */}
       {toastMessage && (
@@ -1243,48 +1244,76 @@ export default function DoctorsView({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="overview-counter-cards">
                 
                 {/* 1. Total Doctors Card */}
-                <div className="bg-[#f0e7ff]/30 p-5 rounded-2xl border border-purple-100/50 flex items-center gap-4">
-                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-purple-600 shadow-3xs border border-purple-100/20">
+                <motion.div 
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.05, ease: "easeOut" }}
+                  whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 20px -5px rgba(124, 58, 237, 0.08)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-[#f0e7ff]/30 p-5 rounded-2xl border border-purple-100/50 flex items-center gap-4 group cursor-pointer"
+                >
+                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-purple-600 shadow-3xs border border-purple-100/20 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
                     <Users size={18} />
                   </div>
                   <div>
                     <span className="block text-[#7c3aed] text-lg font-extrabold leading-none">{totalDoctors}</span>
                     <span className="block text-[11px] text-slate-400 font-semibold mt-1 uppercase tracking-wider">Total Doctors</span>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* 2. Active Doctors Card */}
-                <div className="bg-[#e0f2fe]/40 p-5 rounded-2xl border border-sky-100/50 flex items-center gap-4">
-                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-sky-600 shadow-3xs border border-sky-100/20">
+                <motion.div 
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+                  whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 20px -5px rgba(14, 165, 233, 0.08)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-[#e0f2fe]/40 p-5 rounded-2xl border border-sky-100/50 flex items-center gap-4 group cursor-pointer"
+                >
+                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-sky-600 shadow-3xs border border-sky-100/20 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
                     <User size={18} />
                   </div>
                   <div>
                     <span className="block text-sky-700 text-lg font-extrabold leading-none">{activeDoctors}</span>
                     <span className="block text-[11px] text-slate-400 font-semibold mt-1 uppercase tracking-wider">Active Doctors</span>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* 3. Available for booking */}
-                <div className="bg-[#dcfce7]/30 p-5 rounded-2xl border border-emerald-100/50 flex items-center gap-4">
-                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-3xs border border-emerald-100/20">
+                <motion.div 
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
+                  whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 20px -5px rgba(16, 185, 129, 0.08)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-[#dcfce7]/30 p-5 rounded-2xl border border-emerald-100/50 flex items-center gap-4 group cursor-pointer"
+                >
+                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-3xs border border-emerald-100/20 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
                     <CheckCircle size={18} />
                   </div>
                   <div>
                     <span className="block text-[#00a85a] text-lg font-extrabold leading-none">{availableToBook}</span>
                     <span className="block text-[11px] text-slate-400 font-semibold mt-1 uppercase tracking-wider">Available to Book</span>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* 4. Portal Access */}
-                <div className="bg-[#fef9c3]/30 p-5 rounded-2xl border border-amber-100/50 flex items-center gap-4">
-                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-amber-600 shadow-3xs border border-amber-100/20">
+                <motion.div 
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+                  whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 20px -5px rgba(245, 158, 11, 0.08)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-[#fef9c3]/30 p-5 rounded-2xl border border-amber-100/50 flex items-center gap-4 group cursor-pointer"
+                >
+                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-amber-600 shadow-3xs border border-amber-100/20 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
                     <Send size={18} />
                   </div>
                   <div>
                     <span className="block text-[#b45309] text-lg font-extrabold leading-none">{portalAccessSent}</span>
                     <span className="block text-[11px] text-slate-400 font-semibold mt-1 uppercase tracking-wider">Portal Access Sent</span>
                   </div>
-                </div>
+                </motion.div>
 
               </div>
 
@@ -1292,7 +1321,13 @@ export default function DoctorsView({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 
                 {/* Left Panel: Doctors By Department */}
-                <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-3xs">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: 0.25 }}
+                  whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.02)" }}
+                  className="bg-white border border-slate-100 rounded-2xl p-5 shadow-3xs"
+                >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-50">
                     <div>
                       <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Doctors by Department</h3>
@@ -1329,10 +1364,16 @@ export default function DoctorsView({
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Right Panel: Recently Added */}
-                <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-3xs">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                  whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.02)" }}
+                  className="bg-white border border-slate-100 rounded-2xl p-5 shadow-3xs"
+                >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-50">
                     <div>
                       <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Recently Added</h3>
@@ -1380,12 +1421,19 @@ export default function DoctorsView({
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
 
               </div>
 
               {/* Doctors on Duty Today Panel */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-3xs" id="doctors-on-duty-pane">
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 }}
+                whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.02)" }}
+                className="bg-white border border-slate-100 rounded-2xl p-5 shadow-3xs" 
+                id="doctors-on-duty-pane"
+              >
                 <div className="flex items-center justify-between pb-3 border-b border-slate-50">
                   <div>
                     <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Doctors on Duty Today</h3>
@@ -1397,13 +1445,13 @@ export default function DoctorsView({
                   {dutyDoctorsToday.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
                       {dutyDoctorsToday.map(doc => (
-                        <div key={doc.id} className="p-3 bg-slate-50 hover:bg-[#e6f4f1]/30 rounded-xl border border-slate-100 transition-all flex justify-between items-center">
+                        <div key={doc.id} className="p-3 bg-slate-50 hover:bg-[#e6f4f1]/30 rounded-xl border border-slate-100 transition-all flex justify-between items-center group">
                           <div>
-                            <span className="font-bold text-slate-800 text-xs block">{doc.name}</span>
+                            <span className="font-bold text-slate-800 text-xs block group-hover:text-[#007f6e] transition-colors duration-150">{doc.name}</span>
                             <span className="text-[10px] text-[#007f6e] font-semibold mt-0.5 block">{doc.specialization}</span>
                             <span className="text-[9px] text-slate-400 font-mono mt-1 block">{doc.phone}</span>
                           </div>
-                          <span className="bg-emerald-50 text-emerald-600 text-[9px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">
+                          <span className="bg-emerald-50 text-emerald-600 text-[9px] font-bold px-2 py-0.5 rounded-full border border-emerald-100 group-hover:scale-105 transition-transform">
                             On Duty
                           </span>
                         </div>
@@ -1411,15 +1459,21 @@ export default function DoctorsView({
                     </div>
                   ) : (
                     <div className="p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-                      <Stethoscope size={28} className="text-slate-300" />
+                      <Stethoscope size={28} className="text-slate-300 animate-pulse" />
                       <p className="text-xs font-medium">No doctors have appointments scheduled today</p>
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
               {/* Fee Structure Overview Widgets */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-3xs">
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.4 }}
+                whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.02)" }}
+                className="bg-white border border-slate-100 rounded-2xl p-5 shadow-3xs"
+              >
                 <div>
                   <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Fee Structure Overview</h3>
                   <p className="text-[10px] text-slate-400 font-semibold mb-3">Consultation fees across active clinical rosters</p>
@@ -1427,42 +1481,54 @@ export default function DoctorsView({
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Card 1: Average */}
-                  <div className="bg-[#fcf8ff] border border-purple-100 p-4 rounded-xl flex items-center justify-between">
+                  <motion.div 
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className="bg-[#fcf8ff] border border-purple-100 p-4 rounded-xl flex items-center justify-between cursor-pointer group"
+                  >
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Avg. Consultation Fee</span>
                       <h4 className="text-lg font-extrabold text-[#7c3aed] mt-1">₹{fees.avg}</h4>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-purple-100 text-[#7c3aed] flex items-center justify-center font-bold text-sm">₹</div>
-                  </div>
+                    <div className="w-8 h-8 rounded-full bg-purple-100 text-[#7c3aed] flex items-center justify-center font-bold text-sm group-hover:scale-110 group-hover:rotate-12 transition-all">₹</div>
+                  </motion.div>
 
                   {/* Card 2: Lowest */}
-                  <div className="bg-[#f0fdf4] border border-emerald-100 p-4 rounded-xl flex items-center justify-between">
+                  <motion.div 
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className="bg-[#f0fdf4] border border-emerald-100 p-4 rounded-xl flex items-center justify-between cursor-pointer group"
+                  >
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Lowest Fee</span>
                       <h4 className="text-lg font-extrabold text-[#00a85a] mt-1">₹{fees.min}</h4>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#00a85a] flex items-center justify-center font-bold text-sm">₹</div>
-                  </div>
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#00a85a] flex items-center justify-center font-bold text-sm group-hover:scale-110 group-hover:rotate-12 transition-all">₹</div>
+                  </motion.div>
 
                   {/* Card 3: Highest */}
-                  <div className="bg-[#fffbeb] border border-amber-100 p-4 rounded-xl flex items-center justify-between">
+                  <motion.div 
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className="bg-[#fffbeb] border border-amber-100 p-4 rounded-xl flex items-center justify-between cursor-pointer group"
+                  >
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Highest Fee</span>
                       <h4 className="text-lg font-extrabold text-amber-600 mt-1">₹{fees.max}</h4>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center font-bold text-sm">₹</div>
-                  </div>
+                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center font-bold text-sm group-hover:scale-110 group-hover:rotate-12 transition-all">₹</div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Three bottom colored CTA actions cards (Image 1 Bottom) */}
               <div className={isPatient ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 md:grid-cols-3 gap-4"}>
                 
                 {/* 1. Add Doctor panel */}
                 {!isPatient && (
-                  <div className="bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs">
+                  <motion.div 
+                    whileHover={{ scale: 1.02, y: -4 }}
+                    className="bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs cursor-pointer group"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center">
+                      <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                         <Stethoscope size={18} />
                       </div>
                       <div>
@@ -1475,16 +1541,19 @@ export default function DoctorsView({
                       className="w-full bg-white hover:bg-slate-50 text-slate-800 rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm"
                     >
                       <span>Add Doctor</span>
-                      <ArrowRight size={13} />
+                      <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
                     </button>
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* 2. Manage Staff panel */}
                 {!isPatient && (
-                  <div className="bg-[#115e59] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs">
+                  <motion.div 
+                    whileHover={{ scale: 1.02, y: -4 }}
+                    className="bg-[#115e59] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs cursor-pointer group"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center">
+                      <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                         <Users size={18} />
                       </div>
                       <div>
@@ -1497,15 +1566,18 @@ export default function DoctorsView({
                       className="w-full bg-white hover:bg-slate-50 text-[#115e59] rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
                     >
                       <span>Go to Staff</span>
-                      <ArrowRight size={13} />
+                      <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
                     </button>
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* 3. View Appointments panel */}
-                <div className="bg-[#059669] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs">
+                <motion.div 
+                  whileHover={{ scale: 1.02, y: -4 }}
+                  className="bg-[#059669] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs cursor-pointer group"
+                >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center">
+                    <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                       <Calendar size={18} />
                     </div>
                     <div>
@@ -1520,7 +1592,7 @@ export default function DoctorsView({
                     <span>View Appointments</span>
                     <ArrowRight size={13} />
                   </button>
-                </div>
+                </motion.div>
 
               </div>
 

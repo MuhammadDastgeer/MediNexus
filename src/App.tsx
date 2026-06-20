@@ -109,6 +109,7 @@ export default function App() {
   }, [loggedInUser]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Dynamic state arrays backed up by SQLite Database
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -1459,12 +1460,14 @@ export default function App() {
         onUpdateStaff={handleAddStaff}
         onUpdateDoctor={handleUpdateDoctor}
         onUpdatePatient={handleUpdatePatient}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
       />
 
       {/* 2. Primary Admin Workspace */}
       <div className="flex-1 flex flex-col h-full overflow-hidden" id="central-column">
         {/* Top Search-Bell Bar */}
-        <Header loggedInUser={loggedInUser} />
+        <Header loggedInUser={loggedInUser} onMenuClick={() => setMobileSidebarOpen(true)} />
 
         {/* Central Component Swapper */}
         <main className="flex-1 overflow-hidden" id="workspace-scroll">

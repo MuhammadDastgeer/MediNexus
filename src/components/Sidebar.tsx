@@ -39,6 +39,8 @@ interface SidebarProps {
   onUpdateStaff: (staff: Omit<Staff, 'id'> & { id?: string }) => Promise<void> | void;
   onUpdateDoctor?: (id: string, fields: any) => Promise<void> | void;
   onUpdatePatient?: (patient: any) => Promise<void> | void;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export default function Sidebar({
@@ -51,6 +53,8 @@ export default function Sidebar({
   onUpdateStaff,
   onUpdateDoctor,
   onUpdatePatient,
+  mobileOpen = false,
+  onCloseMobile,
 }: SidebarProps) {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editName, setEditName] = useState('');
@@ -229,9 +233,30 @@ export default function Sidebar({
     setActiveView('landing');
   };
 
+  const handleNavClick = (viewId: ActiveView) => {
+    setActiveView(viewId);
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const handleLogoutWithClose = () => {
+    handleNavClick('landing');
+    setLoggedInUser(null);
+  };
+
   return (
     <>
-      <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-100 flex flex-col h-screen overflow-y-auto select-none transition-all duration-300 relative`} id="app-sidebar">
+      {/* Mobile Sidebar backdrop overlay */}
+      {mobileOpen && (
+        <div 
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-black/45 backdrop-blur-xs z-40 md:hidden"
+          id="sidebar-mobile-backdrop"
+        />
+      )}
+
+      <aside className={`fixed md:relative inset-y-0 left-0 z-50 md:z-20 bg-white border-r border-slate-100 flex flex-col h-screen overflow-y-auto select-none transition-all duration-300 ${
+        mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
+      } ${collapsed ? 'md:w-20' : 'md:w-64'}`} id="app-sidebar">
         {/* Brand Logo & Collapse Toggle */}
         <div className={`p-5 flex items-center justify-between border-b border-slate-50 ${collapsed ? 'flex-col gap-4 py-6' : ''}`}>
           <div className="flex items-center gap-3">
@@ -271,7 +296,7 @@ export default function Sidebar({
                 return (
                   <li key={item.id}>
                     <button
-                      onClick={() => setActiveView(item.id)}
+                      onClick={() => handleNavClick(item.id)}
                       className={`w-full flex items-center ${collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3 py-2'} rounded-xl text-sm font-medium transition-all duration-200 text-left cursor-pointer ${
                         isActive
                           ? 'bg-[#e6f4f1] text-[#007f6e]'
@@ -303,11 +328,11 @@ export default function Sidebar({
                   return (
                     <li key={item.id}>
                       <button
-                        onClick={() => setActiveView(item.id)}
+                        onClick={() => handleNavClick(item.id)}
                         className={`w-full flex items-center ${collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3 py-2'} rounded-xl text-sm font-medium transition-all duration-200 text-left cursor-pointer ${
                           isActive
                             ? 'bg-[#e6f4f1] text-[#007f6e]'
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-850'
                         }`}
                         title={collapsed ? item.label : undefined}
                         id={`menu-item-${item.id}`}
@@ -347,7 +372,7 @@ export default function Sidebar({
           </div>
 
           <button
-            onClick={handleLogout}
+            onClick={handleLogoutWithClose}
             className={`w-full flex items-center justify-center ${collapsed ? 'py-2.5 px-0' : 'gap-2 px-4 py-2'} bg-red-50 text-red-600 rounded-xl border border-red-100/30 font-bold text-xs hover:bg-red-100 transition-colors cursor-pointer`}
             id="logout-btn"
             title="Disconnect current session"

@@ -113,7 +113,7 @@ export default function RightSidebar({ appointments, patients, inventory, doctor
     .reduce((sum, b) => sum + Number(b.amount), 0);
 
   return (
-    <aside className="w-80 bg-white border-l border-slate-100 p-6 flex flex-col gap-6 overflow-y-auto h-screen select-none" id="right-sidebar">
+    <aside className="hidden xl:flex w-80 bg-white border-l border-slate-100 p-6 flex-col gap-6 overflow-y-auto h-screen select-none shrink-0" id="right-sidebar">
       {/* Date & Calendar */}
       <div>
         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider" id="date-label">
