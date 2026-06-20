@@ -1270,7 +1270,7 @@ export default function App() {
             onUpdateBill={handleUpdateBill}
             onDeleteBill={handleDeleteBill}
             onRefresh={handleRefreshAll}
-            isReadOnly={isReadOnly}
+            isReadOnly={loggedInUser?.role === 'staff' ? false : isReadOnly}
             loggedInUser={loggedInUser}
           />
         );

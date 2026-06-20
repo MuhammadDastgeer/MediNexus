@@ -112,6 +112,10 @@ export default function AppointmentsView({
   const [showModal, setShowModal] = useState(false);
   const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(1);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [originalDate, setOriginalDate] = useState<string>('');
+  const [originalTime, setOriginalTime] = useState<string>('');
+  const [originalStatus, setOriginalStatus] = useState<Appointment['status']>('Scheduled');
+  const [statusVal, setStatusVal] = useState<Appointment['status']>('Scheduled');
   const [isNewAppointmentInsteadOfOverwrite, setIsNewAppointmentInsteadOfOverwrite] = useState(false);
   const [isExistingPatientSelected, setIsExistingPatientSelected] = useState(false);
 
@@ -433,8 +437,12 @@ export default function AppointmentsView({
     setAge(appt.age || 30);
     setDoctorName(appt.doctorName);
     setSpecialization(appt.specialization);
-    setDate(getTodayDateString());
+    setDate(appt.date);
     setTime(appt.time);
+    setOriginalDate(appt.date);
+    setOriginalTime(appt.time);
+    setOriginalStatus(appt.status || 'Scheduled');
+    setStatusVal(appt.status || 'Scheduled');
     setIsFollowUpFromCheckbox(appt.type === 'Follow-up');
     setSaveToPatientRegistry(true);
     
@@ -539,7 +547,7 @@ export default function AppointmentsView({
       specialization,
       date,
       time,
-      status: 'Scheduled',
+      status: (editingId && date === originalDate && time === originalTime) ? statusVal : (editingId ? originalStatus : 'Scheduled'),
       patientEmail,
       patientPassword,
       patientPhone,
@@ -789,10 +797,10 @@ export default function AppointmentsView({
         </div>
 
         {/* Global Action Booker */}
-        {(!isReadOnly && !isPatient) && (
+        {(!isReadOnly || loggedInUser?.role === 'staff') && !isPatient && (
           <button
             onClick={handleOpenNewWizard}
-            className="flex items-center justify-center gap-2 bg-[#007f6e] hover:bg-[#006657] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
+            className="flex items-center justify-center gap-2 bg-[#007f6e] hover:bg-[#006657] text-[#ffffff] px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
             id="trigger-quick-booking-btn"
           >
             <Plus size={16} />
@@ -1195,7 +1203,7 @@ export default function AppointmentsView({
                               <Eye size={13} />
                             </button>
 
-                            {(!isReadOnly || isPatient) && (
+                            {(!isReadOnly || isPatient || loggedInUser?.role === 'staff') && (
                               <button
                                 onClick={() => handleOpenEditWizard(a)}
                                 className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"
@@ -2146,6 +2154,39 @@ export default function AppointmentsView({
                   </div>
 
                   {editingId && (
+                    <div className="pt-3 border-t border-slate-100 mt-3 space-y-2">
+                      <label className="block text-[10px] font-bold text-[#007f6e] uppercase mb-1">Appointment Status State</label>
+                      {date === originalDate && time === originalTime ? (
+                        <div>
+                          <select
+                            value={statusVal}
+                            onChange={(e) => setStatusVal(e.target.value as any)}
+                            className="w-full text-xs px-3.5 py-2.5 bg-white border-2 border-[#007f6e] text-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007f6e]/20 font-semibold cursor-pointer shadow-xs"
+                          >
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="Overdue">Overdue</option>
+                          </select>
+                          <p className="text-[10px] text-emerald-600 mt-1 font-medium">
+                            ✓ Status is editable because Appointment Date and Time match original values.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-amber-50/50 border border-amber-250 p-3 rounded-xl text-amber-800">
+                          <p className="text-[10px] font-bold flex items-center gap-1">
+                            ⚠️ Rescheduled! Status is automatically set to "Scheduled"
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                            Since you modified the Date or Time Slot, the status state is automatically locked and set to <strong>"Scheduled"</strong> to reflect the new reschedule date.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {editingId && (
                     <div className="bg-emerald-50/30 border border-emerald-100 p-4 rounded-xl space-y-2 mt-4">
                       <div className="flex items-start gap-2.5">
                         <input
@@ -2574,28 +2615,28 @@ export default function AppointmentsView({
             {/* Footer with Edit, Delete, Download Report PDF, Follow-Up, and Close buttons */}
             <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
+                {(!isReadOnly || loggedInUser?.role === 'staff') && (
+                  <button
+                    onClick={() => {
+                      handleOpenEditWizard(selectedAppointment);
+                      setSelectedAppointment(null);
+                    }}
+                    className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Edit2 size={12} />
+                    <span>Edit</span>
+                  </button>
+                )}
                 {!isReadOnly && (
-                  <>
-                    <button
-                      onClick={() => {
-                        handleOpenEditWizard(selectedAppointment);
-                        setSelectedAppointment(null);
-                      }}
-                      className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <Edit2 size={12} />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleDeleteAppointmentRecord(selectedAppointment.id);
-                      }}
-                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <Trash2 size={12} />
-                      <span>Delete</span>
-                    </button>
-                  </>
+                  <button
+                    onClick={() => {
+                      handleDeleteAppointmentRecord(selectedAppointment.id);
+                    }}
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 size={12} />
+                    <span>Delete</span>
+                  </button>
                 )}
               </div>
 
