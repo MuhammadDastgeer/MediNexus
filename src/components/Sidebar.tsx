@@ -111,14 +111,20 @@ export default function Sidebar({
   }
 
   // Display fields for sidebar profile widget
-  const displayName = loggedInUser?.data?.name || "Muhammad Hamza";
-  const displayRole = loggedInUser ? `${loggedInUser.role} Console` : "Hospital Admin";
+  const displayName = loggedInUser?.data?.name || "Admin";
+  const displayRole = loggedInUser 
+    ? (loggedInUser.role === 'patient' 
+        ? "Patient Console" 
+        : loggedInUser.role === 'doctor' 
+          ? "Doctor Console" 
+          : "Staff Console") 
+    : "Admin Console";
   const displayInitial = displayName.slice(0, 2).toUpperCase();
 
   // Populate dynamic form state on modal open
   const openEditProfile = () => {
-    setEditName(loggedInUser?.data?.name || "Muhammad Hamza");
-    setEditEmail(loggedInUser?.data?.email || "hamza@hospital.com");
+    setEditName(loggedInUser?.data?.name || "Admin");
+    setEditEmail(loggedInUser?.data?.email || "admin@hospital.com");
     setEditPassword(loggedInUser?.data?.password || "admin123");
     setShowPwd(false);
     setSaveSuccessMsg('');
@@ -235,7 +241,7 @@ export default function Sidebar({
             {!collapsed && (
               <div>
                 <h2 className="font-bold text-slate-800 text-[16px] leading-tight" id="brand-logo-name">Code</h2>
-                <span className="text-xs text-slate-400 font-medium" id="brand-logo-subtitle">Hospital Admin</span>
+                <span className="text-xs text-slate-400 font-medium" id="brand-logo-subtitle">{displayRole}</span>
               </div>
             )}
           </div>

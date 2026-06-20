@@ -710,32 +710,39 @@ export default function DoctorsView({
       {!showForm && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-2">
           {/* Pills Tabs Switch */}
-          <div className="flex bg-slate-100 p-1 rounded-xl w-fit" id="doctors-tabs-container">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                activeTab === 'overview'
-                  ? 'bg-white text-[#007f6e] shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-              id="tab-overview-btn"
-            >
+          {!isPatient ? (
+            <div className="flex bg-slate-100 p-1 rounded-xl w-fit" id="doctors-tabs-container">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  activeTab === 'overview'
+                    ? 'bg-white text-[#007f6e] shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                id="tab-overview-btn"
+              >
+                <Activity size={14} />
+                <span>Overview</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('roster')}
+                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  activeTab === 'roster'
+                    ? 'bg-white text-[#007f6e] shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                id="tab-roster-btn"
+              >
+                <Stethoscope size={14} />
+                <span>Doctors</span>
+              </button>
+            </div>
+          ) : (
+            <div className="px-4 py-1.5 bg-slate-100/50 rounded-xl text-[#007f6e] text-xs font-bold flex items-center gap-2" id="doctors-tabs-container-patient">
               <Activity size={14} />
-              <span>Overview</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('roster')}
-              className={`flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                activeTab === 'roster'
-                  ? 'bg-white text-[#007f6e] shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-              id="tab-roster-btn"
-            >
-              <Stethoscope size={14} />
-              <span>Doctors</span>
-            </button>
-          </div>
+              <span>Hospital Doctors Overview</span>
+            </div>
+          )}
 
           <div>
              <span className="text-slate-400 text-xs font-medium">
@@ -1210,13 +1217,15 @@ export default function DoctorsView({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setActiveTab('roster')}
-                    className="bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all"
-                    id="manage-doctors-shortcut"
-                  >
-                    Manage Doctors
-                  </button>
+                  {!isPatient && (
+                    <button
+                      onClick={() => setActiveTab('roster')}
+                      className="bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all"
+                      id="manage-doctors-shortcut"
+                    >
+                      Manage Doctors
+                    </button>
+                  )}
                   {!isReadOnly && (
                     <button
                       onClick={handleOpenAddForm}
@@ -1329,12 +1338,14 @@ export default function DoctorsView({
                       <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Recently Added</h3>
                       <p className="text-[10px] text-slate-400 font-medium font-semibold">Latest doctors onboarded</p>
                     </div>
-                    <button 
-                      onClick={() => setActiveTab('roster')} 
-                      className="text-[#007f6e] text-[10px] font-bold hover:underline"
-                    >
-                      View All ›
-                    </button>
+                    {!isPatient && (
+                      <button 
+                        onClick={() => setActiveTab('roster')} 
+                        className="text-[#007f6e] text-[10px] font-bold hover:underline"
+                      >
+                        View All ›
+                      </button>
+                    )}
                   </div>
 
                   <div className="divide-y divide-slate-50">
@@ -1351,13 +1362,15 @@ export default function DoctorsView({
                             </span>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleOpenEditForm(doc)}
-                          className="p-1 text-slate-400 hover:text-[#007f6e]"
-                          title="Edit Specialist Record"
-                        >
-                          <Edit3 size={13} />
-                        </button>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => handleOpenEditForm(doc)}
+                            className="p-1 text-slate-400 hover:text-[#007f6e]"
+                            title="Edit Specialist Record"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+                        )}
                       </div>
                     ))}
 
@@ -1888,32 +1901,36 @@ export default function DoctorsView({
 
             </div>
 
-            {/* Footer with Edit, Delete, Download Report PDF, and Close buttons */}
+             {/* Footer with Edit, Delete, Download Report PDF, and Close buttons */}
             <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    setViewingDoctor(null);
-                    handleOpenEditForm(viewingDoctor);
-                  }}
-                  className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                  id="edit-from-modal-btn"
-                >
-                  <Edit3 size={12} />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`Are you absolutely sure you want to remove Dr. ${viewingDoctor.name}?`)) {
-                      onDeleteDoctor(viewingDoctor.id);
-                      setViewingDoctor(null);
-                    }
-                  }}
-                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <Trash2 size={12} />
-                  <span>Delete</span>
-                </button>
+                {!isReadOnly && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setViewingDoctor(null);
+                        handleOpenEditForm(viewingDoctor);
+                      }}
+                      className="bg-[#e6f4f1] hover:bg-[#d5eeea] text-[#007f6e] border border-emerald-500/10 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                      id="edit-from-modal-btn"
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you absolutely sure you want to remove Dr. ${viewingDoctor.name}?`)) {
+                          onDeleteDoctor(viewingDoctor.id);
+                          setViewingDoctor(null);
+                        }
+                      }}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                      <span>Delete</span>
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">

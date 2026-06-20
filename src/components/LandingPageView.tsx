@@ -452,7 +452,15 @@ export default function LandingPageView({
             id="to-admin-dashboard-btn"
           >
             <LayoutDashboard className="w-4 h-4 text-emerald-400" />
-            <span>Admin Console</span>
+            <span>
+              {loggedInUser
+                ? (loggedInUser.role === 'patient'
+                    ? "Patient Console"
+                    : loggedInUser.role === 'doctor'
+                      ? "Doctor Console"
+                      : "Staff Console")
+                : "Admin Console"}
+            </span>
           </button>
         </div>
       </nav>

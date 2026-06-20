@@ -95,7 +95,8 @@ export default function AppointmentsView({
         doctorName,
         specialization,
         date,
-        time
+        time,
+        status: 'Scheduled'
       });
       showToast('Appointment rescheduled successfully.');
     }
@@ -431,7 +432,7 @@ export default function AppointmentsView({
     setAge(appt.age || 30);
     setDoctorName(appt.doctorName);
     setSpecialization(appt.specialization);
-    setDate(appt.date);
+    setDate(getTodayDateString());
     setTime(appt.time);
     setIsFollowUpFromCheckbox(appt.type === 'Follow-up');
     setSaveToPatientRegistry(true);
@@ -537,7 +538,7 @@ export default function AppointmentsView({
       specialization,
       date,
       time,
-      status: editingId ? 'Confirmed' : 'Scheduled',
+      status: 'Scheduled',
       patientEmail,
       patientPassword,
       patientPhone,

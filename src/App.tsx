@@ -1464,7 +1464,7 @@ export default function App() {
       {/* 2. Primary Admin Workspace */}
       <div className="flex-1 flex flex-col h-full overflow-hidden" id="central-column">
         {/* Top Search-Bell Bar */}
-        <Header />
+        <Header loggedInUser={loggedInUser} />
 
         {/* Central Component Swapper */}
         <main className="flex-1 overflow-hidden" id="workspace-scroll">

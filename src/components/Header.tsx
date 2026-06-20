@@ -1,6 +1,30 @@
 import { Search, Bell, ChevronDown } from 'lucide-react';
 
-export default function Header() {
+interface HeaderProps {
+  loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
+}
+
+export default function Header({ loggedInUser = null }: HeaderProps) {
+  const getInitials = (name: string) => {
+    if (!name) return "MH";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
+  const displayName = loggedInUser?.data?.name || "Admin";
+  const displayRole = loggedInUser 
+    ? (loggedInUser.role === 'patient' 
+        ? "Patient Console" 
+        : loggedInUser.role === 'doctor' 
+          ? "Doctor Console" 
+          : "Staff Console") 
+    : "Admin Console";
+
+  const initials = loggedInUser?.data?.name ? getInitials(loggedInUser.data.name) : "AD";
+
   return (
     <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-6 select-none" id="app-header">
       <div className="flex items-center gap-4">
@@ -29,11 +53,11 @@ export default function Header() {
         {/* User Card */}
         <div className="flex items-center gap-3 pl-3 border-l border-slate-100 cursor-pointer hover:opacity-95" id="header-profile-dropdown">
           <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center text-xs font-bold" id="dropdown-initial">
-            MH
+            {initials}
           </div>
           <div className="hidden sm:block text-left">
-            <h4 className="text-xs font-semibold text-slate-800 leading-tight" id="dropdown-name">Muhammad</h4>
-            <span className="text-[10px] text-slate-400 font-medium" id="dropdown-role">Hosp. Admin</span>
+            <h4 className="text-xs font-semibold text-slate-800 leading-tight" id="dropdown-name">{displayName}</h4>
+            <span className="text-[10px] text-slate-400 font-medium" id="dropdown-role">{displayRole}</span>
           </div>
           <ChevronDown size={14} className="text-slate-400" />
         </div>
