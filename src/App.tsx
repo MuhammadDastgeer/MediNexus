@@ -1241,6 +1241,7 @@ export default function App() {
             onAddAppointment={handleAddAppointment}
             onRefresh={handleRefreshAll}
             isReadOnly={isReadOnly}
+            loggedInUser={loggedInUser}
           />
         );
       case 'appointments':
@@ -1269,6 +1270,7 @@ export default function App() {
             onDeleteBill={handleDeleteBill}
             onRefresh={handleRefreshAll}
             isReadOnly={isReadOnly}
+            loggedInUser={loggedInUser}
           />
         );
       case 'inventory':
@@ -1294,6 +1296,7 @@ export default function App() {
             onDeleteDoctor={handleDeleteDoctor}
             onNavigate={setActiveView}
             isReadOnly={isReadOnly}
+            loggedInUser={loggedInUser}
           />
         );
       case 'staff':

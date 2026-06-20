@@ -19,6 +19,7 @@ interface PatientsViewProps {
   onAddAppointment: (appt: Omit<Appointment, 'id'>) => void;
   onRefresh: () => void;
   isReadOnly?: boolean;
+  loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
 }
 
 export default function PatientsView({
@@ -32,7 +33,11 @@ export default function PatientsView({
   onAddAppointment,
   onRefresh,
   isReadOnly = false,
+  loggedInUser = null,
 }: PatientsViewProps) {
+  const isPatient = loggedInUser?.role === 'patient';
+  const patientProfileName = isPatient ? loggedInUser?.data?.name : null;
+
   const [activeTab, setActiveTab] = useState<'members' | 'overview'>('members');
   const [showForm, setShowForm] = useState<'add' | 'edit' | false>(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -294,12 +299,15 @@ export default function PatientsView({
   };
 
   // Filter and Search logic
-  const filteredPatients = patients.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.phone.includes(search) ||
-    (p.email && p.email.toLowerCase().includes(search.toLowerCase())) ||
-    (p.bloodGroup && p.bloodGroup.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredPatients = patients.filter((p) => {
+    if (isPatient && patientProfileName && p.name?.trim().toLowerCase() !== patientProfileName.trim().toLowerCase()) {
+      return false;
+    }
+    return p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.phone.includes(search) ||
+      (p.email && p.email.toLowerCase().includes(search.toLowerCase())) ||
+      (p.bloodGroup && p.bloodGroup.toLowerCase().includes(search.toLowerCase()));
+  });
 
   // Overview metrics calculations
   const totalCount = patients.length;
@@ -1396,13 +1404,15 @@ export default function PatientsView({
             </div>
             
             <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                onClick={startAdd}
-                className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm hover:shadow-md transition-all active:scale-95"
-              >
-                <Plus size={14} />
-                <span>Register New Patient</span>
-              </button>
+              {!isPatient && !isReadOnly && (
+                <button
+                  onClick={startAdd}
+                  className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm hover:shadow-md transition-all active:scale-95"
+                >
+                  <Plus size={14} />
+                  <span>Register New Patient</span>
+                </button>
+              )}
               
               <div className="relative">
                 <button

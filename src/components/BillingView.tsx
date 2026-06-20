@@ -32,6 +32,7 @@ interface BillingViewProps {
   onDeleteBill?: (id: string) => void;
   onRefresh: () => void;
   isReadOnly?: boolean;
+  loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
 }
 
 export default function BillingView({ 
@@ -42,7 +43,11 @@ export default function BillingView({
   onDeleteBill, 
   onRefresh,
   isReadOnly = false,
+  loggedInUser = null,
 }: BillingViewProps) {
+  const isPatient = loggedInUser?.role === 'patient';
+  const patientProfileName = isPatient ? loggedInUser?.data?.name : null;
+
   const getTodayDateString = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -152,6 +157,10 @@ export default function BillingView({
 
   // Filter bills list
   const filtered = bills.filter((b) => {
+    if (isPatient && patientProfileName && b.patientName?.trim().toLowerCase() !== patientProfileName.trim().toLowerCase()) {
+      return false;
+    }
+
     const matchSearch = 
       b.patientName.toLowerCase().includes(search.toLowerCase()) || 
       b.id.toLowerCase().includes(search.toLowerCase());

@@ -48,6 +48,7 @@ interface DoctorsViewProps {
   onDeleteDoctor: (id: string) => void;
   onNavigate?: (view: any) => void;
   isReadOnly?: boolean;
+  loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
 }
 
 export default function DoctorsView({ 
@@ -59,8 +60,10 @@ export default function DoctorsView({
   onUpdateDoctor,
   onDeleteDoctor,
   onNavigate,
-  isReadOnly = false
+  isReadOnly = false,
+  loggedInUser = null
 }: DoctorsViewProps) {
+  const isPatient = loggedInUser?.role === 'patient';
   const [activeTab, setActiveTab] = useState<'roster' | 'overview'>('overview');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -1440,47 +1443,51 @@ export default function DoctorsView({
               </div>
 
               {/* Three bottom colored CTA actions cards (Image 1 Bottom) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className={isPatient ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 md:grid-cols-3 gap-4"}>
                 
                 {/* 1. Add Doctor panel */}
-                <div className="bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center">
-                      <Stethoscope size={18} />
+                {!isPatient && (
+                  <div className="bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center">
+                        <Stethoscope size={18} />
+                      </div>
+                      <div>
+                        <span className="font-bold text-sm block">Add New Doctor</span>
+                        <span className="text-[10px] text-purple-100 mt-0.5 block">Register a new doctor with full profile and credentials</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-sm block">Add New Doctor</span>
-                      <span className="text-[10px] text-purple-100 mt-0.5 block">Register a new doctor with full profile and credentials</span>
-                    </div>
+                    <button 
+                      onClick={handleOpenAddForm}
+                      className="w-full bg-white hover:bg-slate-50 text-slate-800 rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      <span>Add Doctor</span>
+                      <ArrowRight size={13} />
+                    </button>
                   </div>
-                  <button 
-                    onClick={handleOpenAddForm}
-                    className="w-full bg-white hover:bg-slate-50 text-slate-800 rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm"
-                  >
-                    <span>Add Doctor</span>
-                    <ArrowRight size={13} />
-                  </button>
-                </div>
+                )}
 
                 {/* 2. Manage Staff panel */}
-                <div className="bg-[#115e59] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center">
-                      <Users size={18} />
+                {!isPatient && (
+                  <div className="bg-[#115e59] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-white/20 text-white rounded-lg flex items-center justify-center">
+                        <Users size={18} />
+                      </div>
+                      <div>
+                        <span className="font-bold text-sm block">Manage Staff</span>
+                        <span className="text-[10px] text-[#ccfbf1] mt-0.5 block">View and manage all non-doctor hospital staff members</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-sm block">Manage Staff</span>
-                      <span className="text-[10px] text-[#ccfbf1] mt-0.5 block">View and manage all non-doctor hospital staff members</span>
-                    </div>
+                    <button 
+                      onClick={() => onNavigate?.('staff')}
+                      className="w-full bg-white hover:bg-slate-50 text-[#115e59] rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                    >
+                      <span>Go to Staff</span>
+                      <ArrowRight size={13} />
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => onNavigate?.('staff')}
-                    className="w-full bg-white hover:bg-slate-50 text-[#115e59] rounded-lg py-2 mt-4 text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
-                  >
-                    <span>Go to Staff</span>
-                    <ArrowRight size={13} />
-                  </button>
-                </div>
+                )}
 
                 {/* 3. View Appointments panel */}
                 <div className="bg-[#059669] text-white rounded-2xl p-5 flex flex-col justify-between h-40 shadow-xs">
