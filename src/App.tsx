@@ -23,6 +23,7 @@ import ConfigureHospitalView from './components/ConfigureHospitalView';
 import ReportsView from './components/ReportsView';
 import SupportView from './components/SupportView';
 import LandingPageView from './components/LandingPageView';
+import AIAssistantView from './components/AIAssistantView';
 
 export default function App() {
   const [loggedInUser, setLoggedInUser] = useState<{ role: 'patient' | 'doctor' | 'staff'; data: any } | null>(null);
@@ -36,6 +37,7 @@ export default function App() {
   const viewToPathMap: Record<ActiveView, string> = {
     'landing': '/',
     'dashboard': `/${prefix}/dashboard`,
+    'ai-assistant': `/${prefix}/ai-assistant`,
     'appointments': `/${prefix}/appointments`,
     'consultation': `/${prefix}/consultation`,
     'billing': `/${prefix}/billing`,
@@ -60,6 +62,7 @@ export default function App() {
       return (loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor' || loggedInUser?.role === 'patient') ? 'dashboard' : 'landing';
     }
     if (cleanPath.includes('dashboard') || cleanPath.includes('desboard')) return 'dashboard';
+    if (cleanPath.includes('ai-assistant') || cleanPath.includes('ai-helper') || cleanPath.includes('assistant')) return 'ai-assistant';
     if (cleanPath.includes('appointment')) return 'appointments';
     if (cleanPath.includes('consultation')) return 'consultation';
     if (cleanPath.includes('billing') || cleanPath.includes('bill')) return 'billing';
@@ -1211,6 +1214,52 @@ export default function App() {
     const filteredDoctors = isDoctor ? doctors.filter((d) => d.id === loggedInUser?.data?.id) : doctors;
 
     switch (activeView) {
+      case 'ai-assistant':
+        return (
+          <AIAssistantView
+            contextData={{
+              activeTab: activeView,
+              userRole: loggedInUser?.role || 'admin',
+              userName: loggedInUser?.data?.name || 'Hospital Administrator',
+              data: {
+                appointmentsSummary: filteredAppts.slice(0, 10).map(a => ({
+                  patient: a.patientName,
+                  doctor: a.doctorName,
+                  specialization: a.specialization,
+                  date: a.date,
+                  time: a.time,
+                  status: a.status
+                })),
+                patientsSummary: filteredPatients.slice(0, 10).map(p => ({
+                  name: p.name,
+                  age: p.age,
+                  gender: p.gender,
+                  status: p.status
+                })),
+                billsSummary: filteredBills.slice(0, 10).map(b => ({
+                  patient: b.patientName,
+                  amount: b.amount,
+                  pendingAmount: b.pendingAmount,
+                  collectedAmount: b.collectedAmount,
+                  status: b.status
+                })),
+                inventorySummary: inventory.slice(0, 10).map(i => ({
+                  name: i.name,
+                  category: i.category,
+                  stock: i.stock,
+                  minStock: i.minStock,
+                  price: i.price,
+                  sellingPrice: i.sellingPrice
+                })),
+                doctorsSummary: filteredDoctors.slice(0, 10).map(d => ({
+                  name: d.name,
+                  specialization: d.specialization,
+                  status: d.status
+                }))
+              }
+            }}
+          />
+        );
       case 'dashboard':
         return (
           <DashboardView

@@ -1,6 +1,7 @@
 export type ActiveView =
   | 'landing'
   | 'dashboard'
+  | 'ai-assistant'
   | 'appointments'
   | 'consultation'
   | 'billing'

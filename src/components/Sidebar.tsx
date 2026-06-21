@@ -26,6 +26,7 @@ import {
   Lock,
   Mail,
   User as UserIcon,
+  Sparkles,
 } from 'lucide-react';
 import { ActiveView, Staff } from '../types';
 
@@ -67,6 +68,7 @@ export default function Sidebar({
   // Define All possible navigation items
   const allGeneralItems = [
     { id: 'landing' as ActiveView, label: 'Public Website', icon: Globe },
+    { id: 'ai-assistant' as ActiveView, label: 'AI Assistant', icon: Sparkles },
     { id: 'dashboard' as ActiveView, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'appointments' as ActiveView, label: 'Appointments', icon: Calendar },
     { id: 'consultation' as ActiveView, label: 'Consultation', icon: HeartPulse },
@@ -99,17 +101,17 @@ export default function Sidebar({
 
   if (isStaff) {
     // Staff displays: Dashboard, Appointments, Consultations, Billing, Staff, Patients, Blogs, Public Website
-    const staffAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'consultation', 'billing', 'staff', 'patients', 'blogs'];
+    const staffAllowedLocalTabs = ['landing', 'dashboard', 'ai-assistant', 'appointments', 'consultation', 'billing', 'staff', 'patients', 'blogs'];
     generalItems = allGeneralItems.filter((item) => staffAllowedLocalTabs.includes(item.id));
     systemItems = []; // Staff has no system administration access
   } else if (isDoctor) {
     // Doctor displays: Dashboard, Appointments, Consultations, Billing, Doctors (own profile), Patients, Public Website, Staff
-    const doctorAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'consultation', 'billing', 'doctors', 'patients', 'staff', 'blogs'];
+    const doctorAllowedLocalTabs = ['landing', 'dashboard', 'ai-assistant', 'appointments', 'consultation', 'billing', 'doctors', 'patients', 'staff', 'blogs'];
     generalItems = allGeneralItems.filter((item) => doctorAllowedLocalTabs.includes(item.id));
     systemItems = []; // Doctors have no system administration access
   } else if (isPatient) {
     // Patient displays: Dashboard, Appointments, Billing, Patients (own profile), Doctors (all), Public Website
-    const patientAllowedLocalTabs = ['landing', 'dashboard', 'appointments', 'billing', 'patients', 'doctors'];
+    const patientAllowedLocalTabs = ['landing', 'dashboard', 'ai-assistant', 'appointments', 'billing', 'patients', 'doctors'];
     generalItems = allGeneralItems.filter((item) => patientAllowedLocalTabs.includes(item.id));
     systemItems = []; // Patients have no system administration access
   }

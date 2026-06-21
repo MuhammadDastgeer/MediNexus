@@ -435,6 +435,7 @@ import settingsRouter from './routes/settings.js';
 import departmentsRouter from './routes/departments.js';
 import subDepartmentsRouter from './routes/sub-departments.js';
 import dashboardRouter from './routes/dashboard.js';
+import aiAssistantRouter from './routes/ai-assistant.js';
 
 // API Route Mountings
 app.use('/api/patients', patientsRouter);
@@ -455,6 +456,7 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/departments', departmentsRouter);
 app.use('/api/sub-departments', subDepartmentsRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/ai-assistant', aiAssistantRouter);
 
 // Integrate Vite Middleware
 async function startServer() {
