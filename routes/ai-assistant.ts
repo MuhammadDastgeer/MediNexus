@@ -344,23 +344,29 @@ const getCategoryInstruction = (category: string): string => {
   const domainFocus = specializedPROMPTS[category] || 'You are a clinical specialist and healthcare workflow assistant.';
 
   return `You are a highly specialised clinical and medical hospital AI assistant. 
-Category Focus: ${domainFocus}
-You MUST adhere to these strict limits and instructions:
-1. ONLY answer queries that are:
-   a. Related to medical knowledge, healthy lifestyles, clinical symptoms, wellness guidance, medical analysis, pharmacology, diagnostics, procedures, etc.
-   b. Related to the provided Screen, Role, and Category Context (specifically: the category is "${category}").
-2. If the user asks about ANYTHING ELSE that is NOT related to medical/clinical care, healthcare, or hospital data management (for example: general knowledge, weather, sports, politics, pop culture, irrelevant coding, cooking recipes, general storytelling, or general file contents of a non-medical file/image/document):
-   - You MUST detect the language of the user's message/query.
-   - You MUST reply to them in that EXACT SAME LANGUAGE stating ONLY that you can only answer medical questions.
-   - Do NOT provide any other information, explanation, or reasoning.
-   - Example replies (match the exact phrase per language):
-     * Roman Urdu / Roman Hindi / Hinglish: "Only medical questions ka answer da sakta hu"
-     * English: "I can only answer medical questions."
-     * Urdu Script (Nastaliq): "صرف طبی سوالات کے جوابات دے سکتا ہوں۔"
-     * Hindi Script: "मैं केवल चिकित्सा संबंधी प्रश्नों के उत्तर दे सकता हूँ।"
-     * Other languages: Translate "I can only answer medical questions" into the detected language, and output ONLY that phrase.
-3. Respond in a highly professional, clinical, helpful, and concise manner.
-4. Note that for this specialized category, ONLY CSV and Excel formats are supported for file uploads. Treat any unrelated document as non-medical, or politely state that only spreadsheets are permitted for files in this assistant.
+Category / Current Tab Focus: [${category}]
+Current Tab Role: ${domainFocus}
+
+CRITICAL MANDATORY INSTRUCTIONS & SCOPE RESTRICTIONS:
+1. You are accessed from the specific, specialized [${category}] tab. You MUST ONLY answer queries (whether typed or SPOKEN via voice audio) that are directly related to the current "${category}" tab's roles, operations, data management, listing, creating/adding new records, editing/updating records, or deleting/deactivating records.
+2. You are STRICTLY FORBIDDEN from answering any other general medical questions, miscellaneous general knowledge, coding, weather, or ANY query that does not concern managing, editing, adding, or deleting data in this specific "${category}" tab.
+3. If the user asks ANY other general, clinical, or unrelated question (even if it is medical, and even if they spoke it in a VOICE/AUDIO query) that is not about this specific "${category}" tab's operations and data:
+   - You MUST politely refuse to answer.
+   - You MUST instruct them that this assistant only performs "${category}" tab operations and they should go to the main "AI Assistant" tab to ask other questions.
+   - Example replies (in Hindi/Urdu/English depending on the language they asked):
+     * English: "This assistant is restricted strictly to "${category}" operations and data. For other general or clinical questions, please go to the main \"AI Assistant\" tab."
+     * Hindi/Urdu/Roman Urdu (Hinglish): "Yeh assistant sirf "${category}" tab ke operations aur data se mutalik jawab de sakta hai. Kisi aur qism ke clinical ya general sawal ke liye, barah-e-maherbani main \"AI Assistant\" tab par jayen."
+4. Respond in a very concise, helpful, and professional clinical manner, referencing data context when asked about current items. Keep it short.
+5. Voice / Audio Query Processing Guidance:
+   - If the user sent a VOICE/AUDIO query, first transcribe and comprehend what they said.
+   - If their spoken query is related to this current "${category}" tab, answer their question directly.
+   - If their spoken query belongs to a DIFFERENT tab (such as talking about "billing/paisa/invoice/amount" while in "staff" tab, or speaking about "staff/doctor/nurse/duty" while in "billing" tab, or speaking about "ward/bed/room occupancy" while in "inventory" tab):
+     * You MUST identify which tab their spoken query corresponds to.
+     * State clearly what they talked about in the voice snippet (e.g. transcribing/summarizing their spoken request in Roman Urdu/Hindi or English).
+     * Provide a helpful, concise response to their question using your general capability as a hospital assistant, so they get their answer immediately.
+     * Explicitly inform them that you are automatically redirecting them to that relevant tab now so they can view the correct context and data.
+     * At the very end of your response, you MUST append EXACTLY this trigger tag: \`[NAVIGATE: <tab_name>-ai]\` (e.g., \`[NAVIGATE: billing-ai]\`, \`[NAVIGATE: staff-ai]\`, \`[NAVIGATE: appointments-ai]\`, \`[NAVIGATE: ipd-wards-ai]\`, \`[NAVIGATE: inventory-ai]\`, \`[NAVIGATE: doctors-ai]\`, \`[NAVIGATE: patients-ai]\`, \`[NAVIGATE: consultation-ai]\`).
+     * Keep it highly helpful, concise, and in the language they spoke (Urdu, Hindi, Roman Urdu, or English).
 `;
 };
 
@@ -384,6 +390,70 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
   let lastMessageText = lastMessage?.content || '';
   const lastMessageImage = lastMessage?.image || '';
   const lastMessageAudio = lastMessage?.audio || '';
+
+  const activeTabName = (context.activeTab || '').toLowerCase().trim();
+  const isTabSpecific = activeTabName && 
+                        activeTabName !== 'general' && 
+                        activeTabName !== 'general-ai' && 
+                        activeTabName !== 'ai-assistant';
+
+  if (isTabSpecific && !lastMessageAudio) {
+    const query = lastMessageText.toLowerCase();
+    
+    // Check if the query is general and unrelated to this specific tab's core operations.
+    // We allow basic greeting, or questions targeting operations such as add, edit, delete, roles, data list, or containing key words of the tab name.
+    const isBasicGreeting = query.length < 15 && (
+      query.includes('hi') || 
+      query.includes('hello') || 
+      query.includes('hey') || 
+      query.includes('salaam') || 
+      query.includes('aoa') || 
+      query.includes('help') || 
+      query.includes('intro') ||
+      query.trim() === '?'
+    );
+
+    // Let's list general check verbs and also the specific category terms
+    const hasCategoryKeywords = 
+      query.includes(activeTabName) || 
+      (activeTabName === 'doctors' && (query.includes('doctor') || query.includes('doc') || query.includes('roster') || query.includes('dr.'))) ||
+      (activeTabName === 'staff' && (query.includes('staff') || query.includes('member') || query.includes('nurse') || query.includes('shazib') || query.includes('duty') || query.includes('roster'))) ||
+      (activeTabName === 'appointments' && (query.includes('appoint') || query.includes('book') || query.includes('slot'))) ||
+      (activeTabName === 'billing' && (query.includes('bill') || query.includes('invoice') || query.includes('collect') || query.includes('payment') || query.includes('amount') || query.includes('billon') || query.includes('paisa'))) ||
+      (activeTabName === 'inventory' && (query.includes('invent') || query.includes('stock') || query.includes('medicine') || query.includes('drug') || query.includes('pharma'))) ||
+      (activeTabName === 'patients' && (query.includes('patient') || query.includes('sick') || query.includes('admit') || query.includes('allergic'))) ||
+      (activeTabName === 'consultation' && (query.includes('consult') || query.includes('prescribe') || query.includes('visit') || query.includes('symptom'))) ||
+      (activeTabName === 'ipd-wards' && (query.includes('ward') || query.includes('bed') || query.includes('room') || query.includes('occupy')));
+
+    const hasOperationKeywords = 
+      query.includes('add') || 
+      query.includes('create') || 
+      query.includes('edit') || 
+      query.includes('update') || 
+      query.includes('delete') || 
+      query.includes('remove') || 
+      query.includes('list') || 
+      query.includes('show') || 
+      query.includes('modify') || 
+      query.includes('change') || 
+      query.includes('details') || 
+      query.includes('role') || 
+      query.includes('naya') || 
+      query.includes('nayi') || 
+      query.includes('tab') || 
+      query.includes('data');
+
+    if (!isBasicGreeting && !hasCategoryKeywords && !hasOperationKeywords) {
+      // The query is unrelated to this tab! Return a polite rejection directing them to the main AI Assistant tab.
+      const responseText = `This specialized assistant is strictly restricted to "${activeTabName}" operations (add, edit, delete, and list tasks). For other general, general clinical, or miscellaneous questions, please visit the main "AI Assistant" tab.
+      
+(Yeh assistant sirf "${activeTabName}" tab ke operations aur data se mutalik jawab de sakta hai. Kisi aur qism ke general ya clinical sawal ke liye, barah-e-maherbani main "AI Assistant" tab par jayen.)`;
+      return res.json({
+        reply: responseText,
+        attempts: [{ provider: 'Specialized Tab Constraint Checks', status: 'success', modelUsed: 'Static-Filter-Rules' }]
+      });
+    }
+  }
 
   // Append context to the last user message so the models always have it
   let finalPrompt = '';

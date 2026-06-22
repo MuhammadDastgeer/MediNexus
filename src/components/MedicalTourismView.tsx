@@ -18,7 +18,8 @@ import {
   Phone,
   Calendar,
   Edit3,
-  Download
+  Download,
+  Sparkles
 } from 'lucide-react';
 
 interface TourismEnquiry {
@@ -39,13 +40,15 @@ interface MedicalTourismViewProps {
   onSaveEnquiry: (enquiry: any) => void;
   onDeleteEnquiry: (id: string) => void;
   onRefresh: () => void;
+  onNavigate?: (view: any) => void;
 }
 
 export default function MedicalTourismView({ 
   enquiries = [], 
   onSaveEnquiry, 
   onDeleteEnquiry, 
-  onRefresh 
+  onRefresh,
+  onNavigate
 }: MedicalTourismViewProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -140,12 +143,24 @@ export default function MedicalTourismView({
   return (
     <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-700" id="medical-tourism-view">
       {/* Title block */}
-      <div className="flex justify-between items-center" id="tourism-header">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" id="tourism-header">
         <div>
           <h1 className="text-xl font-bold text-slate-800 tracking-tight" id="tourism-title">Medical Tourism Enquiries</h1>
           <p className="text-xs text-slate-400 mt-0.5">Manage and track international medical consulting inquiries and workflows.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('medical-tourism-ai')}
+              type="button"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer"
+              id="trigger-medical-tourism-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>Medical Tourism AI</span>
+            </button>
+          )}
+
           <button
             onClick={handleOpenAdd}
             className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-colors"

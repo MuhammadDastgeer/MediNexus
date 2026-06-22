@@ -22,7 +22,8 @@ import {
   Search,
   CheckCircle,
   HelpCircle,
-  Info
+  Info,
+  Sparkles
 } from 'lucide-react';
 import { Patient, Appointment, Doctor, Staff, Bill, InventoryItem, Department, SubDepartment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -37,6 +38,7 @@ interface ReportsViewProps {
   subDepartments?: SubDepartment[];
   inventory?: InventoryItem[];
   onRefresh?: () => void;
+  onNavigate?: (view: any) => void;
 }
 
 export default function ReportsView({
@@ -48,7 +50,8 @@ export default function ReportsView({
   departments = [],
   subDepartments = [],
   inventory = [],
-  onRefresh
+  onRefresh,
+  onNavigate
 }: ReportsViewProps) {
   // Global Month Filter
   const [selectedMonth, setSelectedMonth] = useState<string>('All');
@@ -1201,7 +1204,20 @@ export default function ReportsView({
           <p className="text-xs text-slate-400 mt-0.5">Statistical indices, patient intake metrics, directory records summaries and billing audits.</p>
         </div>
 
-        <div className="flex items-center gap-2.5 bg-white border border-slate-200 px-4 py-2 rounded-2xl shadow-xs self-start md:self-auto select-none">
+        <div className="flex items-center gap-3 flex-wrap self-start md:self-auto">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('reports-ai')}
+              type="button"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer"
+              id="trigger-reports-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>Reports AI</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-2.5 bg-white border border-slate-200 px-4 py-2 rounded-2xl shadow-xs select-none">
           <Calendar size={14} className="text-[#007f6e]" />
           <span className="text-xs text-slate-500 font-semibold whitespace-nowrap">Analytical Month:</span>
           <select
@@ -1224,6 +1240,7 @@ export default function ReportsView({
             })}
           </select>
         </div>
+       </div>
       </div>
 
       {/* RENDER MODE switcher (Main bento grid vs custom details drilldown view) */}

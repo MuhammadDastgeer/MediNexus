@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Bed, Plus, Search, RefreshCw, FileSpreadsheet, Trash2, Edit3, Eye, 
-  X, Check, AlertCircle, Shield, Home, Users, CheckCircle2, UserCheck
+  X, Check, AlertCircle, Shield, Home, Users, CheckCircle2, UserCheck, Sparkles
 } from 'lucide-react';
 import { Patient } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -14,6 +14,7 @@ interface IpdWardsViewProps {
   onAddWard: (ward: any) => Promise<void>;
   onDeleteWard: (id: string) => Promise<void>;
   onUpdatePatient: (patient: any) => Promise<void>;
+  onNavigate?: (view: any) => void;
 }
 
 interface RoomConfig {
@@ -29,7 +30,8 @@ export default function IpdWardsView({
   onRefresh,
   onAddWard,
   onDeleteWard,
-  onUpdatePatient
+  onUpdatePatient,
+  onNavigate
 }: IpdWardsViewProps) {
   const [activeTab, setActiveTab] = useState<'bed-map' | 'admissions' | 'ipd-setup'>('bed-map');
   const [searchQuery, setSearchQuery] = useState('');
@@ -319,7 +321,19 @@ export default function IpdWardsView({
           <h1 className="text-xl font-bold text-slate-800 tracking-tight" id="ipd-title">IPD — Ward & Bed Management</h1>
           <p className="text-xs text-slate-400 mt-0.5">Allocate, track, and configure wards and hospital bed systems.</p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('ipd-wards-ai')}
+              type="button"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer"
+              id="trigger-ipd-wards-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>IPD Wards AI</span>
+            </button>
+          )}
+
           <button
             onClick={() => handleOpenAllocateModal()}
             className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"

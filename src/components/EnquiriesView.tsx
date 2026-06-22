@@ -16,7 +16,8 @@ import {
   Phone,
   Calendar,
   Building,
-  Download
+  Download,
+  Sparkles
 } from 'lucide-react';
 
 interface Inquiry {
@@ -36,6 +37,7 @@ interface EnquiriesViewProps {
   onRefresh: () => void;
   onSaveEnquiry: (enquiry: any) => void;
   onDeleteEnquiry: (id: string) => void;
+  onNavigate?: (view: any) => void;
 }
 
 export default function EnquiriesView({ 
@@ -43,7 +45,8 @@ export default function EnquiriesView({
   onUpdateStatus, 
   onRefresh,
   onSaveEnquiry,
-  onDeleteEnquiry
+  onDeleteEnquiry,
+  onNavigate
 }: EnquiriesViewProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -125,12 +128,24 @@ export default function EnquiriesView({
   return (
     <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-700" id="enquiries-view">
       {/* Title Header */}
-      <div className="flex justify-between items-center" id="enquiries-header">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" id="enquiries-header">
         <div>
           <h1 className="text-xl font-bold text-slate-800 tracking-tight" id="enquiry-title">Enquiries Queue</h1>
           <p className="text-xs text-slate-400 mt-0.5">Review general hospital and consulting submission inquiries.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('enquiries-ai')}
+              type="button"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer"
+              id="trigger-enquiries-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>Enquiries AI</span>
+            </button>
+          )}
+
           <button
             onClick={handleOpenAdd}
             className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all"

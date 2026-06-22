@@ -1252,6 +1252,7 @@ export default function App() {
       case 'ai-assistant':
         return (
           <AIAssistantView
+            onNavigate={(target) => setActiveView(target as any)}
             contextData={{
               activeTab: activeView,
               userRole: loggedInUser?.role || 'admin',
@@ -1334,6 +1335,8 @@ export default function App() {
           <AIAssistantView
             backendApiEndpoint={`/api/ai-assistant/${category}/chat`}
             restrictFileTypes={true}
+            onBack={() => setActiveView(category as any)}
+            onNavigate={(target) => setActiveView(target as any)}
             contextData={{
               activeTab: category,
               userRole: loggedInUser?.role || 'admin',
@@ -1410,6 +1413,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
+            onNavigate={setActiveView}
           />
         );
       case 'appointments':
@@ -1426,6 +1430,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
+            onNavigate={setActiveView}
           />
         );
       case 'billing':
@@ -1439,6 +1444,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             isReadOnly={(loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor') ? false : isReadOnly}
             loggedInUser={loggedInUser}
+            onNavigate={setActiveView}
           />
         );
       case 'inventory':
@@ -1450,6 +1456,7 @@ export default function App() {
             onDeleteInventoryItem={handleDeleteInventoryItem}
             onRestock={handleRestock}
             onRefresh={handleRefreshAll}
+            onNavigate={setActiveView}
           />
         );
       case 'doctors':
@@ -1491,6 +1498,7 @@ export default function App() {
             onAddSubDepartment={handleAddSubDepartment}
             onDeleteSubDepartment={handleDeleteSubDepartment}
             onRefresh={handleRefreshAll}
+            onNavigate={setActiveView}
           />
         );
       case 'consultation':
@@ -1508,6 +1516,7 @@ export default function App() {
             onOpenBooking={() => setActiveView('appointments')}
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
+            onNavigate={setActiveView}
           />
         );
       case 'ipd-wards':
@@ -1520,6 +1529,7 @@ export default function App() {
             onAddWard={handleAddWard}
             onDeleteWard={handleDeleteWard}
             onUpdatePatient={handleUpdatePatient}
+            onNavigate={setActiveView}
           />
         );
       case 'enquiries':
@@ -1530,6 +1540,7 @@ export default function App() {
             onSaveEnquiry={handleSaveEnquiry}
             onDeleteEnquiry={handleDeleteEnquiry}
             onRefresh={handleRefreshAll}
+            onNavigate={setActiveView}
           />
         );
       case 'medical-tourism':
@@ -1539,6 +1550,7 @@ export default function App() {
             onSaveEnquiry={handleSaveTourismEnquiry}
             onDeleteEnquiry={handleDeleteTourismEnquiry}
             onRefresh={handleRefreshAll}
+            onNavigate={setActiveView}
           />
         );
       case 'blogs':
@@ -1550,6 +1562,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             isReadOnly={loggedInUser?.role === 'patient'}
             loggedInUser={loggedInUser}
+            onNavigate={setActiveView}
           />
         );
       case 'finance':
@@ -1581,6 +1594,7 @@ export default function App() {
             subDepartments={subDepartments}
             inventory={inventory}
             onRefresh={handleRefreshAll}
+            onNavigate={setActiveView}
           />
         );
       case 'support':

@@ -47,6 +47,7 @@ interface AppointmentsViewProps {
   onRefresh?: () => void;
   isReadOnly?: boolean;
   loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
+  onNavigate?: (view: any) => void;
 }
 
 interface FollowUp {
@@ -72,6 +73,7 @@ export default function AppointmentsView({
   onRefresh,
   isReadOnly = false,
   loggedInUser = null,
+  onNavigate,
 }: AppointmentsViewProps) {
   const isPatient = loggedInUser?.role === 'patient';
   const patientProfileName = isPatient ? loggedInUser?.data?.name : null;
@@ -796,17 +798,31 @@ export default function AppointmentsView({
           </button>
         </div>
 
-        {/* Global Action Booker */}
-        {(!isReadOnly || loggedInUser?.role === 'staff') && !isPatient && (
-          <button
-            onClick={handleOpenNewWizard}
-            className="flex items-center justify-center gap-2 bg-[#007f6e] hover:bg-[#006657] text-[#ffffff] px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
-            id="trigger-quick-booking-btn"
-          >
-            <Plus size={16} />
-            <span>Book Appointment</span>
-          </button>
-        )}
+        {/* Global Action Booker & AI Assistant Trigger */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('appointments-ai')}
+              type="button"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+              id="trigger-appointments-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>Appointments AI</span>
+            </button>
+          )}
+
+          {(!isReadOnly || loggedInUser?.role === 'staff') && !isPatient && (
+            <button
+              onClick={handleOpenNewWizard}
+              className="flex items-center justify-center gap-2 bg-[#007f6e] hover:bg-[#006657] text-[#ffffff] px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
+              id="trigger-quick-booking-btn"
+            >
+              <Plus size={16} />
+              <span>Book Appointment</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ========================================================================= */}

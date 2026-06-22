@@ -16,7 +16,8 @@ import {
   ChevronRight, 
   X, 
   CheckCircle, 
-  AlertCircle 
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { Department, SubDepartment, Doctor } from '../types';
 
@@ -29,6 +30,7 @@ interface DepartmentsViewProps {
   onAddSubDepartment: (sub: Omit<SubDepartment, 'id'> & { id?: string }) => Promise<void>;
   onDeleteSubDepartment: (id: string) => Promise<void>;
   onRefresh: () => Promise<void>;
+  onNavigate?: (view: any) => void;
 }
 
 export default function DepartmentsView({
@@ -40,6 +42,7 @@ export default function DepartmentsView({
   onAddSubDepartment,
   onDeleteSubDepartment,
   onRefresh,
+  onNavigate,
 }: DepartmentsViewProps) {
   // Navigation & Search State
   const [activeTab, setActiveTab] = useState<'departments' | 'sub-departments' | 'overview'>('departments');
@@ -242,7 +245,19 @@ export default function DepartmentsView({
             Manage hospital clinical wings, service stations, and medical divisions.
           </p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto" id="departments-header-actions">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap" id="departments-header-actions">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('departments-ai')}
+              type="button"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition duration-150 cursor-pointer"
+              id="trigger-departments-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>Departments AI</span>
+            </button>
+          )}
+
           <button 
             type="button"
             onClick={handleRefreshClick}

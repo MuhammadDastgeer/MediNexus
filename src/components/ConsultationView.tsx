@@ -23,7 +23,8 @@ import {
   Edit3,
   Download,
   X,
-  UserPlus
+  UserPlus,
+  Sparkles
 } from 'lucide-react';
 import { Appointment, Doctor, Department, Patient } from '../types';
 
@@ -40,6 +41,7 @@ interface ConsultationViewProps {
   onOpenBooking: () => void;
   isReadOnly?: boolean;
   loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
+  onNavigate?: (view: any) => void;
 }
 
 export default function ConsultationView({
@@ -55,6 +57,7 @@ export default function ConsultationView({
   onOpenBooking,
   isReadOnly = false,
   loggedInUser = null,
+  onNavigate,
 }: ConsultationViewProps) {
   // Helper to parse date string into local timezone Date safely without shifts
   const parseLocalDate = (dateStr: string) => {
@@ -263,13 +266,26 @@ export default function ConsultationView({
   return (
     <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-700" id="consultation-view">
       {/* Title block */}
-      <div className="flex justify-between items-start" id="consultation-header">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" id="consultation-header">
         <div>
           <h1 className="text-xl font-bold text-slate-800 tracking-tight" id="consult-title">Patient Consultation</h1>
           <p className="text-xs text-slate-400 mt-0.5">Manage and consult patients across all departments</p>
         </div>
-        <div className="bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs px-3 py-1.5 rounded-lg font-semibold shadow-xs" id="consult-date-badge">
-          Today: {TODAY.getDate()} {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][TODAY.getMonth()]} {TODAY.getFullYear()}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap animate-fade-in">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('consultation-ai')}
+              type="button"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-extrabold shadow-sm hover:shadow-md transition-all cursor-pointer"
+              id="trigger-consultation-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>Consultation AI</span>
+            </button>
+          )}
+          <div className="bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs px-3 py-1.5 rounded-lg font-semibold shadow-xs" id="consult-date-badge">
+            Today: {TODAY.getDate()} {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][TODAY.getMonth()]} {TODAY.getFullYear()}
+          </div>
         </div>
       </div>
 

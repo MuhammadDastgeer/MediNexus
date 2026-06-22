@@ -34,7 +34,8 @@ import {
   Building,
   Camera,
   ArrowLeft,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { Doctor, Department, SubDepartment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -752,8 +753,8 @@ export default function DoctorsView({
             </div>
           )}
 
-          <div>
-             <span className="text-slate-400 text-xs font-medium">
+          <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+             <span className="text-slate-400 text-xs font-medium hidden md:inline">
                {activeTab === 'overview' 
                  ? 'Summary of doctor distribution, department breakdown, on-duty stats, and recent additions'
                  : 'Manage doctor profiles, schedules and credentials'
@@ -1232,6 +1233,17 @@ export default function DoctorsView({
                       id="manage-doctors-shortcut"
                     >
                       Manage Doctors
+                    </button>
+                  )}
+                  {onNavigate && (
+                    <button
+                      onClick={() => onNavigate('doctors-ai')}
+                      type="button"
+                      className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer"
+                      id="trigger-doctors-ai-banner"
+                    >
+                      <Sparkles size={14} className="animate-pulse" />
+                      <span>Doctors AI</span>
                     </button>
                   )}
                   {!isReadOnly && (

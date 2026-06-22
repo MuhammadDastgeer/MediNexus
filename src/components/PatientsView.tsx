@@ -3,7 +3,7 @@ import {
   User, Plus, Search, Calendar, RefreshCw, BarChart2, Users, 
   CheckSquare, Activity, ShieldCheck, CreditCard, Clock, MapPin, 
   ArrowLeft, Eye, Edit, Trash2, X, Check, EyeOff, Landmark,
-  FolderPlus, Heart, FileText, UserPlus, FileDown, Camera, Phone
+  FolderPlus, Heart, FileText, UserPlus, FileDown, Camera, Phone, Sparkles
 } from 'lucide-react';
 import { Patient, Doctor, Bill, Appointment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -20,6 +20,7 @@ interface PatientsViewProps {
   onRefresh: () => void;
   isReadOnly?: boolean;
   loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
+  onNavigate?: (view: any) => void;
 }
 
 export default function PatientsView({
@@ -34,6 +35,7 @@ export default function PatientsView({
   onRefresh,
   isReadOnly = false,
   loggedInUser = null,
+  onNavigate,
 }: PatientsViewProps) {
   const isPatient = loggedInUser?.role === 'patient';
   const patientProfileName = isPatient ? loggedInUser?.data?.name : null;
@@ -1404,6 +1406,18 @@ export default function PatientsView({
             </div>
             
             <div className="flex items-center gap-2 self-start sm:self-auto">
+              {onNavigate && (
+                <button
+                  onClick={() => onNavigate('patients-ai')}
+                  type="button"
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm hover:shadow-md transition-all cursor-pointer"
+                  id="trigger-patients-ai"
+                >
+                  <Sparkles size={14} className="animate-pulse" />
+                  <span>Patients AI</span>
+                </button>
+              )}
+
               {!isPatient && !isReadOnly && (
                 <button
                   onClick={startAdd}

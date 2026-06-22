@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ClipboardList, ListCollapse, PlaySquare, HelpCircle } from 'lucide-react';
+import { RefreshCw, ClipboardList, ListCollapse, PlaySquare, HelpCircle, Sparkles } from 'lucide-react';
 import { InventoryItem, Supplier, Purchase, DeptTransfer } from '../types';
 
 // Tab Subcomponents
@@ -17,6 +17,7 @@ interface InventoryViewProps {
   onDeleteInventoryItem: (id: string) => void;
   onRestock: (id: string, amount: number) => void;
   onRefresh: () => void;
+  onNavigate?: (view: any) => void;
 }
 
 export default function InventoryView({
@@ -26,6 +27,7 @@ export default function InventoryView({
   onDeleteInventoryItem,
   onRestock,
   onRefresh,
+  onNavigate,
 }: InventoryViewProps) {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -216,7 +218,18 @@ export default function InventoryView({
           <h1 className="text-xl font-extrabold text-[#007f6e] tracking-tight" id="inventory-title">Clinic Inventory Suite</h1>
           <p className="text-xs text-slate-400 mt-0.5">Control items, stock warnings, trade vendors, purchases orders & department transfers.</p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('inventory-ai')}
+              type="button"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-3.5 py-2 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+              id="trigger-inventory-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>Inventory AI</span>
+            </button>
+          )}
           <button
             onClick={() => {
               setActiveTab('items');

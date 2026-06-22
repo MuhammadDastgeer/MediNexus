@@ -87,19 +87,6 @@ export default function Header({
             id="search-input"
           />
         </div>
-
-        {/* Dynamic Ask AI Button */}
-        {showAIButton && (
-          <button
-            onClick={() => onNavigate && onNavigate(`${activeView}-ai` as any)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#007f6e] to-[#047857] text-white hover:from-[#0f766e] hover:to-[#065f46] hover:scale-[1.02] active:scale-95 transition-all rounded-lg text-xs font-semibold shadow-xs cursor-pointer select-none"
-            id="header-tab-specific-ai-btn"
-            title={`Ask custom AI questions about ${getAIButtonLabel(activeView)}`}
-          >
-            <Sparkles size={13} className="animate-pulse" />
-            <span>{getAIButtonLabel(activeView)}</span>
-          </button>
-        )}
       </div>
 
       {/* User Actions */}

@@ -24,7 +24,8 @@ import {
   Stethoscope,
   HeartPulse,
   Play,
-  Square
+  Square,
+  ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -62,6 +63,8 @@ interface AIAssistantViewProps {
   };
   backendApiEndpoint?: string;
   restrictFileTypes?: boolean;
+  onBack?: () => void;
+  onNavigate?: (view: string) => void;
 }
 
 // Mock Clinical Images/Scans to let users test Vision capability easily inside the sandbox
@@ -98,57 +101,184 @@ interface Chip {
 
 const getChipsForTab = (tab: string): Chip[] => {
   const normalized = tab ? tab.toLowerCase() : '';
-  const customChips: Chip[] = [];
 
-  if (normalized === 'dashboard') {
-    customChips.push(
-      { label: 'Dashboard Health Check', icon: '⚡', prompt: 'Provide a comprehensive health check-up assessment based on current hospital statistics in our dashboard context.' },
-      { label: "Tomorrow's Appts Load", icon: '📅', prompt: "What is the schedule load of doctor Priya Patel's patient appointments for tomorrow? Identify any critical peak hours." },
-      { label: 'Ward Occupancy Breakdown', icon: '👥', prompt: 'Check patient status distributions and show a breakdown of active ward occupants.' }
-    );
-  } else if (normalized === 'appointments') {
-    customChips.push(
-      { label: 'Overdue Appointments', icon: '📅', prompt: 'Summarize any pending appointments that have overdue status or require urgent rescheduled action.' },
-      { label: 'Available Doctors Roster', icon: '👨‍⚕️', prompt: 'Analyze doctor roster statuses and check who is available for immediate patient consultation.' },
-      { label: "Today's Clinic Peak Hours", icon: '🕒', prompt: 'Tell me which departments have the highest volume of patient appointments scheduled today.' }
-    );
-  } else if (normalized === 'patients') {
-    customChips.push(
-      { label: 'Active Patients Summary', icon: '🩺', prompt: 'Give me a breakdown of currently admitted active patients, summarizing their conditions and ages.' },
-      { label: 'High Risk Patients', icon: '⚠️', prompt: 'Are there patient records presenting critical or severe statuses? Summarize their recent logs.' },
-      { label: 'Aging Demographics Spec', icon: '📈', prompt: 'Analyze our patient age patterns to inspect specialized pediatric or geriatric trends.' }
-    );
-  } else if (normalized.includes('bill')) {
-    customChips.push(
-      { label: 'High Pending Bills', icon: '💰', prompt: 'Identify patient billing records with high outstanding or pending payments.' },
-      { label: 'Collection Efficiency Report', icon: '📊', prompt: 'Provide a report comparing completed collected fees versus pending amounts.' },
-      { label: 'Unpaid Invoices Breakdown', icon: '💳', prompt: 'Which departments or appointments have the largest unpaid billing logs?' }
-    );
-  } else if (normalized.includes('invent') || normalized.includes('pharmacy')) {
-    customChips.push(
-      { label: 'Low Stock Safeguard', icon: '🧱', prompt: 'Confirm which critical pharmacological items in the inventory have stock levels below their warning threshold limit.' },
-      { label: 'Pharmacy Spends Analysis', icon: '💊', prompt: 'Report on our pharmacy inventory categories and identify our highest value assets.' },
-      { label: 'Replenishment Schedule', icon: '📦', prompt: 'Based on active stock counts versus minimum thresholds, formulate a pharmacy replenishment priority order.' }
-    );
-  } else if (normalized === 'doctors') {
-    customChips.push(
-      { label: 'Doctor Specialty Loads', icon: '🩺', prompt: 'Give me a breakdown of doctors grouped by their specialty and active status.' },
-      { label: 'On-Call Availability', icon: '⏰', prompt: 'Check if we have enough on-call specialized physicians available right now.' }
-    );
-  } else if (normalized.includes('depart')) {
-    customChips.push(
-      { label: 'Department Patient Loads', icon: '🏢', prompt: 'Summarize the department-wise load of appointments and bed placements.' },
-      { label: 'Emergency Room Stats', icon: '🚨', prompt: 'Verify emergency department indicators and critical case allocations.' }
-    );
+  if (normalized === 'staff' || normalized === 'staff-ai') {
+    return [
+      { label: 'Total Active Staff', icon: '👥', prompt: 'Give me a summary of total active staff members currently on duty and their roles.' },
+      { label: 'Staff Roles Breakdown', icon: '👔', prompt: 'What are the main staff roles (Doctors, Nurses, Receptionists, Admins) and their counts?' },
+      { label: 'Add New Staff Member', icon: '➕', prompt: 'How do I add a new staff member to the system? Explain the required fields and access levels.' },
+      { label: 'Edit Staff Records', icon: '✏️', prompt: 'Explain the process of editing or updating a staff member\'s contact info or department.' },
+      { label: 'Staff Shift Allocations', icon: '📅', prompt: 'How can we view or update the roster/shifts of our nursing staff and general practitioners?' },
+      { label: 'Safely Delete Staff', icon: '🗑️', prompt: 'What is the procedure to deactivate or safely delete a staff record if they leave the hospital?' },
+      { label: 'Grant Portal Access', icon: '🔑', prompt: 'How can I grant, edit, or revoke dashboard portal access and credentials for a staff member?' },
+      { label: 'Nurses Shift Coverage', icon: '🩺', prompt: 'Check if we have adequate nursing shift coverage for the ICU and Emergency departments tonight.' },
+      { label: 'Staff Contact Directory', icon: '📞', prompt: 'Show the quick phone contact and email directory list of our active staff members.' },
+      { label: 'Check Admin Roles', icon: '🛡️', prompt: 'Who are the active administrators currently registered with portal system privileges?' },
+      { label: 'Shift Coverage Hours', icon: '⏰', prompt: 'How do I generate a report of scheduled duty hours for our hospital staff this week?' },
+      { label: 'Staff Attendance Logs', icon: '📈', prompt: 'Summarize standard staff attendance logs, performance records, or duty logs.' },
+      { label: 'Emergency Shift Alerts', icon: '🚨', prompt: 'How are emergency shifts assigned and what is the current checklist for on-call nursing staff?' },
+      { label: 'License & Credentials', icon: '📜', prompt: 'How can I update an employee\'s medical license or clinical certification expiry date in the profile?' },
+      { label: 'Staff Leave Requests', icon: '🌴', prompt: 'How do we track staff leave requests, holidays, or temporary duty substitutes?' }
+    ];
   }
 
-  // Always append the standard/global suggested clinical chips requested by user
+  if (normalized === 'doctors' || normalized === 'doctors-ai') {
+    return [
+      { label: 'Active Doctors List', icon: '👨‍⚕️', prompt: 'Provide a list of all active doctors currently registered, along with their availability statuses.' },
+      { label: 'Specialties Breakdown', icon: '🩺', prompt: 'Give me a breakdown of our registered doctors grouped by their specialty and department loads.' },
+      { label: 'Add Doctor Profile', icon: '➕', prompt: 'Explain the steps to add a new doctor profile, schedule, and their consultation fees.' },
+      { label: 'Edit Doctor Profile', icon: '✏️', prompt: 'How do I update a doctor\'s fee, designation, consultation rooms, or email details?' },
+      { label: 'On-Call Doctors Today', icon: '⏰', prompt: 'Check who are the on-call doctors and specialists available right now in the hospital.' },
+      { label: 'Room Allocations', icon: '🏢', prompt: 'Which doctors are assigned to Room 101, Room 102, and Room 201? Show room allocations.' },
+      { label: 'Doctor Shift Schedules', icon: '📅', prompt: 'How do we configure or adjust the morning, evening, and night timetables for our doctors?' },
+      { label: 'Delete Doctor Profile', icon: '🗑️', prompt: 'Explain the protocol to deactivate or delete a doctor\'s record when they resign or retire.' },
+      { label: 'Consultation Fees List', icon: '💰', prompt: 'Show a summary list of doctors along with their active consultation fee structures.' },
+      { label: 'Cardiology Status', icon: '❤️', prompt: 'Are there cardiology specialists active on the roster right now? Check Dr. Anil Sharma\'s availability.' },
+      { label: 'Pediatricians Status', icon: '👶', prompt: 'Are there pediatric doctors active on the scheduling chart right now? Check Dr. Priya Patel\'s status.' },
+      { label: 'Doctor Booking Loads', icon: '📊', prompt: 'Identify which doctor has the highest appointment load and patient bookings today.' },
+      { label: 'License Verification', icon: '📜', prompt: 'How do I keep doctor credentials, clinical license keys, or MD certificates updated?' },
+      { label: 'Department Transfers', icon: '🔄', prompt: 'How can I transfer a doctor to another clinical department roster or sub-specialization?' },
+      { label: 'Emergency Coverage', icon: '🚨', prompt: 'Who is the backup doctor assigned to handle emergency trauma and cardiac arrests tonight?' }
+    ];
+  }
+
+  if (normalized === 'appointments' || normalized === 'appointments-ai') {
+    return [
+      { label: 'Overdue Appointments', icon: '📅', prompt: 'Summarize any pending appointments that have overdue status or require urgent rescheduled action.' },
+      { label: 'Available Doctors Roster', icon: '👨‍⚕️', prompt: 'Analyze doctor roster statuses and check who is available for immediate patient consultation.' },
+      { label: 'Clinic Peak Hours', icon: '🕒', prompt: 'Tell me which departments have the highest volume of patient appointments scheduled today.' },
+      { label: 'Add New Appointment', icon: '➕', prompt: 'What is the procedure to book or create a new patient appointment slot in the system?' },
+      { label: 'Edit Scheduled Slot', icon: '✏️', prompt: 'How do I reschedule, shift, or update an existing patient\'s appointment timing?' },
+      { label: 'Cancel Appointment', icon: '❌', prompt: 'Explain how to cancel or safely delete an appointment while notifying the clinical department.' },
+      { label: 'Today\'s Appointments List', icon: '📋', prompt: 'Show me a structured list of patient appointments scheduled for today.' },
+      { label: 'Pending Checkups Search', icon: '🔍', prompt: 'List any pending clinical appointments awaiting doctor approval or check-in.' },
+      { label: 'Completed Sessions Report', icon: '✅', prompt: 'Show recently completed patient consultations and their logged outcome status.' },
+      { label: 'Appointment Status Stats', icon: '📈', prompt: 'Give a breakdown of appointments grouped by status: Scheduled, Checked-In, Done, and Cancelled.' },
+      { label: 'Specialization Load Chart', icon: '📊', prompt: 'Which clinical specialties (e.g., Cardiology, Pediatrics) have the largest booking queue this week?' },
+      { label: 'Doctor-Specific Booking', icon: '🩺', prompt: 'How do I check the scheduled patient booking list for a specific doctor?' },
+      { label: 'Patient Queue Delay', icon: '⚠️', prompt: 'Identify any ongoing delays or slot clashes in the clinical consultation rooms.' },
+      { label: 'Auto Slot Allocation', icon: '🔄', prompt: 'How does the reservation queue system handle double-booking safety and slot conflicts?' },
+      { label: 'Follow-Up Scheduling', icon: '🚨', prompt: 'What is the protocol to book secondary follow-up slots for chronic care patients?' }
+    ];
+  }
+
+  if (normalized === 'patients' || normalized === 'patients-ai') {
+    return [
+      { label: 'Active Patients Summary', icon: '🩺', prompt: 'Give me a breakdown of currently admitted active patients, summarizing their conditions and ages.' },
+      { label: 'High Risk Patients', icon: '⚠️', prompt: 'Are there patient records presenting critical or severe statuses? Summarize their recent logs.' },
+      { label: 'Demographics Analysis', icon: '📈', prompt: 'Analyze our patient age patterns to inspect specialized pediatric or geriatric trends.' },
+      { label: 'Add New Patient Record', icon: '➕', prompt: 'What are the required data fields and registration flows to add a new patient profile?' },
+      { label: 'Edit Patient Details', icon: '✏️', prompt: 'How can I update a patient\'s medical history, blood group, contact, or insurance information?' },
+      { label: 'Delete/Archive Profile', icon: '🗑️', prompt: 'Explain how to archive or remove a redundant patient record while maintaining clinical audits.' },
+      { label: 'Registered Patients List', icon: '📋', prompt: 'Show me a directory list of the most recently registered patients.' },
+      { label: 'Patient Admission Flow', icon: '🏥', prompt: 'What is the clinical intake checklist for admitting a patient to inpatient care?' },
+      { label: 'Check Symptoms Chart', icon: '🌡️', prompt: 'How can we record or log daily patient clinical symptoms and key vitals?' },
+      { label: 'Allergy Alerts & Warning', icon: '🚫', prompt: 'Search patient profiles for registered severe drug allergies or dietary flags.' },
+      { label: 'Chronic Disease Group', icon: '🧬', prompt: 'Summarize patients registered under chronic disease groups like diabetes or hypertension.' },
+      { label: 'Patient Vital Signs Log', icon: '💓', prompt: 'How do I record heart rate, blood pressure, temperature, and SpO2 in the logs?' },
+      { label: 'Discharge Checklist', icon: '📋', prompt: 'What is the standard procedure to discharge a patient and settle their medical charts?' },
+      { label: 'Insurance Information', icon: '💳', prompt: 'Explain how insurance provider files and policy coverage terms are assigned to a patient\'s profile.' },
+      { label: 'Pediatric Demographics', icon: '🍼', prompt: 'Show pediatric registrations and summarize their primary clinical consultants.' }
+    ];
+  }
+
+  if (normalized.includes('bill') || normalized.includes('finance')) {
+    return [
+      { label: 'High Pending Bills', icon: '💰', prompt: 'Identify patient billing records with high outstanding or pending payments.' },
+      { label: 'Fee Collection Efficiency', icon: '📊', prompt: 'Provide a report comparing completed collected fees versus pending amounts.' },
+      { label: 'Unpaid Invoices List', icon: '💳', prompt: 'Which departments or appointments have the largest unpaid billing logs?' },
+      { label: 'Create New Invoice', icon: '➕', prompt: 'Explain how to generate and log a new patient bill, including consultation and pharmacy charges.' },
+      { label: 'Edit Billing Record', icon: '✏️', prompt: 'How do I update an invoice amount, apply discounts, or adjust taxes?' },
+      { label: 'Settle/Delete Bill', icon: '🗑️', prompt: 'What is the protocol to cancel, refund, or delete a wrongly recorded billing entry?' },
+      { label: 'Completed Payments Report', icon: '✅', prompt: 'Show a summary of recently completed fee collections and methods used (Cash, Card, UPI).' },
+      { label: 'Outstanding Balance Alert', icon: '⚠️', prompt: 'Generate a list of patients with active outstanding balance totals above emergency limits.' },
+      { label: 'Department Fee Analysis', icon: '🏢', prompt: 'Provide a breakdown of total revenue generated by each medical department this month.' },
+      { label: 'Tax & Discount Audits', icon: '📜', prompt: 'How are clinician discounts, insurance covers, and government taxes calculated on invoices?' },
+      { label: 'Refund Protocol Flow', icon: '🔄', prompt: 'What is the workflow to process payment refunds and log receipt adjustment entries?' },
+      { label: 'Payment Reminders List', icon: '📞', prompt: 'How can we trigger outstanding payment reminders for patients with pending balances?' },
+      { label: 'Daily Receipts Summary', icon: '🕒', prompt: 'Provide a summary analysis of total cash receipts and digital collections since morning.' },
+      { label: 'Pharmacy Drug Billing', icon: '💊', prompt: 'How are medicine purchases synced automatically from inventory to patient bills?' },
+      { label: 'Ward Occupancy Costing', icon: '🛌', prompt: 'Explain how daily ward charges and nursing service fees are calculated in the main bill.' }
+    ];
+  }
+
+  if (normalized.includes('invent') || normalized.includes('pharmacy') || normalized.includes('purchases') || normalized.includes('transfers')) {
+    return [
+      { label: 'Low Stock Safeguard', icon: '🧱', prompt: 'Confirm which critical pharmacological items in the inventory have stock levels below their warning threshold limit.' },
+      { label: 'Pharmacy Spends Analysis', icon: '💊', prompt: 'Report on our pharmacy inventory categories and identify our highest value assets.' },
+      { label: 'Replenishment Schedule', icon: '📦', prompt: 'Based on active stock counts versus minimum thresholds, formulate a pharmacy replenishment priority order.' },
+      { label: 'Add Inventory Item', icon: '➕', prompt: 'Explain how to register a new clinical equipment unit or pharmacological medicine batch in stock.' },
+      { label: 'Edit Stock Item Details', icon: '✏️', prompt: 'How can I update an item\'s description, supplier, minimum threshold, or cost prices?' },
+      { label: 'Remove Defective Stock', icon: '🗑️', prompt: 'What are the rules and logs to delete, discard, or report decayed or expired stock items?' },
+      { label: 'Supplier Directory List', icon: '📞', prompt: 'Provide a list of registered pharmaceutical suppliers along with their active contacts.' },
+      { label: 'Expired Batches Alert', icon: '🚨', prompt: 'Scan medicine shelves and report on batches approaching their expiration date.' },
+      { label: 'Stock Transfer Log', icon: '🔄', prompt: 'How do I log a stock transfer from the main central medical store to ward pharmacies?' },
+      { label: 'Supplier Purchase Orders', icon: '📋', prompt: 'Explain the procedure to generate a draft purchase order for low-stock antibiotics.' },
+      { label: 'Restocking Protocols', icon: '📦', prompt: 'How are items restocked, and what logs track bulk inventory delivery receipts?' },
+      { label: 'Shelf Location Audit', icon: '🗺️', prompt: 'How do we record shelf codes, cold storage temperature zones, and location tags for vaccines?' },
+      { label: 'Valuation Reports', icon: '💰', prompt: 'Calculate the total financial asset valuation of our pharmacy and equipment stock.' },
+      { label: 'Narcotics & Controlled Drugs', icon: '🔒', prompt: 'How do we audit or record high-risk narcotic substance logs and restricted drug dispensations?' },
+      { label: 'Daily Dispensed Medicines', icon: '🩺', prompt: 'How can I view a report of dispensed stock items linked to doctor prescriptions?' }
+    ];
+  }
+
+  if (normalized === 'consultation' || normalized === 'consultation-ai') {
+    return [
+      { label: 'General Drug Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
+      { label: 'Allergy Symptoms Check', icon: '🌡️', prompt: 'How are clinical allergy skin symptoms and diagnostic rashes diagnosed?' },
+      { label: 'Add Consultation Record', icon: '➕', prompt: 'Detail the steps to log a patient\'s consultation notes, symptom logs, and vitals.' },
+      { label: 'Modify Prescription Notes', icon: '✏️', prompt: 'Explain how to edit or modify clinical prescriptions and drug dosages on file.' },
+      { label: 'Delete Wrong Prescription', icon: '🗑️', prompt: 'What is the safety rule to safely delete or retract a wrong prescription entry?' },
+      { label: 'General Lab Tests Checklist', icon: '🔬', prompt: 'What are the standard recommended lab tests for suspected blood sugar or anemia?' },
+      { label: 'Chronic Care Guidance', icon: '💖', prompt: 'Generate guidelines for chronic hypertension wellness and low-sodium diets.' },
+      { label: 'Pediatrics Dose Formula', icon: '🍼', prompt: 'How are standard drug dosages adjusted based on pediatric patient weights?' },
+      { label: 'Pregnancy Drug Safety', icon: '🤰', prompt: 'Summarize critical FDA drug category restrictions during patient pregnancies.' },
+      { label: 'Clinical Followup Rules', icon: '📅', prompt: 'What are the clinical indicators for booking patient follow-up consults?' },
+      { label: 'Patient Symptoms Triage', icon: '⏱️', prompt: 'Outline an emergency clinical triage workflow for acute abdominal pain.' },
+      { label: 'Vaccine Scheduler Guide', icon: '💉', prompt: 'Provide a standard pediatric vaccination schedule and dose intervals.' },
+      { label: 'Cardiac Vitals Watch', icon: '💓', prompt: 'What are critical physiological alerts for resting heart rates and ECG anomalies?' },
+      { label: 'Write Medication Plan', icon: '📝', prompt: 'Suggest a model therapeutic medication schedule for standard Type-2 diabetes.' },
+      { label: 'OTC Treatment Guides', icon: '🍃', prompt: 'Are there any standard OTC recommendations for mild cold and throat irritation?' }
+    ];
+  }
+
+  if (normalized.includes('ward') || normalized.includes('ipd')) {
+    return [
+      { label: 'Ward Occupancy Count', icon: '🛌', prompt: 'Give me the total available versus occupied beds count in our general wards.' },
+      { label: 'ICU Critical Bed Alert', icon: '🚨', prompt: 'Check ICU bed availability and count occupied beds for trauma emergencies.' },
+      { label: 'Add New Ward Bed', icon: '➕', prompt: 'How can I add a new bed, room number, or special ward category to our database register?' },
+      { label: 'Edit Bed Placement', icon: '✏️', prompt: 'How do we edit bed assignments, swap patient beds, or update daily room tariff costs?' },
+      { label: 'Discharge Room Cleaning', icon: '🗑️', prompt: 'Explain the protocol to set a bed status to cleaning or delete redundant entries.' },
+      { label: 'Patient Admission Map', icon: '🏥', prompt: 'Show the current directory list of admitted patients mapped to their specific ward rooms.' },
+      { label: 'Pediatric Ward Occupancy', icon: '🍼', prompt: 'Check the active patient occupancy status in our pediatric ward block.' },
+      { label: 'ICU On-Call Nursing Shift', icon: '👩‍⚕️', prompt: 'Who are the nurses assigned to ICU Ward A and Emergency Room duties tonight?' },
+      { label: 'Ward Tariff Comparison', icon: '💰', prompt: 'Provide a room tariff comparison list showing daily bed rates for ICU, Semi-Private, and General Wards.' },
+      { label: 'Bed Maintenance Logs', icon: '🔧', prompt: 'How do we report defective bedside monitors or mark beds as under maintenance?' },
+      { label: 'Bed Transfer Protocols', icon: '🔄', prompt: 'Explain how to transfer an admitted patient from General Ward to Private ICU Care.' },
+      { label: 'Emergency Room Placements', icon: '🏎️', prompt: 'Are there vacant resuscitation beds registered in our triage emergency department?' },
+      { label: 'Daily Admitted Vitals', icon: '📋', prompt: 'Show the scheduled times nurses check vitals (BP, SpO2) in General Ward beds.' },
+      { label: 'Quarantine Room Allocation', icon: '🛡️', prompt: 'What beds or wings are isolated for infectious diseases or quarantine requirements?' },
+      { label: 'Doctors Ward Visits', icon: '🩺', prompt: 'How are doctor morning ward rounds and check-ins recorded for admitted patients?' }
+    ];
+  }
+
+  // Fallback for dashboard, general, or others (exactly 15 prompt chips)
   return [
-    ...customChips,
     { label: 'Clinic Appointments', icon: '🗂️', prompt: 'Analyze pending hospital appointments in our dashboard context.' },
     { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
     { label: 'Billing Standing', icon: '📊', prompt: 'Review our total pending clinical bills versus collected amounts.' },
-    { label: 'Pharmacy Inventory', icon: '🧱', prompt: 'Generate a summary list of medication inventory items with low-stock count.' }
+    { label: 'Pharmacy Inventory', icon: '🧱', prompt: 'Generate a summary list of medication inventory items with low-stock count.' },
+    { label: 'All Active Doctors', icon: '👨‍⚕️', prompt: 'Who are the doctors currently available on duty and what are their specializations?' },
+    { label: 'Patient Condition Trends', icon: '🩺', prompt: 'Give me a breakdown of active patient registers and high-risk case reports.' },
+    { label: 'Room Occupancy Check', icon: '🛌', prompt: 'What is the overall occupancy level of our wards and private rooms?' },
+    { label: 'Clinic Revenue Sheet', icon: '💰', prompt: 'Summarize this month\'s financial fee collections and outstanding balance totals.' },
+    { label: 'Nurse Shifts & Roster', icon: '⏰', prompt: 'Provide current nurse duty shift allocations and emergency coverage records.' },
+    { label: 'Drug Refill List', icon: '📦', prompt: 'Show pharmaceutical supplier contacts and our lowest stock antibiotics list.' },
+    { label: 'Emergency Protocol Trait', icon: '🚨', prompt: 'What is the hospital\'s priority emergency dispatch protocol for clinical trauma?' },
+    { label: 'Insurance Claim Setup', icon: '💳', prompt: 'What insurance providers do we accept and how is policy billing calculated?' },
+    { label: 'Discharge Daily List', icon: '📋', prompt: 'Show patients scheduled for discharge today and check if bills are settled.' },
+    { label: 'System Configuration Info', icon: '⚙️', prompt: 'Describe system parameters, active modules, and helpdesk contact details.' },
+    { label: 'Support & Access Help', icon: '🔑', prompt: 'How do I resolve user password resets, tech issues, or modify portal permissions?' }
   ];
 };
 
@@ -195,23 +325,48 @@ const PlayAudioButton: React.FC<{ url: string }> = ({ url }) => {
 export default function AIAssistantView({ 
   contextData, 
   backendApiEndpoint = '/api/ai-assistant/chat', 
-  restrictFileTypes = false 
+  restrictFileTypes = false,
+  onBack,
+  onNavigate
 }: AIAssistantViewProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: `Hello there! I am your **Clinical & Hospital Management AI Assistant**. 
+  const activeTabLower = (contextData?.activeTab || '').toLowerCase().trim();
+  const isTabSpecific = activeTabLower && 
+                        activeTabLower !== 'general' && 
+                        activeTabLower !== 'general-ai' && 
+                        activeTabLower !== 'ai-assistant';
 
-I can assist you with:
-- **Medical & Clinical Queries**: Diagnostic indicators, healthy guidelines, clinical procedures, or drug info.
-- **Hospital Administration & Data**: Active appointment summaries, billing standings, department levels, or staff counts from your current screen.
-- **Vision Recognition**: Upload an image of a clinical prescription, lab report, or diagnostic screen to analyze.
+  const [messages, setMessages] = useState<Message[]>([]);
 
-*Security Guideline:* To maintain focus, I will politely decline any off-topic queries that are not related to medical science or hospital context. Let me know how I can help you today!`,
-      timestamp: new Date()
+  useEffect(() => {
+    if (isTabSpecific) {
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: `Welcome to the specialized **${activeTabLower.toUpperCase()} AI Assistant**! 🩺
+  
+This assistant is strictly dedicated to managing, listing, adding, editing, and deleting **${activeTabLower}** data and operations in this tab.
+
+⚠️ **Strict Boundary Policy:**
+I am **restricted** and will only answer and handle questions or tasks related to the ${activeTabLower} workflow. Any general medical, general clinical, or unrelated queries will be politely refused.
+
+💡 For general medical advice, symptoms, or other general helper features, please close this assistant and use the main **AI Assistant** tab.
+
+Feel free to try the **15 Quick Prompts** below or type your specialized query now!`,
+          timestamp: new Date()
+        }
+      ]);
+    } else {
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: `Hello there! I am your **Clinical & Hospital Management AI Assistant**. \n\nI can assist you with:\n- **Medical & Clinical Queries**: Diagnostic indicators, healthy guidelines, clinical procedures, or drug info.\n- **Hospital Administration & Data**: Active appointment summaries, billing standings, department levels, or staff counts from your current screen.\n- **Vision Recognition**: Upload an image of a clinical prescription, lab report, or diagnostic screen to analyze.\n\n*Security Guideline:* To maintain focus, I will politely decline any off-topic queries that are not related to medical science or hospital context. Let me know how I can help you today!`,
+          timestamp: new Date()
+        }
+      ]);
     }
-  ]);
+  }, [contextData?.activeTab]);
 
   const [input, setInput] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -346,6 +501,11 @@ I can assist you with:
 
   // Process any selected or dropped file (image or document)
   const processSelectedFile = (file: File) => {
+    if (isTabSpecific) {
+      alert("File uploads (including Excel or CSV) are disabled in this specialized assistant. Please use the main AI Assistant tab for document/image processing.");
+      return;
+    }
+
     if (file.size > 8 * 1024 * 1024) {
       alert("File exceeds the maximum limit of 8MB.");
       return;
@@ -629,10 +789,21 @@ I can assist you with:
         setLatestAttempts(resData.attempts);
       }
 
+      let replyContent = resData.reply || "Unable to formulate response from downstream services.";
+      
+      const navMatch = replyContent.match(/\[NAVIGATE:\s*([a-zA-Z0-9_-]+)\]/i);
+      if (navMatch && onNavigate) {
+        const targetView = navMatch[1].trim();
+        replyContent = replyContent.replace(/\[NAVIGATE:\s*[a-zA-Z0-9_-]+\]/gi, '').trim();
+        setTimeout(() => {
+          onNavigate(targetView);
+        }, 3000);
+      }
+
       const assistantMsg: Message = {
         id: 'assistant-' + Date.now(),
         role: 'assistant',
-        content: resData.reply || "Unable to formulate response from downstream services.",
+        content: replyContent,
         attempts: resData.attempts,
         timestamp: new Date()
       };
@@ -683,6 +854,18 @@ Please request support or review active API parameter credentials.`,
           </div>
 
           <div className="flex flex-wrap items-center gap-3" id="header-settings-actions">
+            {onBack && (
+              <button
+                onClick={onBack}
+                type="button"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-teal-750 bg-teal-50 hover:bg-teal-100/90 hover:scale-102 active:scale-95 border border-teal-200/60 rounded-xl transition-all cursor-pointer shadow-xs"
+                title="Go Back to last active Tab"
+                id="back-to-tab-btn"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Go Back to Tab</span>
+              </button>
+            )}
             <button 
               onClick={clearChat}
               className="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-500 hover:text-red-600 hover:bg-slate-105 rounded-xl transition-all cursor-pointer bg-white border border-slate-200 shadow-sm"
@@ -1106,15 +1289,17 @@ Please request support or review active API parameter credentials.`,
               </button>
 
               {/* DIRECT FILE UPLOAD BUTTON */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 sm:p-2.5 rounded-full hover:scale-105 active:scale-95 transition-all text-slate-600 hover:text-teal-600 bg-white border border-slate-200 hover:border-teal-200 hover:bg-teal-50/20 shadow-2xs cursor-pointer"
-                title="Upload Image/Document"
-                id="direct-file-upload-btn"
-              >
-                <Upload className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-              </button>
+              {!isTabSpecific && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 sm:p-2.5 rounded-full hover:scale-105 active:scale-95 transition-all text-slate-600 hover:text-teal-600 bg-white border border-slate-200 hover:border-teal-200 hover:bg-teal-50/20 shadow-2xs cursor-pointer"
+                  title="Upload Image/Document"
+                  id="direct-file-upload-btn"
+                >
+                  <Upload className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                </button>
+              )}
 
               {/* Hidden classic file input for image analysis and documents (Excel, CSV, doc, pdf, txt, etc.) */}
               <input 

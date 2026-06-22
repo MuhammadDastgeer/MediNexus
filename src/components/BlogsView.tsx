@@ -16,7 +16,8 @@ import {
   Bookmark,
   RefreshCw,
   Clock,
-  User
+  User,
+  Sparkles
 } from 'lucide-react';
 
 interface BlogPost {
@@ -39,6 +40,7 @@ interface BlogsViewProps {
   onRefresh?: () => void;
   isReadOnly?: boolean;
   loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
+  onNavigate?: (view: any) => void;
 }
 
 const CATEGORIES = [
@@ -56,7 +58,8 @@ export default function BlogsView({
   onDeleteBlog,
   onRefresh,
   isReadOnly = false,
-  loggedInUser = null
+  loggedInUser = null,
+  onNavigate
 }: BlogsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Articles');
@@ -185,7 +188,19 @@ export default function BlogsView({
           <p className="text-xs text-slate-400">Share informative articles, clinical breakthroughs, health tips, and notifications with colleagues and patients.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('blogs-ai')}
+              type="button"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer"
+              id="trigger-blogs-ai"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>Blogs AI</span>
+            </button>
+          )}
+
           {onRefresh && (
             <button
               onClick={onRefresh}
