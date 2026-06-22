@@ -18,10 +18,22 @@ You MUST adhere to these strict limits and instructions:
 1. ONLY answer queries that are:
    a. Related to medical knowledge, healthy lifestyles, clinical symptoms, wellness guidance, medical analysis, pharmacology, diagnostics, procedures, etc.
    b. Related to the provided Screen and Role Context (e.g. queries about appointment lists, bills, financial records, inventory items, ward structures, doctor lists).
-2. If the user asks about ANYTHING ELSE that is NOT related to medical/clinical care or hospital data management (for example: general knowledge, weather patterns, sports leagues, politics, pop culture, irrelevant coding, cooking recipes other than medical diets, general storytelling), you MUST politely and firmly decline to answer. 
-   Say: "I am a dedicated Medical & Clinical Hospital AI Assistant. I can only assist with healthcare inquiries, medical knowledge, or clinical dashboard context."
+2. If the user asks about ANYTHING ELSE that is NOT related to medical/clinical care, healthcare, or hospital data management (for example: general knowledge, weather, sports, politics, pop culture, irrelevant coding, cooking recipes, general storytelling, or general file contents of a non-medical file/image/document):
+   - You MUST detect the language of the user's message/query.
+   - You MUST reply to them in that EXACT SAME LANGUAGE stating ONLY that you can only answer medical questions.
+   - Do NOT provide any other information, explanation, or reasoning.
+   - Examples of exact matching replies for non-medical queries per language detected:
+     * Roman Urdu / Roman Hindi / Hinglish (e.g., "kya haal hai", "gaana sunao", "France ka capital kya hai", "ap kya kr skte ho"): "Only medical questions ka answer da sakta hu"
+     * English (e.g., "Hello, tell me a joke", "What is the capital of...", "write a poem", "how to code"): "I can only answer medical questions."
+     * Urdu Script (Nastaliq, e.g., "آپ کیا کر سکتے ہیں؟", "فرانس کا دارالحکومت"): "صرف طبی سوالات کے جوابات دے سکتا ہوں۔"
+     * Hindi Script (Devanagari, e.g., "आप क्या कर सकते हैं?", "फ्रांस की राजधानी क्या है?"): "मैं केवल चिकित्सा संबंधी प्रश्नों के उत्तर दे सकता हूँ।"
+     * Spanish (e.g., "¿Cuál es la capital...", "¿Qué puedes hacer?"): "Solo puedo responder a preguntas médicas."
+     * French (e.g., "Quelle est la capitale...", "Que pouvez-vous faire?"): "Je ne peux répondre qu'aux questions médicales."
+     * German (e.g., "Was kannst du tun?"): "Ich kann nur medizinische Fragen beantworten."
+     * Arabic (e.g., "ما هي عاصمة فرنسا؟"): "يمكنني فقط الإجابة على الأسئلة الطبية."
+     * Other languages: Translate the phrase "I can only answer medical questions" or "Only medical questions ka answer da sakta hu" into that language, and output ONLY that phrase.
 3. Respond in a highly professional, clinical, helpful, and concise manner.
-4. If an image is uploaded (such as a lab report, prescription, skin rash, or clinical medical record), check it thoroughly and provide your clinical insight.
+4. If an image or any other document file is uploaded (such as a lab report, prescription, skin rash, clinical medical records, spreadsheets with hospital/patient metrics, csv data of symptoms), check it thoroughly and provide your clinical insight. If the file content is not related to healthcare/medical/hospital records, treat it as a non-medical query and reply ONLY in the same language as the user's accompanying message/query using the translation as specified in Rule 2.
 `;
 
 // Extract base64 image data helper
@@ -38,7 +50,7 @@ function parseImageData(dataUrl: string) {
 // Individual Provider Executions
 // ----------------------------------------------------
 
-async function tryGemini(keys: any, prompt: string, image: string, audio: string, attempts: any[]) {
+async function tryGemini(keys: any, prompt: string, image: string, audio: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.gemini && keys.gemini !== 'MY_GEMINI_API_KEY' && keys.gemini.trim() !== '') {
     try {
       const ai = new GoogleGenAI({
@@ -81,7 +93,7 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
         model: 'gemini-3.5-flash',
         contents: contentsParts,
         config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
+          systemInstruction: systemInstruction,
           temperature: 0.2
         }
       });
@@ -101,11 +113,11 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
   return null;
 }
 
-async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any[]) {
+async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.openai && keys.openai.trim() !== '') {
     try {
       const openAiMessages: any[] = [
-        { role: 'system', content: SYSTEM_INSTRUCTION }
+        { role: 'system', content: systemInstruction }
       ];
 
       let contentPayload: any = prompt;
@@ -153,7 +165,7 @@ async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any
   return null;
 }
 
-async function tryAnthropic(keys: any, prompt: string, image: string, attempts: any[]) {
+async function tryAnthropic(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.anthropic && keys.anthropic.trim() !== '') {
     try {
       let contentPayload: any[] = [{ type: 'text', text: prompt }];
@@ -181,7 +193,7 @@ async function tryAnthropic(keys: any, prompt: string, image: string, attempts: 
         },
         body: JSON.stringify({
           model: 'claude-3-5-sonnet-20241022',
-          system: SYSTEM_INSTRUCTION,
+          system: systemInstruction,
           messages: [{ role: 'user', content: contentPayload }],
           max_tokens: 1024,
           temperature: 0.2
@@ -210,11 +222,11 @@ async function tryAnthropic(keys: any, prompt: string, image: string, attempts: 
   return null;
 }
 
-async function tryOpenRouter(keys: any, prompt: string, image: string, attempts: any[]) {
+async function tryOpenRouter(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.openrouter && keys.openrouter.trim() !== '') {
     try {
       const openRouterMessages: any[] = [
-        { role: 'system', content: SYSTEM_INSTRUCTION }
+        { role: 'system', content: systemInstruction }
       ];
 
       let contentPayload: any = prompt;
@@ -262,11 +274,11 @@ async function tryOpenRouter(keys: any, prompt: string, image: string, attempts:
   return null;
 }
 
-async function tryGroq(keys: any, prompt: string, image: string, attempts: any[]) {
+async function tryGroq(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.groq && keys.groq.trim() !== '') {
     try {
       const groqMessages = [
-        { role: 'system', content: SYSTEM_INSTRUCTION },
+        { role: 'system', content: systemInstruction },
         { role: 'user', content: prompt }
       ];
 
@@ -306,10 +318,53 @@ async function tryGroq(keys: any, prompt: string, image: string, attempts: any[]
 }
 
 // ----------------------------------------------------
-// Main POST routing
+// Main POST routing & Category Helpers
 // ----------------------------------------------------
 
-router.post('/chat', async (req: Request, res: Response) => {
+const getCategoryInstruction = (category: string): string => {
+  const specializedPROMPTS: Record<string, string> = {
+    'appointments': 'You are a scheduling and hospital consultation queue planner. Focus on doctor slots, booking confirmations, overdue checkups, peak clinic hours, and roster allocations.',
+    'consultation': 'You are a healthcare specialist in general medicine and patient diagnosis. Focus on pharmacology advice, symptoms, secondary wellness guidelines, treatment prescriptions, and follow-up consultation timelines.',
+    'billing': 'You are a clinical finance and accounts controller. Focus on payment efficiency, collected funds, outstanding bills, department billing statistics, and patient invoices.',
+    'inventory': 'You are a pharmacy and medical inventory officer. Focus on stock counts, replenishment schedules, critical medicine shortages, procurement, and asset valuations.',
+    'ipd-wards': 'You are an IPD (In-Patient Department) ward and bed coordinator. Focus on ward allocations, room statuses, bed occupancies, and patient admission flows.',
+    'staff': 'You are a medical staffing coordinator. Focus on doctor rosters, duty nursing shifts, staff schedules, allocations, and emergency coverage.',
+    'doctors': 'You are a medical roster superintendent. Focus on medical specializations, on-call charts, doctor availabilities, and room assignments.',
+    'patients': 'You are a patient care coordinator. Focus on patient profiles, demographic stats (geriatric, pediatric), high-risk clinical conditions, and registrations.',
+    'departments': 'You are a departmental clinic manager. Focus on patient loading by department, specialization demands, clinic rooms, and hospital operational charts.',
+    'enquiries': 'You are a clinic desk receptionist. Focus on booking leads, diagnostic enquiries, lead pipelines, response tracking, and general hospital FAQs.',
+    'medical-tourism': 'You are an international patient tourism officer. Focus on package rates, cross-border plans, traveler stays, and specialized surgical queries.',
+    'blogs': 'You are a health media writer. Focus on disease prevention guides, patient blogs, health habits, medical awareness posts, and news.',
+    'reports': 'You are a hospital data analyst. Focus on performance charts, statistical diagnostics data, trend analyses, and performance reports.',
+    'finance': 'You are a hospital chief financial analyst. Focus on transaction ledgers, cash flows, bills processing, expense charts, and overall revenue.',
+    'configure-hospital': 'You are an IT hospital configurations administrator. Focus on general clinic parameters, system schedules, active features, and configuration settings.',
+    'support': 'You are a hospital technical helpdesk assistant. Focus on user access, tech tickets, password issues, and system error resolution.'
+  };
+
+  const domainFocus = specializedPROMPTS[category] || 'You are a clinical specialist and healthcare workflow assistant.';
+
+  return `You are a highly specialised clinical and medical hospital AI assistant. 
+Category Focus: ${domainFocus}
+You MUST adhere to these strict limits and instructions:
+1. ONLY answer queries that are:
+   a. Related to medical knowledge, healthy lifestyles, clinical symptoms, wellness guidance, medical analysis, pharmacology, diagnostics, procedures, etc.
+   b. Related to the provided Screen, Role, and Category Context (specifically: the category is "${category}").
+2. If the user asks about ANYTHING ELSE that is NOT related to medical/clinical care, healthcare, or hospital data management (for example: general knowledge, weather, sports, politics, pop culture, irrelevant coding, cooking recipes, general storytelling, or general file contents of a non-medical file/image/document):
+   - You MUST detect the language of the user's message/query.
+   - You MUST reply to them in that EXACT SAME LANGUAGE stating ONLY that you can only answer medical questions.
+   - Do NOT provide any other information, explanation, or reasoning.
+   - Example replies (match the exact phrase per language):
+     * Roman Urdu / Roman Hindi / Hinglish: "Only medical questions ka answer da sakta hu"
+     * English: "I can only answer medical questions."
+     * Urdu Script (Nastaliq): "صرف طبی سوالات کے جوابات دے سکتا ہوں۔"
+     * Hindi Script: "मैं केवल चिकित्सा संबंधी प्रश्नों के उत्तर दे सकता हूँ।"
+     * Other languages: Translate "I can only answer medical questions" into the detected language, and output ONLY that phrase.
+3. Respond in a highly professional, clinical, helpful, and concise manner.
+4. Note that for this specialized category, ONLY CSV and Excel formats are supported for file uploads. Treat any unrelated document as non-medical, or politely state that only spreadsheets are permitted for files in this assistant.
+`;
+};
+
+async function processChatRequest(systemInstructionToUse: string, req: Request, res: Response) {
   const { messages = [], context = {}, selectedModel = 'auto' } = req.body;
   const keys = getKeys();
   const attempts: Array<{ provider: string; status: 'success' | 'failed' | 'skipped'; error?: string; modelUsed?: string }> = [];
@@ -331,7 +386,14 @@ router.post('/chat', async (req: Request, res: Response) => {
   const lastMessageAudio = lastMessage?.audio || '';
 
   // Append context to the last user message so the models always have it
-  const finalPrompt = `${contextIntro}\nUser Message: ${lastMessageText}`;
+  let finalPrompt = '';
+  if (!lastMessageText.trim() && lastMessageAudio) {
+    finalPrompt = `${contextIntro}\n(The user has submitted a voice audio query. Please listen to the attached audio, understand or transcribe their query, and reply directly with a text response based on what they spoke.)`;
+  } else if (!lastMessageText.trim() && lastMessageImage) {
+    finalPrompt = `${contextIntro}\n(The user has uploaded a clinical image/scan without typing any message. Please analyze this image/scan thoroughly and provide your medical or clinical diagnostic insights.)`;
+  } else {
+    finalPrompt = `${contextIntro}\nUser Message: ${lastMessageText}`;
+  }
 
   // Build sequential priority list based on user dropdown selection
   let providerChain: string[] = [];
@@ -355,15 +417,15 @@ router.post('/chat', async (req: Request, res: Response) => {
   for (const provider of providerChain) {
     let reply: string | null = null;
     if (provider === 'gemini') {
-      reply = await tryGemini(keys, finalPrompt, lastMessageImage, lastMessageAudio, attempts);
+      reply = await tryGemini(keys, finalPrompt, lastMessageImage, lastMessageAudio, attempts, systemInstructionToUse);
     } else if (provider === 'openai') {
-      reply = await tryOpenAI(keys, finalPrompt, lastMessageImage, attempts);
+      reply = await tryOpenAI(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
     } else if (provider === 'claude') {
-      reply = await tryAnthropic(keys, finalPrompt, lastMessageImage, attempts);
+      reply = await tryAnthropic(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
     } else if (provider === 'openrouter') {
-      reply = await tryOpenRouter(keys, finalPrompt, lastMessageImage, attempts);
+      reply = await tryOpenRouter(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
     } else if (provider === 'groq') {
-      reply = await tryGroq(keys, finalPrompt, lastMessageImage, attempts);
+      reply = await tryGroq(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
     }
 
     if (reply) {
@@ -391,7 +453,9 @@ I have analyzed your screen context and medical query locally:
 `;
 
   // Guardrail test offline
+  const hasAttachment = !!lastMessageImage || query.includes('[document attached:') || query.includes('document content:');
   const isMedicalQuery = 
+    hasAttachment ||
     query.includes('pain') || query.includes('dard') || query.includes('fever') || query.includes('cough') || query.includes('headache') ||
     query.includes('doctor') || query.includes('patient') || query.includes('appointment') || query.includes('bill') || query.includes('heart') ||
     query.includes('medicine') || query.includes('drug') || query.includes('clinical') || query.includes('report') || query.includes('rash') ||
@@ -399,10 +463,22 @@ I have analyzed your screen context and medical query locally:
     query.includes('bp') || query.includes('blood pressure');
 
   if (!isMedicalQuery && query.length > 3) {
-    fallbackReply = `I am a dedicated Medical & Clinical Hospital AI Assistant. 
-I can only assist with healthcare inquiries, medical knowledge, or clinical dashboard context.
+    const hasSpanish = /\b(hola|que|como|capital|escribir|presidente|deporte|tiempo|clima)\b/i.test(query);
+    const hasUrduArabic = /[\u0600-\u06FF]/.test(query);
+    const hasHindiDev = /[\u0900-\u097F]/.test(query);
+    const hasRomanUrdu = /\b(kya|tum|mujhse|hai|hein|kar|sakte|sunao|gana|haal|kaise|shairi|da|sakta)\b/i.test(query);
 
-Please ask a medical question (e.g. cardiac symptoms, pediatric care, lab analysis) or query the current hospital console's numbers.`;
+    if (hasUrduArabic) {
+      fallbackReply = `صرف طبی سوالات کے جوابات دے سکتا ہوں۔`;
+    } else if (hasHindiDev) {
+      fallbackReply = `मैं केवल चिकित्सा संबंधी प्रश्नों के उत्तर दे सकता हूँ।`;
+    } else if (hasSpanish) {
+      fallbackReply = `Solo puedo responder a preguntas médicas.`;
+    } else if (hasRomanUrdu) {
+      fallbackReply = `Only medical questions ka answer da sakta hu`;
+    } else {
+      fallbackReply = `I can only answer medical questions.`;
+    }
   } else {
     if (query.includes('heart') || query.includes('dil') || query.includes('chest') || query.includes('cardiac')) {
       fallbackReply += `
@@ -427,6 +503,18 @@ Please ask a medical question (e.g. cardiac symptoms, pediatric care, lab analys
     reply: fallbackReply,
     attempts
   });
+}
+
+// Default Global Chat POST Route
+router.post('/chat', async (req: Request, res: Response) => {
+  return processChatRequest(SYSTEM_INSTRUCTION, req, res);
+});
+
+// Category-Specific Independent API Routers for each section
+router.post('/:category/chat', async (req: Request, res: Response) => {
+  const { category } = req.params;
+  const customInstruction = getCategoryInstruction(category);
+  return processChatRequest(customInstruction, req, res);
 });
 
 export default router;

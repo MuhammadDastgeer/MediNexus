@@ -54,6 +54,22 @@ export default function App() {
     'finance': `/${prefix}/finance`,
     'configure-hospital': `/${prefix}/configure-hospital`,
     'support': `/${prefix}/support`,
+    'appointments-ai': `/${prefix}/appointments/ai`,
+    'consultation-ai': `/${prefix}/consultation/ai`,
+    'billing-ai': `/${prefix}/billing/ai`,
+    'inventory-ai': `/${prefix}/inventory/ai`,
+    'ipd-wards-ai': `/${prefix}/ipd-wards/ai`,
+    'staff-ai': `/${prefix}/staff/ai`,
+    'doctors-ai': `/${prefix}/doctors/ai`,
+    'patients-ai': `/${prefix}/patients/ai`,
+    'departments-ai': `/${prefix}/departments/ai`,
+    'enquiries-ai': `/${prefix}/enquiries/ai`,
+    'medical-tourism-ai': `/${prefix}/medical-tourism/ai`,
+    'blogs-ai': `/${prefix}/blogs/ai`,
+    'reports-ai': `/${prefix}/reports/ai`,
+    'finance-ai': `/${prefix}/finance/ai`,
+    'configure-hospital-ai': `/${prefix}/configure-hospital/ai`,
+    'support-ai': `/${prefix}/support/ai`,
   };
 
   const getViewFromPath = (pathname: string): ActiveView => {
@@ -61,6 +77,25 @@ export default function App() {
     if (cleanPath === '' || cleanPath === 'home' || cleanPath === 'about' || cleanPath === 'contact' || cleanPath === 'doctor' || cleanPath === 'doctors' || cleanPath === 'blog' || cleanPath === 'blogs') {
       return (loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor' || loggedInUser?.role === 'patient') ? 'dashboard' : 'landing';
     }
+    
+    // Sub-AI specifics checked first
+    if (cleanPath.endsWith('/appointments/ai') || cleanPath.endsWith('appointments/ai') || (cleanPath.includes('appointment') && cleanPath.endsWith('/ai'))) return 'appointments-ai';
+    if (cleanPath.endsWith('/consultation/ai') || cleanPath.endsWith('consultation/ai') || (cleanPath.includes('consultation') && cleanPath.endsWith('/ai'))) return 'consultation-ai';
+    if (cleanPath.endsWith('/billing/ai') || cleanPath.endsWith('billing/ai') || (cleanPath.includes('billing') && cleanPath.endsWith('/ai')) || (cleanPath.includes('bill') && cleanPath.endsWith('/ai'))) return 'billing-ai';
+    if (cleanPath.endsWith('/inventory/ai') || cleanPath.endsWith('inventory/ai') || (cleanPath.includes('inventory') && cleanPath.endsWith('/ai'))) return 'inventory-ai';
+    if (cleanPath.endsWith('/ipd-wards/ai') || cleanPath.endsWith('ipd-wards/ai') || (cleanPath.includes('ipd') && cleanPath.endsWith('/ai')) || (cleanPath.includes('ward') && cleanPath.endsWith('/ai'))) return 'ipd-wards-ai';
+    if (cleanPath.endsWith('/staff/ai') || cleanPath.endsWith('staff/ai') || (cleanPath.includes('staff') && cleanPath.endsWith('/ai'))) return 'staff-ai';
+    if (cleanPath.endsWith('/doctors/ai') || cleanPath.endsWith('doctors/ai') || (cleanPath.includes('doctor') && cleanPath.endsWith('/ai'))) return 'doctors-ai';
+    if (cleanPath.endsWith('/patients/ai') || cleanPath.endsWith('patients/ai') || (cleanPath.includes('patient') && cleanPath.endsWith('/ai'))) return 'patients-ai';
+    if (cleanPath.endsWith('/departments/ai') || cleanPath.endsWith('departments/ai') || (cleanPath.includes('department') && cleanPath.endsWith('/ai'))) return 'departments-ai';
+    if (cleanPath.endsWith('/enquiries/ai') || cleanPath.endsWith('enquiries/ai') || (cleanPath.includes('enquiries') && cleanPath.endsWith('/ai')) || (cleanPath.includes('enquiry') && cleanPath.endsWith('/ai'))) return 'enquiries-ai';
+    if (cleanPath.endsWith('/medical-tourism/ai') || cleanPath.endsWith('medical-tourism/ai') || (cleanPath.includes('tourism') && cleanPath.endsWith('/ai'))) return 'medical-tourism-ai';
+    if (cleanPath.endsWith('/blogs/ai') || cleanPath.endsWith('blogs/ai') || (cleanPath.includes('blog') && cleanPath.endsWith('/ai'))) return 'blogs-ai';
+    if (cleanPath.endsWith('/reports/ai') || cleanPath.endsWith('reports/ai') || (cleanPath.includes('report') && cleanPath.endsWith('/ai'))) return 'reports-ai';
+    if (cleanPath.endsWith('/finance/ai') || cleanPath.endsWith('finance/ai') || (cleanPath.includes('finance') && cleanPath.endsWith('/ai'))) return 'finance-ai';
+    if (cleanPath.endsWith('/configure-hospital/ai') || cleanPath.endsWith('configure-hospital/ai') || (cleanPath.includes('configure') && cleanPath.endsWith('/ai'))) return 'configure-hospital-ai';
+    if (cleanPath.endsWith('/support/ai') || cleanPath.endsWith('support/ai') || (cleanPath.includes('support') && cleanPath.endsWith('/ai'))) return 'support-ai';
+
     if (cleanPath.includes('dashboard') || cleanPath.includes('desboard')) return 'dashboard';
     if (cleanPath.includes('ai-assistant') || cleanPath.includes('ai-helper') || cleanPath.includes('assistant')) return 'ai-assistant';
     if (cleanPath.includes('appointment')) return 'appointments';
@@ -1260,6 +1295,89 @@ export default function App() {
             }}
           />
         );
+      case 'appointments-ai':
+      case 'consultation-ai':
+      case 'billing-ai':
+      case 'inventory-ai':
+      case 'ipd-wards-ai':
+      case 'staff-ai':
+      case 'doctors-ai':
+      case 'patients-ai':
+      case 'departments-ai':
+      case 'enquiries-ai':
+      case 'medical-tourism-ai':
+      case 'blogs-ai':
+      case 'reports-ai':
+      case 'finance-ai':
+      case 'configure-hospital-ai':
+      case 'support-ai': {
+        const categoryMap: { [key in ActiveView]?: string } = {
+          'appointments-ai': 'appointments',
+          'consultation-ai': 'consultation',
+          'billing-ai': 'billing',
+          'inventory-ai': 'inventory',
+          'ipd-wards-ai': 'ipd-wards',
+          'staff-ai': 'staff',
+          'doctors-ai': 'doctors',
+          'patients-ai': 'patients',
+          'departments-ai': 'departments',
+          'enquiries-ai': 'enquiries',
+          'medical-tourism-ai': 'medical-tourism',
+          'blogs-ai': 'blogs',
+          'reports-ai': 'reports',
+          'finance-ai': 'finance',
+          'configure-hospital-ai': 'configure-hospital',
+          'support-ai': 'support',
+        };
+        const category = categoryMap[activeView] || 'general';
+        return (
+          <AIAssistantView
+            backendApiEndpoint={`/api/ai-assistant/${category}/chat`}
+            restrictFileTypes={true}
+            contextData={{
+              activeTab: category,
+              userRole: loggedInUser?.role || 'admin',
+              userName: loggedInUser?.data?.name || 'Hospital Administrator',
+              data: {
+                appointmentsSummary: filteredAppts.slice(0, 10).map(a => ({
+                  patient: a.patientName,
+                  doctor: a.doctorName,
+                  specialization: a.specialization,
+                  date: a.date,
+                  time: a.time,
+                  status: a.status
+                })),
+                patientsSummary: filteredPatients.slice(0, 10).map(p => ({
+                  name: p.name,
+                  age: p.age,
+                  gender: p.gender,
+                  status: p.status
+                })),
+                billsSummary: filteredBills.slice(0, 10).map(b => ({
+                  patient: b.patientName,
+                  amount: b.amount,
+                  pendingAmount: b.pendingAmount,
+                  collectedAmount: b.collectedAmount,
+                  status: b.status
+                })),
+                inventorySummary: inventory.slice(0, 10).map(i => ({
+                  name: i.name,
+                  category: i.category,
+                  stock: i.stock,
+                  minStock: i.minStock,
+                  price: i.price,
+                  sellingPrice: i.sellingPrice
+                })),
+                doctorsSummary: filteredDoctors.slice(0, 10).map(d => ({
+                  name: d.name,
+                  specialization: d.specialization,
+                  status: d.status
+                }))
+              }
+            }}
+          />
+        );
+      }
       case 'dashboard':
         return (
           <DashboardView
@@ -1519,7 +1637,12 @@ export default function App() {
       {/* 2. Primary Admin Workspace */}
       <div className="flex-1 flex flex-col h-full overflow-hidden" id="central-column">
         {/* Top Search-Bell Bar */}
-        <Header loggedInUser={loggedInUser} onMenuClick={() => setMobileSidebarOpen(true)} />
+        <Header 
+          loggedInUser={loggedInUser} 
+          onMenuClick={() => setMobileSidebarOpen(true)} 
+          activeView={activeView}
+          onNavigate={setActiveView}
+        />
 
         {/* Central Component Swapper */}
         <main className="flex-1 overflow-hidden" id="workspace-scroll">

@@ -17,7 +17,23 @@ export type ActiveView =
   | 'reports'
   | 'finance'
   | 'configure-hospital'
-  | 'support';
+  | 'support'
+  | 'appointments-ai'
+  | 'consultation-ai'
+  | 'billing-ai'
+  | 'inventory-ai'
+  | 'ipd-wards-ai'
+  | 'staff-ai'
+  | 'doctors-ai'
+  | 'patients-ai'
+  | 'departments-ai'
+  | 'enquiries-ai'
+  | 'medical-tourism-ai'
+  | 'blogs-ai'
+  | 'reports-ai'
+  | 'finance-ai'
+  | 'configure-hospital-ai'
+  | 'support-ai';
 
 export interface Patient {
   id: string;

@@ -1,11 +1,19 @@
-import { Search, Bell, ChevronDown, Menu } from 'lucide-react';
+import { Search, Bell, ChevronDown, Menu, Sparkles } from 'lucide-react';
+import { ActiveView } from '../types';
 
 interface HeaderProps {
   loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
   onMenuClick?: () => void;
+  activeView?: ActiveView;
+  onNavigate?: (view: ActiveView) => void;
 }
 
-export default function Header({ loggedInUser = null, onMenuClick }: HeaderProps) {
+export default function Header({ 
+  loggedInUser = null, 
+  onMenuClick, 
+  activeView, 
+  onNavigate 
+}: HeaderProps) {
   const getInitials = (name: string) => {
     if (!name) return "MH";
     const parts = name.trim().split(/\s+/);
@@ -20,11 +28,40 @@ export default function Header({ loggedInUser = null, onMenuClick }: HeaderProps
     ? (loggedInUser.role === 'patient' 
         ? "Patient Console" 
         : loggedInUser.role === 'doctor' 
-          ? "Doctor Console" 
-          : "Staff Console") 
+            ? "Doctor Console" 
+            : "Staff Console") 
     : "Admin Console";
 
   const initials = loggedInUser?.data?.name ? getInitials(loggedInUser.data.name) : "AD";
+
+  // Check if current tab qualifies for specialized AI button (No dashboard, landing, ai-assistant, or sub-AI page itself)
+  const showAIButton = activeView && 
+    activeView !== 'landing' && 
+    activeView !== 'dashboard' && 
+    activeView !== 'ai-assistant' && 
+    !activeView.endsWith('-ai');
+
+  const getAIButtonLabel = (view: string) => {
+    const labels: Record<string, string> = {
+      'appointments': 'Appointments AI',
+      'consultation': 'Consultation AI',
+      'billing': 'Billing AI',
+      'inventory': 'Inventory AI',
+      'ipd-wards': 'IPD & Wards AI',
+      'staff': 'Staff Roster AI',
+      'doctors': 'Doctors AI',
+      'patients': 'Patients AI',
+      'departments': 'Departments AI',
+      'enquiries': 'Enquiries AI',
+      'medical-tourism': 'Medical Tourism AI',
+      'blogs': 'Blogs AI',
+      'reports': 'Reports Analytics AI',
+      'finance': 'Finance AI',
+      'configure-hospital': 'Hospital Settings AI',
+      'support': 'Support Desk AI'
+    };
+    return labels[view] || `${view.charAt(0).toUpperCase() + view.slice(1)} AI`;
+  };
 
   return (
     <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 sm:px-6 select-none shrink-0" id="app-header">
@@ -50,6 +87,19 @@ export default function Header({ loggedInUser = null, onMenuClick }: HeaderProps
             id="search-input"
           />
         </div>
+
+        {/* Dynamic Ask AI Button */}
+        {showAIButton && (
+          <button
+            onClick={() => onNavigate && onNavigate(`${activeView}-ai` as any)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#007f6e] to-[#047857] text-white hover:from-[#0f766e] hover:to-[#065f46] hover:scale-[1.02] active:scale-95 transition-all rounded-lg text-xs font-semibold shadow-xs cursor-pointer select-none"
+            id="header-tab-specific-ai-btn"
+            title={`Ask custom AI questions about ${getAIButtonLabel(activeView)}`}
+          >
+            <Sparkles size={13} className="animate-pulse" />
+            <span>{getAIButtonLabel(activeView)}</span>
+          </button>
+        )}
       </div>
 
       {/* User Actions */}

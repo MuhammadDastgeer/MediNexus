@@ -15,7 +15,6 @@ import {
   ShieldAlert,
   Mic,
   ArrowUp,
-  Camera,
   Upload,
   Volume2,
   StopCircle,
@@ -51,6 +50,7 @@ interface Message {
   docName?: string;
   docType?: string;
   docSize?: string;
+  docContent?: string;
 }
 
 interface AIAssistantViewProps {
@@ -60,6 +60,8 @@ interface AIAssistantViewProps {
     userName: string;
     data: any;
   };
+  backendApiEndpoint?: string;
+  restrictFileTypes?: boolean;
 }
 
 // Mock Clinical Images/Scans to let users test Vision capability easily inside the sandbox
@@ -190,7 +192,11 @@ const PlayAudioButton: React.FC<{ url: string }> = ({ url }) => {
   );
 };
 
-export default function AIAssistantView({ contextData }: AIAssistantViewProps) {
+export default function AIAssistantView({ 
+  contextData, 
+  backendApiEndpoint = '/api/ai-assistant/chat', 
+  restrictFileTypes = false 
+}: AIAssistantViewProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -214,6 +220,7 @@ I can assist you with:
   const [docName, setDocName] = useState<string | null>(null);
   const [docType, setDocType] = useState<string | null>(null);
   const [docSize, setDocSize] = useState<string | null>(null);
+  const [docContent, setDocContent] = useState<string | null>(null);
   const [recordedAudio, setRecordedAudio] = useState<{
     blob: Blob;
     url: string;
@@ -240,43 +247,21 @@ I can assist you with:
     { provider: 'Groq', status: 'skipped', error: 'Not run yet' }
   ]);
 
-  // Premium UI Interactive States matching uploaded screenshot layout
-  const [plusMenuOpen, setPlusMenuOpen] = useState(false);
-  
   // Voice Recording Simulation states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingSecondsRef = useRef<number>(0);
-
-  // Live Camera viewfinder states
-  const [cameraModalOpen, setCameraModalOpen] = useState(false);
-  const [cameraPermissionGranted, setCameraPermissionGranted] = useState<boolean | null>(null);
-  const [webcamActive, setWebcamActive] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const shouldSubmitRef = useRef<boolean>(false);
+  const selectedTranscriptRef = useRef<string>('');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const plusMenuRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isSending, isRecording]);
-
-  // Close plus menu on outside click
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (plusMenuRef.current && !plusMenuRef.current.contains(event.target as Node)) {
-        setPlusMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   // Voice recording timer simulation
   useEffect(() => {
@@ -307,19 +292,56 @@ I can assist you with:
     };
   }, [isRecording]);
 
-  // Clean stream active web camera
-  const stopWebcam = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
-    }
-    setWebcamActive(false);
-  };
+
 
   // Quick Action trigger
   const executeQuickAction = (text: string) => {
     if (isSending) return;
     sendMessage(text);
+  };
+
+  // Compress and resize images on client-side to prevent large payload transmit errors (avoiding 413 bodies)
+  const resizeAndCompressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Max dimension 1024px for swift, legibly sharp vision analysis
+          const MAX_DIM = 1024;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Dynamic JPEG quality compression down to 0.75 for ultra-fast light weight
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+            resolve(dataUrl);
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.onerror = () => {
+          resolve(e.target?.result as string);
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   // Process any selected or dropped file (image or document)
@@ -329,16 +351,31 @@ I can assist you with:
       return;
     }
 
+    if (restrictFileTypes) {
+      const isCsv = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv';
+      const isExcel = file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx') || file.type.includes('excel') || file.type.includes('spreadsheet') || file.type === 'application/vnd.ms-excel' || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      if (!isCsv && !isExcel) {
+        alert("In this specialized assistant, only CSV and Excel spreadsheets are supported for analysis. PDFs and clinical images are restricted.");
+        return;
+      }
+    }
+
     // Clear previous selection first
     removeAttachedFile();
 
     if (file.type.startsWith('image/')) {
       setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      resizeAndCompressImage(file).then((compressedBase64) => {
+        setImagePreview(compressedBase64);
+      }).catch((err) => {
+        console.error("Compression failed:", err);
+        // Fallback to standard reader
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
     } else {
       setDocFile(file);
       setDocName(file.name);
@@ -351,6 +388,27 @@ I can assist you with:
 
       const extension = file.name.split('.').pop()?.toUpperCase() || 'DOC';
       setDocType(extension);
+
+      // Read text contents for raw text, CSV, JSON, spreadsheet representation or XML files
+      const lowerName = file.name.toLowerCase();
+      if (
+        file.type.includes('text') || 
+        file.type.includes('csv') || 
+        lowerName.endsWith('.csv') || 
+        lowerName.endsWith('.txt') || 
+        lowerName.endsWith('.json') || 
+        lowerName.endsWith('.xml') || 
+        lowerName.endsWith('.tsv')
+      ) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setDocContent(event.target?.result as string);
+        };
+        reader.readAsText(file);
+      } else {
+        // For binary files (like PDF or Excel sheets), read as binary/base64 or provide a brief text marker
+        setDocContent(`[Raw binary file attachment of type ${file.type || 'unknown'}]`);
+      }
     }
   };
 
@@ -362,6 +420,7 @@ I can assist you with:
     setDocName(null);
     setDocType(null);
     setDocSize(null);
+    setDocContent(null);
     setRecordedAudio(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -377,7 +436,6 @@ I can assist you with:
     if (file) {
       processSelectedFile(file);
     }
-    setPlusMenuOpen(false);
   };
 
   // Drag and drop image file handlers
@@ -455,13 +513,23 @@ I can assist you with:
           console.error("Base64 audio load failed:", base64Err);
         }
 
-        setRecordedAudio({
+        const audioObj = {
           blob: audioBlob,
           url: audioUrl,
           size: `${sizeInKb} KB`,
-          duration: recordingSecondsRef.current || 0,
+          duration: recordingSecondsRef.current || 1,
           base64: base64String
-        });
+        };
+
+        setRecordedAudio(audioObj);
+
+        if (shouldSubmitRef.current) {
+          // Send immediately with only the typed text (if any) or blank (if only voice)
+          const textToSend = selectedTranscriptRef.current || input || "";
+          sendMessage(textToSend, audioObj);
+          shouldSubmitRef.current = false;
+          selectedTranscriptRef.current = '';
+        }
       };
 
       recordingSecondsRef.current = 0;
@@ -476,6 +544,11 @@ I can assist you with:
   // Stop recording and process
   const stopVoiceRecording = (submit: boolean) => {
     setIsRecording(false);
+    shouldSubmitRef.current = submit;
+
+    // Do NOT generate any arbitrary simulated text transcripts or autofill the chatbox input.
+    // If there is existing typed input, we preserve it, otherwise it stays empty.
+    selectedTranscriptRef.current = input.trim();
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -485,76 +558,21 @@ I can assist you with:
       audioStreamRef.current.getTracks().forEach(track => track.stop());
       audioStreamRef.current = null;
     }
-
-    if (submit) {
-      // Pick a random clinical transcript to help fill the prompt box as translation feedback
-      const randomTranscript = MOCK_TRANSCRIPTS[Math.floor(Math.random() * MOCK_TRANSCRIPTS.length)];
-      if (!input.trim()) {
-        setInput(randomTranscript);
-      }
-    }
   };
 
-  // Start live medical camera capture
-  const openWebcamView = async () => {
-    setCameraModalOpen(true);
-    setPlusMenuOpen(false);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      mediaStreamRef.current = stream;
-      setCameraPermissionGranted(true);
-      setWebcamActive(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      }, 200);
-    } catch (err) {
-      console.warn("Camera hardware not available or permission denied:", err);
-      setCameraPermissionGranted(false);
-    }
-  };
 
-  // Snapshot from active web video stream
-  const captureSnapshot = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth || 640;
-      canvas.height = videoRef.current.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        setImagePreview(dataUrl);
-        stopWebcam();
-        setCameraModalOpen(false);
-      }
-    }
-  };
-
-  // Select pre-loaded radiology/lab scan choice
-  const selectSyntheticScan = async (url: string) => {
-    try {
-      // Convert to base64
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-        setCameraModalOpen(false);
-      };
-      reader.readAsDataURL(blob);
-    } catch (err) {
-      // Direct assignment fallback
-      setImagePreview(url);
-      setCameraModalOpen(false);
-    }
-  };
 
   // Multi-model delivery action
-  const sendMessage = async (overrideText?: string) => {
-    const textToSend = overrideText || input;
-    if (!textToSend.trim() && !imagePreview && !docName && !recordedAudio) return;
+  const sendMessage = async (overrideText?: string, overrideAudio?: {
+    blob: Blob;
+    url: string;
+    size: string;
+    duration: number;
+    base64?: string;
+  }) => {
+    const textToSend = overrideText !== undefined ? overrideText : input;
+    const audioToUse = overrideAudio !== undefined ? overrideAudio : recordedAudio;
+    if (!textToSend.trim() && !imagePreview && !docName && !audioToUse) return;
 
     const userMsgId = 'user-' + Date.now();
     const newUserMessage: Message = {
@@ -562,14 +580,15 @@ I can assist you with:
       role: 'user',
       content: textToSend,
       image: imagePreview || undefined,
-      audio: recordedAudio?.base64 || undefined,
+      audio: audioToUse?.base64 || undefined,
       docName: docName || undefined,
       docType: docType || undefined,
       docSize: docSize || undefined,
-      voiceRecorded: !!recordedAudio,
-      audioUrl: recordedAudio?.url || undefined,
-      audioSize: recordedAudio?.size || undefined,
-      audioDuration: recordedAudio?.duration || undefined,
+      docContent: docContent || undefined,
+      voiceRecorded: !!audioToUse,
+      audioUrl: audioToUse?.url || undefined,
+      audioSize: audioToUse?.size || undefined,
+      audioDuration: audioToUse?.duration || undefined,
       timestamp: new Date()
     };
 
@@ -583,7 +602,7 @@ I can assist you with:
         messages: messages.concat(newUserMessage).map(m => ({
           role: m.role,
           content: m.docName 
-            ? `[Document Attached: ${m.docName} (${m.docType}, ${m.docSize})]\n\n${m.content}`
+            ? `[Document Attached: ${m.docName} (${m.docType}, ${m.docSize})]\n${m.docContent ? `Document Content:\n${m.docContent}\n\n` : ''}${m.content}`
             : m.content,
           image: m.image,
           audio: m.audio
@@ -592,7 +611,7 @@ I can assist you with:
         selectedModel
       };
 
-      const response = await fetch('/api/ai-assistant/chat', {
+      const response = await fetch(backendApiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -640,7 +659,7 @@ Please request support or review active API parameter credentials.`,
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="flex flex-col gap-6 min-h-[calc(100vh-140px)] w-full text-slate-800" 
+      className="flex flex-col min-h-0 h-full w-full text-slate-800 overflow-hidden pb-1" 
       id="ai-assistant-container-parent"
     >
       {/* HEADER CONTROL AND CHAT */}
@@ -648,11 +667,11 @@ Please request support or review active API parameter credentials.`,
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="flex-1 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden focus-within:border-teal-500/35 transition-all" 
+        className="flex-1 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden focus-within:border-teal-500/35 transition-all min-h-0" 
         id="chat-subpanel-left"
       >
         {/* Chat Title bar */}
-        <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50/50 gap-4" id="chat-header-bar">
+        <div className="px-4 py-3 sm:px-6 sm:py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50/50 gap-4" id="chat-header-bar">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-teal-500 text-white rounded-2xl shadow-md shadow-teal-500/10">
               <Sparkles className="h-5 w-5 animate-pulse" />
@@ -678,7 +697,7 @@ Please request support or review active API parameter credentials.`,
 
         {/* Messaging Stream Area */}
         <div 
-          className={`flex-1 overflow-y-auto p-6 space-y-6 min-h-[480px] max-h-[620px] transition-all relative scrollbar-thin scrollbar-thumb-slate-300 hover:scrollbar-thumb-slate-400 scrollbar-track-slate-50 border-b border-slate-100 ${dragActive ? 'bg-teal-50/20 border-2 border-dashed border-teal-400' : ''}`}
+          className={`flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-0 transition-all relative scrollbar-thin scrollbar-thumb-slate-300 hover:scrollbar-thumb-slate-400 scrollbar-track-slate-50 border-b border-slate-100 ${dragActive ? 'bg-teal-50/20 border-2 border-dashed border-teal-400' : ''}`}
           onDragEnter={handleDrag}
           onDragOver={handleDrag}
           onDragLeave={handleDrag}
@@ -773,22 +792,25 @@ Please request support or review active API parameter credentials.`,
                   )}
 
                   {/* Message content */}
-                  <div className="text-[13.5px] whitespace-pre-wrap leading-relaxed space-y-2.5">
-                    {msg.content.split('\n\n').map((paragraph, idx) => {
-                      if (paragraph.trim().startsWith('- ') || paragraph.trim().startsWith('* ')) {
-                        const items = paragraph.split('\n');
-                        return (
-                          <ul key={idx} className="list-disc pl-5 space-y-1.5 my-2">
-                            {items.map((item, itemIdx) => {
-                              const cleanedItem = item.replace(/^[-*]\s+/, '');
-                              return <li key={itemIdx}>{parseBoldText(cleanedItem)}</li>;
-                            })}
-                          </ul>
-                        );
-                      }
-                      return <p key={idx}>{parseBoldText(paragraph)}</p>;
-                    })}
-                  </div>
+                  {msg.content && msg.content.trim() !== '' && (
+                    <div className="text-[13.5px] whitespace-pre-wrap leading-relaxed space-y-2.5 mt-2">
+                      {msg.content.split('\n\n').map((paragraph, idx) => {
+                        if (!paragraph.trim()) return null;
+                        if (paragraph.trim().startsWith('- ') || paragraph.trim().startsWith('* ')) {
+                          const items = paragraph.split('\n');
+                          return (
+                            <ul key={idx} className="list-disc pl-5 space-y-1.5 my-2">
+                              {items.map((item, itemIdx) => {
+                                const cleanedItem = item.replace(/^[-*]\s+/, '');
+                                return <li key={itemIdx}>{parseBoldText(cleanedItem)}</li>;
+                              })}
+                            </ul>
+                          );
+                        }
+                        return <p key={idx}>{parseBoldText(paragraph)}</p>;
+                      })}
+                    </div>
+                  )}
 
                   <span className={`text-[10px] block font-mono tracking-wider ${msg.role === 'user' ? 'text-slate-400' : 'text-slate-400'}`}>
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -897,17 +919,17 @@ Please request support or review active API parameter credentials.`,
         </div>
 
         {/* CHAT INPUT FORM (STYLING DIRECTLY INSPIRED BY THE UPLOADED SCREENSHOT) */}
-        <div className="p-5 border-t border-slate-100 bg-white shadow-inner" id="chat-input-controls-parent">
+        <div className="p-3 sm:p-5 border-t border-slate-100 bg-white shadow-inner flex flex-col gap-2.5 shrink-0 min-h-0" id="chat-input-controls-parent">
           
           {/* Quick Tab-Sensitive & Suggested Chips */}
-          <div className="mb-4" id="quick-chips-wrapper">
-            <div className="flex items-center gap-1.5 mb-2 text-[11px] text-slate-500 font-bold uppercase tracking-wider px-0.5 select-none">
+          <div className="mb-1 sm:mb-2" id="quick-chips-wrapper">
+            <div className="flex items-center gap-1.5 mb-1.5 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase tracking-wider px-0.5 select-none">
               <Sparkles className="h-3 w-3 text-teal-600 animate-pulse" />
               <span>
                 {input.trim() ? "Active Search Matches & Intelligent Options:" : `Suggested for ${contextData.activeTab.toUpperCase()}:`}
               </span>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 -mx-1 px-1 touch-pan-x scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent" id="quick-chips-scroll-grid">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 touch-pan-x scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent" id="quick-chips-scroll-grid">
               {(() => {
                 const defaultChips = getChipsForTab(contextData.activeTab);
                 let displayChips = defaultChips;
@@ -944,11 +966,11 @@ Please request support or review active API parameter credentials.`,
                   <button
                     key={index}
                     onClick={() => executeQuickAction(chip.prompt)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 border border-slate-200 rounded-full text-xs text-slate-700 font-medium whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-xs shrink-0 select-none"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 border border-slate-200 rounded-full text-[11px] text-slate-700 font-medium whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-xs shrink-0 select-none"
                     title={chip.prompt}
                     id={`quick-chip-item-${index}`}
                   >
-                    <span className="text-sm shrink-0">{chip.icon}</span>
+                    <span className="text-xs shrink-0">{chip.icon}</span>
                     <span>{chip.label}</span>
                   </button>
                 ));
@@ -963,23 +985,23 @@ Please request support or review active API parameter credentials.`,
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                className="relative inline-flex items-center gap-3 mb-4 p-2.5 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm" 
+                className="relative inline-flex items-center gap-2.5 p-2 bg-slate-50 rounded-2xl border border-slate-200 shadow-xs max-w-fit" 
                 id="attached-preview-wrapper"
               >
-                <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                <div className="relative h-11 w-11 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                   <img src={imagePreview} alt="Attached Miniature" className="h-full w-full object-cover" />
                 </div>
-                <div className="flex flex-col pr-6">
-                  <span className="text-[11px] font-bold text-slate-700">Diagnostic Scan Attached</span>
-                  <span className="text-[9px] text-teal-600 font-mono tracking-wider uppercase animate-pulse">Ready for vision analysis</span>
+                <div className="flex flex-col pr-5">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-700">Diagnostic Scan Attached</span>
+                  <span className="text-[8px] sm:text-[9px] text-teal-600 font-mono tracking-wider uppercase animate-pulse">Ready for vision analysis</span>
                 </div>
                 <button 
                   onClick={removeAttachedFile}
-                  className="absolute -top-2 -right-2 p-1.5 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-full border border-slate-200 cursor-pointer shadow-sm transition-all hover:scale-115 active:scale-90"
+                  className="absolute -top-1.5 -right-1.5 p-1 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-full border border-slate-200 cursor-pointer shadow-xs transition-all hover:scale-110 active:scale-90"
                   title="Remove Attached Image"
                   id="remove-attached-image-btn"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                 </button>
               </motion.div>
             )}
@@ -990,24 +1012,24 @@ Please request support or review active API parameter credentials.`,
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                className="relative inline-flex items-center gap-3 mb-4 p-2.5 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm" 
+                className="relative inline-flex items-center gap-2.5 p-2 bg-slate-50 rounded-2xl border border-slate-200 shadow-xs max-w-fit" 
                 id="attached-doc-preview-wrapper"
               >
-                <div className="relative h-14 w-14 rounded-xl bg-teal-500 text-white flex items-center justify-center border border-teal-600 shrink-0">
-                  <FileText className="h-6 w-6" />
+                <div className="relative h-11 w-11 rounded-lg bg-teal-500 text-white flex items-center justify-center border border-teal-600 shrink-0">
+                  <FileText className="h-5 w-5" />
                 </div>
-                <div className="flex flex-col pr-6 max-w-[180px] sm:max-w-[240px]">
-                  <span className="text-[11px] font-bold text-slate-700 truncate">{docName}</span>
-                  <span className="text-[9px] text-slate-500 font-mono">{docType} • {docSize}</span>
-                  <span className="text-[9px] text-teal-600 font-mono tracking-wider uppercase animate-pulse font-semibold">Ready for context ingestion</span>
+                <div className="flex flex-col pr-5 max-w-[150px] sm:max-w-[240px]">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 truncate">{docName}</span>
+                  <span className="text-[8px] sm:text-[9px] text-slate-500 font-mono">{docType} • {docSize}</span>
+                  <span className="text-[8px] sm:text-[9px] text-teal-600 font-mono tracking-wider uppercase animate-pulse font-semibold">Ready for context ingestion</span>
                 </div>
                 <button 
                   onClick={removeAttachedFile}
-                  className="absolute -top-2 -right-2 p-1.5 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-full border border-slate-200 cursor-pointer shadow-sm transition-all hover:scale-115 active:scale-90"
+                  className="absolute -top-1.5 -right-1.5 p-1 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-full border border-slate-200 cursor-pointer shadow-xs transition-all hover:scale-110 active:scale-90"
                   title="Remove Attached Document"
                   id="remove-attached-doc-btn"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                 </button>
               </motion.div>
             )}
@@ -1018,32 +1040,38 @@ Please request support or review active API parameter credentials.`,
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                className="relative inline-flex items-center gap-3 mb-4 p-2.5 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm" 
+                className="relative inline-flex items-center gap-2.5 p-2 bg-slate-50 rounded-2xl border border-slate-200 shadow-xs max-w-fit" 
                 id="attached-audio-preview"
               >
                 <div className="relative shrink-0 flex items-center justify-center">
                   <PlayAudioButton url={recordedAudio.url} />
                 </div>
-                <div className="flex flex-col pr-6 max-w-[180px] sm:max-w-[240px]">
-                  <span className="text-[11px] font-bold text-slate-700">Audio Recording Snippet</span>
-                  <span className="text-[9px] text-slate-500 font-mono">{recordedAudio.size} • 00:{recordedAudio.duration < 10 ? '0' + recordedAudio.duration : recordedAudio.duration}s</span>
-                  <span className="text-[9px] text-teal-600 font-mono tracking-wider uppercase animate-pulse font-semibold">Ready for voice transmission</span>
+                <div className="flex flex-col pr-5 max-w-[150px] sm:max-w-[240px]">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-700">Audio Recording Snippet</span>
+                  <span className="text-[8px] sm:text-[9px] text-slate-500 font-mono">{recordedAudio.size} • 00:{recordedAudio.duration < 10 ? '0' + recordedAudio.duration : recordedAudio.duration}s</span>
+                  <span className="text-[8px] sm:text-[9px] text-teal-600 font-mono tracking-wider uppercase animate-pulse font-semibold">Ready for voice transmission</span>
                 </div>
                 <button 
                   onClick={removeAttachedFile}
-                  className="absolute -top-2 -right-2 p-1.5 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-full border border-slate-200 cursor-pointer shadow-sm transition-all hover:scale-115 active:scale-90"
+                  className="absolute -top-1.5 -right-1.5 p-1 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-full border border-slate-200 cursor-pointer shadow-xs transition-all hover:scale-110 active:scale-90"
                   title="Remove Attached Audio"
                   id="remove-attached-audio-btn"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Screenshot-Style Custom Input Bar Box Wrapper */}
-          <div className="relative flex flex-col md:flex-row items-center border border-slate-200 rounded-3xl bg-slate-50/40 p-1.5 focus-within:ring-2 focus-within:ring-teal-500/10 focus-within:border-teal-500 transition-all gap-2" id="screenshot-input-box-wrapper">
-            
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendMessage();
+            }}
+            className="relative flex items-center border border-slate-220 rounded-[24px] bg-slate-50/40 p-1 focus-within:ring-2 focus-within:ring-teal-500/10 focus-within:border-teal-500 transition-all gap-1.5" 
+            id="screenshot-input-box-wrapper"
+          >
             {/* Input prompt area */}
             <textarea
               value={input}
@@ -1056,76 +1084,42 @@ Please request support or review active API parameter credentials.`,
               }}
               placeholder="Ask anything..."
               rows={1}
-              className="flex-1 w-full bg-transparent p-3.5 pb-2 md:pb-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none resize-none min-h-[48px]"
+              className="flex-1 min-w-0 bg-transparent py-2 px-2.5 sm:py-3 sm:px-4 text-[13px] sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none resize-none min-h-[38px] max-h-[100px] scrollbar-none"
               id="prompt-textarea-input"
             />
 
-            {/* Icons Actions Row aligned inside/beside the box on the right (matching screenshot group) */}
-            <div className="flex items-center gap-2 p-1 md:pr-2 self-end md:self-center shrink-0" id="inner-action-strip">
+            {/* Icons Actions Row aligned horizontally (matching screenshot group) */}
+            <div className="flex items-center gap-1 sm:gap-1.5 pr-1 shrink-0" id="inner-action-strip">
               
               {/* MICROPHONE VOICE BUTTON */}
               <button
                 type="button"
                 onClick={startVoiceRecording}
                 disabled={isRecording}
-                className={`p-3 rounded-full hover:scale-105 active:scale-95 transition-all text-slate-600 hover:text-slate-900 bg-white border border-slate-250 hover:bg-slate-50 shadow-xs cursor-pointer ${
-                  isRecording ? 'opacity-50 pointer-events-none' : ''
+                className={`p-2 sm:p-2.5 rounded-full hover:scale-105 active:scale-95 transition-all text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer ${
+                  isRecording ? 'opacity-50 pointer-events-none animate-pulse' : ''
                 }`}
-                title="Voice Recording (simulated dictation)"
+                title="Voice Recording"
                 id="mic-action-btn"
               >
-                <Mic className="h-4.5 w-4.5" />
+                <Mic className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
               </button>
 
-              {/* PLUS POPUP TRIGGER BUTTON (Exactly matching the screenshot + icon trigger) */}
-              <div className="relative" ref={plusMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setPlusMenuOpen(!plusMenuOpen)}
-                  className="p-3 rounded-full hover:scale-105 active:scale-95 transition-all text-slate-600 hover:text-slate-900 bg-white border border-slate-250 hover:bg-slate-50 shadow-xs cursor-pointer"
-                  title="Upload / Action Menu"
-                  id="plus-action-menu-trigger"
-                >
-                  <Plus className="h-4.5 w-4.5" />
-                </button>
+              {/* DIRECT FILE UPLOAD BUTTON */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 sm:p-2.5 rounded-full hover:scale-105 active:scale-95 transition-all text-slate-600 hover:text-teal-600 bg-white border border-slate-200 hover:border-teal-200 hover:bg-teal-50/20 shadow-2xs cursor-pointer"
+                title="Upload Image/Document"
+                id="direct-file-upload-btn"
+              >
+                <Upload className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+              </button>
 
-                {/* Floating custom dropdown on top right matching screenshot list items nicely */}
-                <AnimatePresence>
-                  {plusMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -20 }}
-                      animate={{ opacity: 1, scale: 1, y: -10 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                      className="absolute bottom-full right-0 mb-3 w-[210px] bg-white rounded-2xl border border-slate-150/90 shadow-2xl p-2 z-50 overflow-hidden"
-                      id="screenshot-plus-dropdown-modal"
-                    >
-                      <button
-                        onClick={() => {
-                          setPlusMenuOpen(false);
-                          fileInputRef.current?.click();
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-all cursor-pointer text-left font-medium"
-                      >
-                        <Upload className="h-4 w-4 text-teal-600 shrink-0" />
-                        <span>Upload Files</span>
-                      </button>
-
-                      <button
-                        onClick={openWebcamView}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-all cursor-pointer text-left font-medium pb-2.5"
-                      >
-                        <Camera className="h-4 w-4 text-teal-600 shrink-0" />
-                        <span>Camera</span>
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Hidden classic file input for image analysis */}
+              {/* Hidden classic file input for image analysis and documents (Excel, CSV, doc, pdf, txt, etc.) */}
               <input 
                 type="file" 
-                accept="image/*" 
+                accept={restrictFileTypes ? ".csv,.xls,.xlsx" : "image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.json,.xml"} 
                 onChange={handleImageChange} 
                 ref={fileInputRef} 
                 className="hidden" 
@@ -1134,117 +1128,22 @@ Please request support or review active API parameter credentials.`,
 
               {/* ARROW UP SEND ACTION BUTTON */}
               <button
-                type="button"
-                onClick={() => sendMessage()}
+                type="submit"
                 disabled={isSending || (!input.trim() && !imagePreview && !docName && !recordedAudio)}
-                className="p-3 bg-slate-900 hover:bg-teal-600 hover:shadow-lg hover:shadow-teal-600/10 text-white rounded-full transition-all shrink-0 cursor-pointer disabled:opacity-30 disabled:pointer-events-none hover:scale-105 active:scale-95 animate-fade-in"
+                className="p-2 sm:p-2.5 bg-slate-900 hover:bg-teal-600 hover:shadow-lg hover:shadow-teal-600/10 text-white rounded-full transition-all shrink-0 cursor-pointer disabled:opacity-30 disabled:pointer-events-none hover:scale-105 active:scale-95 animate-fade-in"
                 id="arrow-send-message-btn"
               >
-                <ArrowUp className="h-4.5 w-4.5 stroke-[2.5]" />
+                <ArrowUp className="h-3.5 sm:h-4 w-3.5 sm:w-4 stroke-[2.5]" />
               </button>
 
             </div>
-          </div>
+          </form>
         </div>
       </motion.div>
 
 
 
-      {/* CAMERA VIEWFINDER AND MOCK SCAN SELECTOR MODAL */}
-      <AnimatePresence>
-        {cameraModalOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
-            id="camera-capture-dialog"
-          >
-            <motion.div 
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-2xl border border-slate-150 space-y-5"
-            >
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Camera className="h-5 w-5 text-teal-600" />
-                  <h3 className="font-bold text-slate-900 text-sm">Diagnostic Camera Input</h3>
-                </div>
-                <button 
-                  onClick={() => {
-                    stopWebcam();
-                    setCameraModalOpen(false);
-                  }}
-                  className="p-1 hover:bg-slate-100 rounded-full cursor-pointer text-slate-500"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
 
-              {/* CAMERA PREVIEW PORT */}
-              <div className="bg-slate-950 aspect-video rounded-3xl overflow-hidden relative flex flex-col items-center justify-center border border-slate-800">
-                {webcamActive ? (
-                  <>
-                    <video 
-                      ref={videoRef} 
-                      autoPlay 
-                      playsInline 
-                      className="w-full h-full object-cover" 
-                    />
-                    <div className="absolute bottom-4 inset-x-0 flex justify-center">
-                      <button
-                        onClick={captureSnapshot}
-                        className="px-5 py-2.5 bg-teal-600 text-white rounded-full font-bold shadow-lg hover:bg-teal-700 cursor-pointer text-xs uppercase tracking-wider flex items-center gap-1.5"
-                      >
-                        <ShieldAlert className="h-4 w-4" />
-                        Take Snapshot
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-6 text-center text-slate-300 space-y-3">
-                    <div className="p-3 bg-slate-900 rounded-full w-fit mx-auto text-teal-400">
-                      <Camera className="h-8 w-8 text-teal-500 shrink-0" />
-                    </div>
-                    <p className="text-xs font-semibold">Webcam stream unconfigured or blocked by frame controls</p>
-                    <button
-                      onClick={openWebcamView}
-                      className="inline-flex px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold rounded-xl transition-all cursor-pointer"
-                    >
-                      Retry System Webcam
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* SYNTHETIC CLINICAL SCANS SELECTOR */}
-              <div className="space-y-2.5">
-                <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Or Select Standard Diagnostic Sample:</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {SAMPLE_CLINICAL_SCANS.map(scan => (
-                    <button
-                      key={scan.id}
-                      onClick={() => selectSyntheticScan(scan.url)}
-                      className="group p-2 bg-slate-50 hover:bg-teal-50/50 hover:border-teal-300 text-left rounded-2xl border border-slate-200 transition-all cursor-pointer"
-                    >
-                      <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-250 mb-1.5">
-                        <img 
-                          src={scan.url} 
-                          alt={scan.name} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-all"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                      <span className="text-[11px] font-bold block text-slate-800 text-center">{scan.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }
