@@ -185,7 +185,13 @@ export default function AppointmentsView({
 
   // Initialize and seed default local storage followups so they always have realistic data matching image
   useEffect(() => {
-    const saved = localStorage.getItem('hosp_followups');
+    let saved = null;
+    try {
+      saved = localStorage.getItem('hosp_followups');
+    } catch (e) {
+      console.warn("localStorage is not available for reading followups:", e);
+    }
+    
     let parsed: FollowUp[] = [];
     if (saved) {
       try {
@@ -229,7 +235,11 @@ export default function AppointmentsView({
           email: 'arshad@gmail.com'
         }
       ];
-      localStorage.setItem('hosp_followups', JSON.stringify(defaultFollowups));
+      try {
+        localStorage.setItem('hosp_followups', JSON.stringify(defaultFollowups));
+      } catch (e) {
+        console.warn("Could not save default followups to localStorage", e);
+      }
       setFollowUps(defaultFollowups);
     } else {
       const normalized = parsed.map(f => {
@@ -251,7 +261,11 @@ export default function AppointmentsView({
       return f;
     });
     setFollowUps(normalized);
-    localStorage.setItem('hosp_followups', JSON.stringify(normalized));
+    try {
+      localStorage.setItem('hosp_followups', JSON.stringify(normalized));
+    } catch (e) {
+      console.warn("Could not save followups to localStorage:", e);
+    }
   };
 
   // Drawer modal for viewing custom patient file details

@@ -26,7 +26,7 @@ You MUST adhere to these strict limits and instructions:
      * Roman Urdu / Roman Hindi / Hinglish (e.g., "kya haal hai", "gaana sunao", "France ka capital kya hai", "ap kya kr skte ho"): "Only medical questions ka answer da sakta hu"
      * English (e.g., "Hello, tell me a joke", "What is the capital of...", "write a poem", "how to code"): "I can only answer medical questions."
      * Urdu Script (Nastaliq, e.g., "آپ کیا کر سکتے ہیں؟", "فرانس کا دارالحکومت"): "صرف طبی سوالات کے جوابات دے سکتا ہوں۔"
-     * Hindi Script (Devanagari, e.g., "आप क्या कर सकते हैं?", "फ्रांस की राजधानी क्या है?"): "मैं केवल चिकित्सा संबंधी प्रश्नों के उत्तर दे सकता हूँ।"
+     * Hindi Script (Devanagari, e.g., "आप क्या कर सकते हैं?", "फ्रांस की राजधानी क्या है?"): "मैं केवल चिकित्सा संबंधी प्रश्नों के उत्तर दे 😊क्ता हूँ।"
      * Spanish (e.g., "¿Cuál es la capital...", "¿Qué puedes hacer?"): "Solo puedo responder a preguntas médicas."
      * French (e.g., "Quelle est la capitale...", "Que pouvez-vous faire?"): "Je ne peux répondre qu'aux questions médicales."
      * German (e.g., "Was kannst du tun?"): "Ich kann nur medizinische Fragen beantworten."
@@ -34,6 +34,13 @@ You MUST adhere to these strict limits and instructions:
      * Other languages: Translate the phrase "I can only answer medical questions" or "Only medical questions ka answer da sakta hu" into that language, and output ONLY that phrase.
 3. Respond in a highly professional, clinical, helpful, and concise manner.
 4. If an image or any other document file is uploaded (such as a lab report, prescription, skin rash, clinical medical records, spreadsheets with hospital/patient metrics, csv data of symptoms), check it thoroughly and provide your clinical insight. If the file content is not related to healthcare/medical/hospital records, treat it as a non-medical query and reply ONLY in the same language as the user's accompanying message/query using the translation as specified in Rule 2.
+5. Voice / Audio (and Typed Text) Navigation and Tab-switching Guidance:
+   - If the user sent a voice/audio query OR typed a query inquiring about or referencing a specific tab/domain (e.g., "billing/paisa", "appointments/consulting/doctor duty", "wardbed/occupancy", "medicine stock/pharmacy inventory count", "patient records", etc.):
+     * You MUST understand what they said or typed.
+     * State clearly what they talked/typed about.
+     * Tell them that you are automatically redirecting them to that relevant tab now so they can view the correct context and data.
+     * At the very end of your response, you MUST append EXACTLY this trigger tag: \`[NAVIGATE: <tab_name>-ai]\` (e.g., \`[NAVIGATE: billing-ai]\`, \`[NAVIGATE: staff-ai]\`, \`[NAVIGATE: appointments-ai]\`, \`[NAVIGATE: ipd-wards-ai]\`, \`[NAVIGATE: inventory-ai]\`, \`[NAVIGATE: doctors-ai]\`, \`[NAVIGATE: patients-ai]\`, \`[NAVIGATE: consultation-ai]\`).
+     * Keep it highly helpful, concise, and in the language they spoke (Urdu, Hindi, Roman Urdu, or English).
 `;
 
 // Extract base64 image data helper
@@ -523,7 +530,7 @@ I have analyzed your screen context and medical query locally:
 `;
 
   // Guardrail test offline
-  const hasAttachment = !!lastMessageImage || query.includes('[document attached:') || query.includes('document content:');
+  const hasAttachment = !!lastMessageImage || !!lastMessageAudio || query.includes('[document attached:') || query.includes('document content:');
   const isMedicalQuery = 
     hasAttachment ||
     query.includes('pain') || query.includes('dard') || query.includes('fever') || query.includes('cough') || query.includes('headache') ||
@@ -531,6 +538,20 @@ I have analyzed your screen context and medical query locally:
     query.includes('medicine') || query.includes('drug') || query.includes('clinical') || query.includes('report') || query.includes('rash') ||
     query.includes('treatment') || query.includes('hospital') || query.includes('tab') || query.includes('asthma') || query.includes('sugar') ||
     query.includes('bp') || query.includes('blood pressure');
+
+  if (lastMessageAudio && attempts.every(att => att.status !== 'success')) {
+    fallbackReply = `⚠️ Note: No live AI model keys are currently configured to process other languages or perform actual speech recognition.
+    
+I received your actual voice message successfully! However, to listen to, transcribe, and dynamically answer your clinical voice query, please configure a valid **GEMINI_API_KEY** in the chat/platform settings.
+
+Once the API Key is supplied, Google Gemini will listen to your audio query and provide full clinical and language-based answers!
+
+*(Aap ki voice message hume mil gayi hai! Magar is awaz ko sunne aur samajhne ke liye, settings panel me valid **GEMINI_API_KEY** configure karein taake model isko direct translate aur process kar sake.)*`;
+    return res.json({
+      reply: fallbackReply,
+      attempts
+    });
+  }
 
   if (!isMedicalQuery && query.length > 3) {
     const hasSpanish = /\b(hola|que|como|capital|escribir|presidente|deporte|tiempo|clima)\b/i.test(query);

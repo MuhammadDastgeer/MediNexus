@@ -405,6 +405,8 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
   // Voice Recording Simulation states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [showVoiceSimulator, setShowVoiceSimulator] = useState(false);
+  const [simulatedVoiceText, setSimulatedVoiceText] = useState('');
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingSecondsRef = useRef<number>(0);
   const shouldSubmitRef = useRef<boolean>(false);
@@ -644,6 +646,24 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
     });
   };
 
+  // Mock Silent Audio base64 string to support high fidelity Voice simulation when mic hardware is unavailable
+  const MOCK_SILENT_AUDIO_BASE64 = "data:audio/webm;base64,GkXfo59ChoEBQveBAULzgQBUg4EAQxuBAXWzgQRzxYREg3uBArSBAZ9B3uBArYIAnUuBArSBAZ9B3uBArYIAko6BAZ9B3uBArYIAn0uBArSBAZ9B3uBArYIAmU6BAZ9B3uBArYIAnEuBArSBAZ9B3uBArYIAmU6BAZ9B";
+
+  const sendSimulatedVoice = (phrase: string) => {
+    if (!phrase.trim()) return;
+    const sizeInKb = (phrase.length / 140 + 0.5).toFixed(1);
+    const mockAudioObj = {
+      blob: new Blob([], { type: 'audio/webm' }),
+      url: 'blob:mock-simulated-audio-blob',
+      size: `${sizeInKb} KB`,
+      duration: Math.max(2, Math.min(10, Math.ceil(phrase.length / 10))),
+      base64: MOCK_SILENT_AUDIO_BASE64
+    };
+    sendMessage(phrase, mockAudioObj);
+    setShowVoiceSimulator(false);
+    setSimulatedVoiceText('');
+  };
+
   // Start Voice recording with MediaRecorder
   const startVoiceRecording = async () => {
     if (isSending) return;
@@ -696,8 +716,8 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
       setIsRecording(true);
       mediaRecorder.start();
     } catch (err) {
-      console.error("Microphone hardware error:", err);
-      alert("Microphone hardware is not available or permission was denied. Please connect a microphone and grant permission in browser.");
+      console.warn("Microphone hardware is not available or permission was denied. Falling back to Simulated Speech Mode:", err);
+      setShowVoiceSimulator(true);
     }
   };
 
@@ -1105,61 +1125,63 @@ Please request support or review active API parameter credentials.`,
         <div className="p-3 sm:p-5 border-t border-slate-100 bg-white shadow-inner flex flex-col gap-2.5 shrink-0 min-h-0" id="chat-input-controls-parent">
           
           {/* Quick Tab-Sensitive & Suggested Chips */}
-          <div className="mb-1 sm:mb-2" id="quick-chips-wrapper">
-            <div className="flex items-center gap-1.5 mb-1.5 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase tracking-wider px-0.5 select-none">
-              <Sparkles className="h-3 w-3 text-teal-600 animate-pulse" />
-              <span>
-                {input.trim() ? "Active Search Matches & Intelligent Options:" : `Suggested for ${contextData.activeTab.toUpperCase()}:`}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 touch-pan-x scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent" id="quick-chips-scroll-grid">
-              {(() => {
-                const defaultChips = getChipsForTab(contextData.activeTab);
-                let displayChips = defaultChips;
-                if (input.trim()) {
-                  const cleanSearch = input.toLowerCase().trim();
-                  const filtered = defaultChips.filter(chip =>
-                    chip.label.toLowerCase().includes(cleanSearch) || 
-                    chip.prompt.toLowerCase().includes(cleanSearch)
-                  );
-                  if (filtered.length > 0) {
-                    displayChips = filtered;
-                  } else {
-                    const truncateStr = (str: string, len: number) => str.length > len ? str.substring(0, len) + "..." : str;
-                    displayChips = [
-                      { 
-                        label: `Ask clinical model: "${truncateStr(input, 20)}"`, 
-                        icon: '✨', 
-                        prompt: input 
-                      },
-                      { 
-                        label: `Check "${truncateStr(input, 15)}" pharmacy/logs`, 
-                        icon: '💊', 
-                        prompt: `Find hospital resources, medication records, or catalog items matching: ${input}` 
-                      },
-                      { 
-                        label: `Clinical procedure for "${truncateStr(input, 15)}"`, 
-                        icon: '🩺', 
-                        prompt: `Formulate a clinical treatment workflow and risk factors assessment for: ${input}` 
-                      }
-                    ];
+          {!isRecording && (
+            <div className="mb-1 sm:mb-2" id="quick-chips-wrapper">
+              <div className="flex items-center gap-1.5 mb-1.5 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase tracking-wider px-0.5 select-none">
+                <Sparkles className="h-3 w-3 text-teal-600 animate-pulse" />
+                <span>
+                  {input.trim() ? "Active Search Matches & Intelligent Options:" : `Suggested for ${contextData.activeTab.toUpperCase()}:`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 touch-pan-x scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent" id="quick-chips-scroll-grid">
+                {(() => {
+                  const defaultChips = getChipsForTab(contextData.activeTab);
+                  let displayChips = defaultChips;
+                  if (input.trim()) {
+                    const cleanSearch = input.toLowerCase().trim();
+                    const filtered = defaultChips.filter(chip =>
+                      chip.label.toLowerCase().includes(cleanSearch) || 
+                      chip.prompt.toLowerCase().includes(cleanSearch)
+                    );
+                    if (filtered.length > 0) {
+                      displayChips = filtered;
+                    } else {
+                      const truncateStr = (str: string, len: number) => str.length > len ? str.substring(0, len) + "..." : str;
+                      displayChips = [
+                        { 
+                          label: `Ask clinical model: "${truncateStr(input, 20)}"`, 
+                          icon: '✨', 
+                          prompt: input 
+                        },
+                        { 
+                          label: `Check "${truncateStr(input, 15)}" pharmacy/logs`, 
+                          icon: '💊', 
+                          prompt: `Find hospital resources, medication records, or catalog items matching: ${input}` 
+                        },
+                        { 
+                          label: `Clinical procedure for "${truncateStr(input, 15)}"`, 
+                          icon: '🩺', 
+                          prompt: `Formulate a clinical treatment workflow and risk factors assessment for: ${input}` 
+                        }
+                      ];
+                    }
                   }
-                }
-                return displayChips.map((chip, index) => (
-                  <button
-                    key={index}
-                    onClick={() => executeQuickAction(chip.prompt)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 border border-slate-200 rounded-full text-[11px] text-slate-700 font-medium whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-xs shrink-0 select-none"
-                    title={chip.prompt}
-                    id={`quick-chip-item-${index}`}
-                  >
-                    <span className="text-xs shrink-0">{chip.icon}</span>
-                    <span>{chip.label}</span>
-                  </button>
-                ));
-              })()}
+                  return displayChips.map((chip, index) => (
+                    <button
+                      key={index}
+                      onClick={() => executeQuickAction(chip.prompt)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 border border-slate-200 rounded-full text-[11px] text-slate-700 font-medium whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-xs shrink-0 select-none"
+                      title={chip.prompt}
+                      id={`quick-chip-item-${index}`}
+                    >
+                      <span className="text-xs shrink-0">{chip.icon}</span>
+                      <span>{chip.label}</span>
+                    </button>
+                  ));
+                })()}
+              </div>
             </div>
-          </div>
+          )}
 
           <AnimatePresence>
             {imagePreview && (
@@ -1172,7 +1194,7 @@ Please request support or review active API parameter credentials.`,
                 id="attached-preview-wrapper"
               >
                 <div className="relative h-11 w-11 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                  <img src={imagePreview} alt="Attached Miniature" className="h-full w-full object-cover" />
+                  <img src={imagePreview} alt="Attached Miniature" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                 </div>
                 <div className="flex flex-col pr-5">
                   <span className="text-[10px] sm:text-[11px] font-bold text-slate-700">Diagnostic Scan Attached</span>
@@ -1245,6 +1267,91 @@ Please request support or review active API parameter credentials.`,
               </motion.div>
             )}
           </AnimatePresence>
+
+          {showVoiceSimulator && (
+            <motion.div
+              initial={{ opacity: 0, y: 15, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 15, scale: 0.98 }}
+              className="mb-3.5 p-4 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl border border-slate-800 shadow-xl"
+              id="clinical-voice-simulator-card"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-teal-500 flex items-center justify-center animate-pulse">
+                    <Mic className="h-3.5 w-3.5 text-slate-950" />
+                  </div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-teal-400">Hospital Voice Command Simulator</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowVoiceSimulator(false)}
+                  className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
+                  title="Dismiss Simulator"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <p className="text-[11px] text-white/80 leading-relaxed mb-3">
+                Your browser microphone permission is currently disabled or hardware is unavailable in the sandboxed preview. 
+                No worries! Select a predefined hospital command below or type any query to simulate a voice speech transmission:
+              </p>
+
+              <div className="mb-3">
+                <span className="text-[9px] font-bold text-white/45 uppercase tracking-widest block mb-1.5">Common Spoken Queries & Navigation Shortcuts:</span>
+                <div className="flex flex-wrap gap-1.5 max-h-[110px] overflow-y-auto pr-1">
+                  {[
+                    { label: "💳 Go to Billing (Urdu)", val: "Aap billing tab par jayen aur outstanding invoice check karein" },
+                    { label: "📅 Check Appointments", val: "Check doctor queue status in appointments tab" },
+                    { label: "🏥 Check IPD Wards occupancy", val: "IPD ward tab par chalain aur check karein beds" },
+                    { label: "👩‍⚕️ List Medical Staff", val: "Show list of nurse staff and coordinators" },
+                    { label: "💊 Check Medicine Stocks", val: "Go to Pharmacy Inventory list to verify medication stock" },
+                    { label: "🩺 See Doctor slots", val: "Mera doctor schedule table check karein" },
+                    { label: "📋 Verify Patient Profiles", val: "Aap patient list record check karein" },
+                    { label: "🤖 General Help query", val: "AOA, what clinical capabilities do you possess?" },
+                  ].map((item, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setSimulatedVoiceText(item.val);
+                      }}
+                      className="text-[10px] py-1 px-2 mb-0.5 bg-white/5 hover:bg-white/15 active:bg-teal-500/10 active:text-teal-400 border border-white/10 rounded-lg text-slate-200 transition-all text-left cursor-pointer truncate max-w-full"
+                      title={item.val}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={simulatedVoiceText}
+                  onChange={(e) => setSimulatedVoiceText(e.target.value)}
+                  placeholder="Enter what you would speak (e.g. 'Go to billing tab')..."
+                  className="flex-1 text-xs py-2 px-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      sendSimulatedVoice(simulatedVoiceText);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => sendSimulatedVoice(simulatedVoiceText)}
+                  disabled={!simulatedVoiceText.trim()}
+                  className="px-3.5 py-2 bg-teal-500 hover:bg-teal-600 active:scale-95 disabled:opacity-40 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md select-none shrink-0"
+                >
+                  <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                  Transmit Speech
+                </button>
+              </div>
+            </motion.div>
+          )}
 
           {/* Screenshot-Style Custom Input Bar Box Wrapper */}
           <form 

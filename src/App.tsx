@@ -72,6 +72,17 @@ export default function App() {
     'support-ai': `/${prefix}/support/ai`,
   };
 
+  const getSafePathname = (): string => {
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        return window.location.pathname || '/';
+      }
+    } catch (e) {
+      console.warn("Could not access window.location.pathname:", e);
+    }
+    return '/';
+  };
+
   const getViewFromPath = (pathname: string): ActiveView => {
     const cleanPath = pathname.toLowerCase().replace(/^\/+/g, '').replace(/\/+$/g, '');
     if (cleanPath === '' || cleanPath === 'home' || cleanPath === 'about' || cleanPath === 'contact' || cleanPath === 'doctor' || cleanPath === 'doctors' || cleanPath === 'blog' || cleanPath === 'blogs') {
@@ -121,28 +132,53 @@ export default function App() {
   const setActiveView = (view: ActiveView) => {
     setActiveViewState(view);
     const targetPath = viewToPathMap[view] || `/${prefix}/${view}`;
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState(null, '', targetPath);
+    try {
+      if (getSafePathname() !== targetPath) {
+        window.history.pushState(null, '', targetPath);
+      }
+    } catch (e) {
+      console.warn("history.pushState is restricted in this context:", e);
     }
   };
 
   useEffect(() => {
     const handlePopState = () => {
-      const matchedView = getViewFromPath(window.location.pathname);
-      setActiveViewState(matchedView);
+      try {
+        const matchedView = getViewFromPath(getSafePathname());
+        setActiveViewState(matchedView);
+      } catch (e) {
+        console.warn("Could not read current path during popstate:", e);
+      }
     };
 
-    const initialView = getViewFromPath(window.location.pathname);
+    let initialView: ActiveView = 'dashboard';
+    try {
+      initialView = getViewFromPath(getSafePathname());
+    } catch (e) {
+      console.warn("Could not read current path for initial view:", e);
+    }
     setActiveViewState(initialView);
 
-    const targetPath = viewToPathMap[initialView];
-    if (window.location.pathname !== targetPath) {
-      window.history.replaceState(null, '', targetPath);
+    const targetPath = viewToPathMap[initialView] || `/${prefix}/${initialView}`;
+    try {
+      if (getSafePathname() !== targetPath) {
+        window.history.replaceState(null, '', targetPath);
+      }
+    } catch (e) {
+      console.warn("history.replaceState is restricted in this context:", e);
     }
 
-    window.addEventListener('popstate', handlePopState);
+    try {
+      window.addEventListener('popstate', handlePopState);
+    } catch (e) {
+      console.warn("Could not add popstate listener:", e);
+    }
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      try {
+        window.removeEventListener('popstate', handlePopState);
+      } catch (e) {
+        console.warn("Could not remove popstate listener:", e);
+      }
     };
   }, [loggedInUser]);
 
@@ -320,7 +356,12 @@ export default function App() {
 
     // Get current calendar day in local system format
     const todayStr = new Date().toDateString();
-    const lastDailyRosterSync = localStorage.getItem('last_daily_hospital_roster_sync');
+    let lastDailyRosterSync = null;
+    try {
+      lastDailyRosterSync = localStorage.getItem('last_daily_hospital_roster_sync');
+    } catch (e) {
+      console.warn("localStorage is not available in this context:", e);
+    }
 
     if (lastDailyRosterSync === todayStr) return; // Already finished daily verification check
 
@@ -356,7 +397,11 @@ export default function App() {
       if (changedAny) {
         handleRefreshAll();
       }
-      localStorage.setItem('last_daily_hospital_roster_sync', todayStr);
+      try {
+        localStorage.setItem('last_daily_hospital_roster_sync', todayStr);
+      } catch (e) {
+        console.warn("Could not save roster sync token to localStorage:", e);
+      }
     };
 
     syncRosterDaily();

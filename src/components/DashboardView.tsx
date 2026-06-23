@@ -59,7 +59,7 @@ export default function DashboardView({
 
   const isToday = (dateStr: string) => {
     if (!dateStr) return false;
-    const clean = dateStr.trim();
+    const clean = String(dateStr).trim();
     const todayYYYYMMDD = getTodayDateString();
     const todayLocale = getLocalDateLocale();
     
@@ -85,7 +85,7 @@ export default function DashboardView({
 
   const isThisMonth = (dateStr: string) => {
     if (!dateStr) return false;
-    const clean = dateStr.trim();
+    const clean = String(dateStr).trim();
     const today = new Date();
     
     // Direct check for demo date
@@ -109,6 +109,7 @@ export default function DashboardView({
     return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [apptTab, setApptTab] = useState<'today' | 'upcoming'>('today');
 
   // Trigger refreshing visual effect
   const handleRefresh = () => {
@@ -156,6 +157,54 @@ export default function DashboardView({
   const followUpAppointments = appointments.filter(
     (a) => a.type?.toLowerCase() === 'follow-up'
   );
+
+  const isUpcoming = (dateStr: string) => {
+    if (!dateStr) return false;
+    const clean = String(dateStr).trim();
+    if (isToday(clean)) return false;
+
+    let parsed: Date | null = null;
+    const parts = clean.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) { // YYYY-MM-DD
+        parsed = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else { // DD-MM-YYYY
+        parsed = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      }
+    } else {
+      const slashParts = clean.split('/');
+      if (slashParts.length === 3) {
+        if (slashParts[0].length === 4) { // YYYY/MM/DD
+          parsed = new Date(parseInt(slashParts[0]), parseInt(slashParts[1]) - 1, parseInt(slashParts[2]));
+        } else { // DD/MM/YYYY
+          parsed = new Date(parseInt(slashParts[2]), parseInt(slashParts[1]) - 1, parseInt(slashParts[0]));
+        }
+      }
+    }
+    if (!parsed || isNaN(parsed.getTime())) {
+      parsed = new Date(clean);
+    }
+    if (isNaN(parsed.getTime())) return false;
+    
+    parsed.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return parsed.getTime() > today.getTime();
+  };
+
+  const todayAppts = appointments
+    .filter((a) => isToday(a.date))
+    .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+  const upcomingAppts = appointments
+    .filter((a) => isUpcoming(a.date))
+    .sort((a, b) => {
+      const dateCompare = (a.date || '').localeCompare(b.date || '');
+      if (dateCompare !== 0) return dateCompare;
+      return (a.time || '').localeCompare(b.time || '');
+    });
+
+  const activeTabAppts = apptTab === 'today' ? todayAppts : upcomingAppts;
 
   // Dynamic live system notice / alert generator
   const getLiveAlerts = () => {
@@ -782,59 +831,111 @@ export default function DashboardView({
           </div>
         </motion.div>
 
-        {/* Follow-up Appointments Panel */}
+        {/* Appointments Schedule Panel */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
           whileHover={{ y: -2, boxShadow: "0 8px 16px -4px rgba(0,0,0,0.03)" }}
           className="bg-white border border-slate-100 rounded-xl p-5 shadow-xs flex flex-col justify-between" 
-          id="followups-card"
+          id="hospital-appointments-card"
         >
           <div>
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="followups-header">
+            <div className="flex items-center justify-between border-b border-slate-50 pb-3" id="appointments-widget-header">
               <div>
                 <h3 className="text-xs font-bold text-slate-800">
-                  {isPatient ? 'My Follow-Up Appointments' : 'Follow-Up Appointments'}
+                  {isPatient ? 'My Appointments Schedule' : 'Hospital Appointments'}
                 </h3>
                 <p className="text-[10px] text-slate-400 font-medium">
                   {isPatient 
-                    ? `You have ${followUpAppointments.length} follow-up appointments scheduled` 
-                    : `${followUpAppointments.length} total follow-ups booked · ${followUpAppointments.filter(a => isToday(a.date)).length} due today`
+                    ? `Today: ${todayAppts.length} due · Upcoming: ${upcomingAppts.length} booked` 
+                    : `Today: ${todayAppts.length} · Upcoming: ${upcomingAppts.length} scheduled`
                   }
                 </p>
               </div>
               <button
                 onClick={() => onNavigate('appointments')}
                 className="w-7 h-7 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                id="all-followups-link-btn"
+                id="all-appointments-link-btn"
+                title="View All Appointments"
               >
                 <ChevronRight size={14} />
               </button>
             </div>
 
-            {followUpAppointments.length === 0 ? (
-              <div className="py-12 flex flex-col items-center justify-center text-xs text-slate-400 font-medium" id="followups-empty">
+            {/* Tab Selector Buttons */}
+            <div className="flex border-b border-slate-100 mt-3 gap-2" id="appt-tab-selector">
+              <button
+                onClick={() => setApptTab('today')}
+                className={`flex-1 sm:flex-initial text-center py-2 px-3 sm:px-4 text-xs font-bold transition-all relative cursor-pointer outline-none ${
+                  apptTab === 'today'
+                    ? 'text-[#007f6e] border-b-2 border-[#007f6e]'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+                id="tab-today-appt"
+              >
+                Today's ({todayAppts.length})
+              </button>
+              <button
+                onClick={() => setApptTab('upcoming')}
+                className={`flex-1 sm:flex-initial text-center py-2 px-3 sm:px-4 text-xs font-bold transition-all relative cursor-pointer outline-none ${
+                  apptTab === 'upcoming'
+                    ? 'text-[#007f6e] border-b-2 border-[#007f6e]'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+                id="tab-upcoming-appt"
+              >
+                Upcoming ({upcomingAppts.length})
+              </button>
+            </div>
+
+            {activeTabAppts.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-xs text-slate-400 font-medium" id="appointments-empty">
                 <HeartPlus size={24} className="text-[#007f6e]/30 mb-2 animate-bounce" />
-                <span>No follow-up appointments scheduled</span>
+                <span>
+                  {apptTab === 'today' 
+                    ? "No appointments scheduled for today" 
+                    : "No upcoming appointments scheduled"
+                  }
+                </span>
               </div>
             ) : (
-              <div className="overflow-x-auto mt-4" id="recent-followups-list">
-                <table className="w-full text-left text-xs text-slate-600">
-                  <thead className="bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 font-sans">
+              <div className="overflow-x-auto mt-4" id="recent-appointments-list">
+                <table className="w-full text-left text-xs text-slate-600 font-sans">
+                  <thead className="bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
                     <tr>
                       <th className="px-3 py-2">Patient</th>
                       <th className="px-3 py-2">Doctor</th>
-                      <th className="px-3 py-2">Specialization</th>
+                      <th className="px-3 py-2">Type / Specialty</th>
                       <th className="px-3 py-2 text-right">Schedule</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {followUpAppointments.slice(0, 4).map((a) => (
-                      <tr key={a.id} className="hover:bg-slate-50/50">
-                        <td className="px-3 py-2.5 font-semibold text-slate-800">{a.patientName}</td>
-                        <td className="px-3 py-2.5 text-slate-600 font-medium font-sans">Dr. {a.doctorName}</td>
-                        <td className="px-3 py-2.5 text-slate-400 text-[11px]">{a.specialization}</td>
+                    {activeTabAppts.slice(0, 4).map((a) => (
+                      <tr key={a.id} className="hover:bg-slate-50/50 transition-colors duration-150">
+                        <td className="px-3 py-2.5 font-semibold text-slate-800">
+                          <div>
+                            <p>{a.patientName}</p>
+                            {a.patientPhone && (
+                              <span className="text-[9px] font-normal text-slate-400 block font-mono">
+                                {a.patientPhone}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-600 font-medium font-sans">
+                          Dr. {a.doctorName}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex flex-col">
+                            <span className="text-slate-500 font-mono text-[9px] uppercase font-bold tracking-tight">
+                              {a.type || 'Regular'}
+                            </span>
+                            <span className="text-slate-400 text-[10px]">
+                              {a.specialization}
+                            </span>
+                          </div>
+                        </td>
                         <td className="px-3 py-2.5 text-right font-mono text-[10px]">
                           <span className="text-[#007f6e] font-bold block">{a.date}</span>
                           <span className="text-slate-400 block">{a.time}</span>

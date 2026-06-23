@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Search, Bell, ChevronDown, Menu, Sparkles } from 'lucide-react';
 import { ActiveView } from '../types';
 
@@ -14,6 +15,16 @@ export default function Header({
   activeView, 
   onNavigate 
 }: HeaderProps) {
+  useEffect(() => {
+    try {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+      localStorage.removeItem('theme');
+    } catch (e) {
+      console.warn("Could not clean up dark class or theme preference:", e);
+    }
+  }, []);
+
   const getInitials = (name: string) => {
     if (!name) return "MH";
     const parts = name.trim().split(/\s+/);

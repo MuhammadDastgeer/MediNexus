@@ -96,6 +96,17 @@ export default function LandingPageView({
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [estimatedDoctors, setEstimatedDoctors] = useState<Doctor[]>([]);
 
+  const getSafePathname = (): string => {
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        return window.location.pathname || '/';
+      }
+    } catch (e) {
+      console.warn("Could not access window.location.pathname:", e);
+    }
+    return '/';
+  };
+
   // Open the Login modal and sync the route path with the selected credential role
   const openLoginModal = (role: 'patient' | 'doctor' | 'staff' = 'patient') => {
     setLoginRole(role);
@@ -109,12 +120,16 @@ export default function LandingPageView({
     setForgotError('');
     setShowPassword(false);
 
-    if (role === 'patient') {
-      window.history.pushState(null, '', '/patient/login');
-    } else if (role === 'doctor') {
-      window.history.pushState(null, '', '/doctor/login');
-    } else if (role === 'staff') {
-      window.history.pushState(null, '', '/login/staff');
+    try {
+      if (role === 'patient') {
+        window.history.pushState(null, '', '/patient/login');
+      } else if (role === 'doctor') {
+        window.history.pushState(null, '', '/doctor/login');
+      } else if (role === 'staff') {
+        window.history.pushState(null, '', '/login/staff');
+      }
+    } catch (e) {
+      console.warn("history.pushState is restricted:", e);
     }
   };
 
@@ -130,12 +145,16 @@ export default function LandingPageView({
     setForgotError('');
     setShowPassword(false);
 
-    if (role === 'patient') {
-      window.history.pushState(null, '', '/patient/login');
-    } else if (role === 'doctor') {
-      window.history.pushState(null, '', '/doctor/login');
-    } else if (role === 'staff') {
-      window.history.pushState(null, '', '/login/staff');
+    try {
+      if (role === 'patient') {
+        window.history.pushState(null, '', '/patient/login');
+      } else if (role === 'doctor') {
+        window.history.pushState(null, '', '/doctor/login');
+      } else if (role === 'staff') {
+        window.history.pushState(null, '', '/login/staff');
+      }
+    } catch (e) {
+      console.warn("history.pushState is restricted:", e);
     }
   };
 
@@ -150,51 +169,69 @@ export default function LandingPageView({
     setForgotError('');
     setShowPassword(false);
 
-    const currentTabPath = activeTab === 'home' ? '' : activeTab;
-    window.history.pushState(null, '', `/${currentTabPath}`);
+    try {
+      const currentTabPath = activeTab === 'home' ? '' : activeTab;
+      window.history.pushState(null, '', `/${currentTabPath}`);
+    } catch (e) {
+      console.warn("history.pushState is restricted:", e);
+    }
   };
 
   // Sync URL routing pathname and query mapping (including deep linking /patient/login, /doctor/login, /login/staff)
   useEffect(() => {
     const handleUrlRouting = () => {
-      const path = window.location.pathname.toLowerCase().replace(/^\/+/g, '').replace(/\/+$/g, '');
-      
-      if (path === 'patient/login' || path === 'patient-login') {
-        setActiveTab('home');
-        setLoginRole('patient');
-        setShowLoginModal(true);
-      } else if (path === 'doctor/login' || path === 'doctor-login') {
-        setActiveTab('home');
-        setLoginRole('doctor');
-        setShowLoginModal(true);
-      } else if (path === 'login/staff' || path === 'login-staff') {
-        setActiveTab('home');
-        setLoginRole('staff');
-        setShowLoginModal(true);
-      } else if (path === 'about') {
-        setActiveTab('about');
-        setShowLoginModal(false);
-      } else if (path === 'doctor' || path === 'doctors') {
-        setActiveTab('doctor');
-        setShowLoginModal(false);
-      } else if (path === 'blog' || path === 'blogs') {
-        setActiveTab('blog');
-        setShowLoginModal(false);
-      } else if (path === 'contact') {
-        setActiveTab('contact');
-        setShowLoginModal(false);
-      } else {
-        setActiveTab('home');
-        // Do not force showLoginModal off if we are already in login paths, but if they navigated to home manually, close it.
-        if (path !== 'patient/login' && path !== 'doctor/login' && path !== 'login/staff') {
+      try {
+        const path = getSafePathname().toLowerCase().replace(/^\/+/g, '').replace(/\/+$/g, '');
+        
+        if (path === 'patient/login' || path === 'patient-login') {
+          setActiveTab('home');
+          setLoginRole('patient');
+          setShowLoginModal(true);
+        } else if (path === 'doctor/login' || path === 'doctor-login') {
+          setActiveTab('home');
+          setLoginRole('doctor');
+          setShowLoginModal(true);
+        } else if (path === 'login/staff' || path === 'login-staff') {
+          setActiveTab('home');
+          setLoginRole('staff');
+          setShowLoginModal(true);
+        } else if (path === 'about') {
+          setActiveTab('about');
           setShowLoginModal(false);
+        } else if (path === 'doctor' || path === 'doctors') {
+          setActiveTab('doctor');
+          setShowLoginModal(false);
+        } else if (path === 'blog' || path === 'blogs') {
+          setActiveTab('blog');
+          setShowLoginModal(false);
+        } else if (path === 'contact') {
+          setActiveTab('contact');
+          setShowLoginModal(false);
+        } else {
+          setActiveTab('home');
+          // Do not force showLoginModal off if we are already in login paths, but if they navigated to home manually, close it.
+          if (path !== 'patient/login' && path !== 'doctor/login' && path !== 'login/staff') {
+            setShowLoginModal(false);
+          }
         }
+      } catch (e) {
+        console.warn("Could not read current path for routing:", e);
       }
     };
 
     handleUrlRouting();
-    window.addEventListener('popstate', handleUrlRouting);
-    return () => window.removeEventListener('popstate', handleUrlRouting);
+    try {
+      window.addEventListener('popstate', handleUrlRouting);
+    } catch (e) {
+      console.warn("Could not add popstate listener:", e);
+    }
+    return () => {
+      try {
+        window.removeEventListener('popstate', handleUrlRouting);
+      } catch (e) {
+        console.warn("Could not remove popstate listener:", e);
+      }
+    };
   }, [activeTab]);
 
   // Update Dynamic Estimator when specialization changes
@@ -216,7 +253,11 @@ export default function LandingPageView({
 
   const changeTab = (tab: 'home' | 'about' | 'doctor' | 'blog' | 'contact') => {
     setActiveTab(tab);
-    window.history.pushState(null, '', `/${tab === 'home' ? '' : tab}`);
+    try {
+      window.history.pushState(null, '', `/${tab === 'home' ? '' : tab}`);
+    } catch (e) {
+      console.warn("history.pushState is restricted:", e);
+    }
   };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
