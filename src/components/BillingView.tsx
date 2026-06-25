@@ -165,8 +165,8 @@ export default function BillingView({
     }
 
     const matchSearch = 
-      b.patientName.toLowerCase().includes(search.toLowerCase()) || 
-      b.id.toLowerCase().includes(search.toLowerCase());
+      (b.patientName || '').toLowerCase().includes(search.toLowerCase()) || 
+      (b.id || '').toLowerCase().includes(search.toLowerCase());
       
     const matchStatus = activeTab === 'All' || b.status === activeTab;
     const matchDate = matchDateString(b.date, filterDate);
@@ -295,8 +295,8 @@ export default function BillingView({
 
   // Filter patients list based on search
   const filteredPatients = patients.filter(p => 
-    p.name.toLowerCase().includes(patientSearch.toLowerCase()) || 
-    p.id.toLowerCase().includes(patientSearch.toLowerCase())
+    (p.name || '').toLowerCase().includes(patientSearch.toLowerCase()) || 
+    (p.id || '').toLowerCase().includes(patientSearch.toLowerCase())
   );
 
   return (

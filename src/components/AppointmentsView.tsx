@@ -696,14 +696,14 @@ export default function AppointmentsView({
   }
 
   const searchedPatientMatches = registeredPatientsList.filter(p => 
-    p.name.toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
-    p.email.toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
-    p.phone.includes(patientSearchQuery)
+    (p.name || '').toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
+    (p.email || '').toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
+    (p.phone || '').includes(patientSearchQuery)
   );
 
   // Stats Counters
   // Appointments Stats
-  const countTodayAppts = appointments.filter(a => a.date === getTodayDateString() || a.date === '2026-06-15').length;
+   const countTodayAppts = appointments.filter(a => a.date === getTodayDateString()).length;
   const countCompletedAppts = appointments.filter(a => a.status === 'Completed').length;
   const countCancelledAppts = appointments.filter(a => a.status === 'Cancelled').length;
   const countTotalAppts = appointments.length;
@@ -732,9 +732,9 @@ export default function AppointmentsView({
 
     // Search query check
     const matchesSearch = searchQuery === '' || 
-      a.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.specialization.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.patientName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.doctorName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.specialization || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (a.patientPhone && a.patientPhone.includes(searchQuery)) ||
       (a.patientEmail && a.patientEmail.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -1873,12 +1873,12 @@ export default function AppointmentsView({
                       <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3.5 space-y-2.5">
                         <div className="flex items-center justify-between border-b pb-1.5 border-slate-200/50">
                           <span className="text-[10px] font-black text-slate-550 uppercase tracking-wider flex items-center gap-1">
-                            <CalendarCheck size={12} className="text-[#007f6e]" /> All Saved Appointments History ({appointments.filter(a => a.patientName.toLowerCase().trim() === patientName.toLowerCase().trim()).length})
+                            <CalendarCheck size={12} className="text-[#007f6e]" /> All Saved Appointments History ({appointments.filter(a => (a.patientName || '').toLowerCase().trim() === (patientName || '').toLowerCase().trim()).length})
                           </span>
                         </div>
                         <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                           {appointments
-                            .filter(a => a.patientName.toLowerCase().trim() === patientName.toLowerCase().trim())
+                            .filter(a => (a.patientName || '').toLowerCase().trim() === (patientName || '').toLowerCase().trim())
                             .map((a, i) => (
                               <div key={a.id || i} className="flex justify-between items-center p-2 bg-white rounded-lg border border-slate-100 text-[11px] text-slate-650 hover:bg-slate-50 transition-colors">
                                 <div className="space-y-0.5">
@@ -1903,7 +1903,7 @@ export default function AppointmentsView({
                               </div>
                             ))
                           }
-                          {appointments.filter(a => a.patientName.toLowerCase().trim() === patientName.toLowerCase().trim()).length === 0 && (
+                          {appointments.filter(a => (a.patientName || '').toLowerCase().trim() === (patientName || '').toLowerCase().trim()).length === 0 && (
                             <p className="text-[10px] text-slate-400 italic text-center py-2">No past appointments found in system matching this name.</p>
                           )}
                         </div>
@@ -2581,7 +2581,7 @@ export default function AppointmentsView({
                     <div className="pt-2">
                       {(() => {
                         const isRegistered = (patients || []).some(p => 
-                          p.name.toLowerCase().trim() === selectedAppointment.patientName.toLowerCase().trim() ||
+                          (p.name || '').toLowerCase().trim() === (selectedAppointment.patientName || '').toLowerCase().trim() ||
                           (selectedAppointment.patientPhone && p.phone && p.phone.trim().replace(/[\s-+()]/g, '') === selectedAppointment.patientPhone.trim().replace(/[\s-+()]/g, ''))
                         );
                         if (isRegistered) {
@@ -2653,14 +2653,14 @@ export default function AppointmentsView({
               <div className="border-t border-slate-100 pt-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Calendar size={12} className="text-[#007f6e]" /> Saved Patient Appointment History ({appointments.filter(appt => appt.patientName.toLowerCase().trim() === selectedAppointment.patientName.toLowerCase().trim()).length})
+                    <Calendar size={12} className="text-[#007f6e]" /> Saved Patient Appointment History ({appointments.filter(appt => (appt.patientName || '').toLowerCase().trim() === (selectedAppointment.patientName || '').toLowerCase().trim()).length})
                   </h4>
                   <span className="text-[10px] font-bold text-slate-400">All registered visits across clinical ledgers</span>
                 </div>
                 
                 <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                   {appointments
-                    .filter(appt => appt.patientName.toLowerCase().trim() === selectedAppointment.patientName.toLowerCase().trim())
+                    .filter(appt => (appt.patientName || '').toLowerCase().trim() === (selectedAppointment.patientName || '').toLowerCase().trim())
                     .map((appt, i) => (
                       <div 
                         key={appt.id || i} 
@@ -2708,7 +2708,7 @@ export default function AppointmentsView({
                       </div>
                     ))
                   }
-                  {appointments.filter(appt => appt.patientName.toLowerCase().trim() === selectedAppointment.patientName.toLowerCase().trim()).length === 0 && (
+                  {appointments.filter(appt => (appt.patientName || '').toLowerCase().trim() === (selectedAppointment.patientName || '').toLowerCase().trim()).length === 0 && (
                     <p className="text-xs text-slate-400 italic text-center py-4">No past or current clinical appointments found matching this patient.</p>
                   )}
                 </div>

@@ -305,8 +305,8 @@ export default function PatientsView({
     if (isPatient && patientProfileName && p.name?.trim().toLowerCase() !== patientProfileName.trim().toLowerCase()) {
       return false;
     }
-    return p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.phone.includes(search) ||
+    return (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (p.phone || '').includes(search) ||
       (p.email && p.email.toLowerCase().includes(search.toLowerCase())) ||
       (p.bloodGroup && p.bloodGroup.toLowerCase().includes(search.toLowerCase()));
   });
@@ -322,8 +322,8 @@ export default function PatientsView({
   const otherGenderCount = patients.filter((p) => p.gender === 'Other').length;
 
   if (viewingPatient) {
-    const patientAppts = appointments.filter((a) => a.patientName.toLowerCase() === viewingPatient.name.toLowerCase());
-    const patientBills = bills.filter((b) => b.patientName.toLowerCase() === viewingPatient.name.toLowerCase());
+    const patientAppts = appointments.filter((a) => (a.patientName || '').toLowerCase() === (viewingPatient.name || '').toLowerCase());
+    const patientBills = bills.filter((b) => (b.patientName || '').toLowerCase() === (viewingPatient.name || '').toLowerCase());
     const visitsCount = patientAppts.length;
     const totalPaidAmount = patientBills.filter(b => b.status === 'Paid').reduce((sum, b) => sum + (b.amount || 0), 0);
     const pendingPaymentAmount = patientBills.filter(b => b.status !== 'Paid').reduce((sum, b) => sum + (b.amount || 0), 0);
@@ -1556,7 +1556,7 @@ export default function PatientsView({
                   <tbody className="divide-y divide-[#edeff2]">
                     {filteredPatients.map((p) => {
                       // Lookup billing items under this specific patient name
-                      const patientBills = bills.filter((b) => b.patientName.toLowerCase() === p.name.toLowerCase());
+                      const patientBills = bills.filter((b) => (b.patientName || '').toLowerCase() === (p.name || '').toLowerCase());
                       const totalBillAmount = patientBills.reduce((acc, current) => acc + (current.amount || 0), 0);
                       const pendingBillCount = patientBills.filter((b) => b.status === 'Pending').length;
 
@@ -1794,7 +1794,7 @@ export default function PatientsView({
                     <span>Book Appt</span>
                   </button>
                 </h4>
-                {appointments.filter((a) => a.patientName.toLowerCase() === viewingPatient.name.toLowerCase()).length === 0 ? (
+                {appointments.filter((a) => (a.patientName || '').toLowerCase() === (viewingPatient.name || '').toLowerCase()).length === 0 ? (
                   <p className="text-slate-400 italic">No scheduled appointments logged for this patient.</p>
                 ) : (
                   <div className="border border-slate-100 rounded-xl overflow-hidden shadow-xs">
@@ -1810,7 +1810,7 @@ export default function PatientsView({
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {appointments
-                          .filter((a) => a.patientName.toLowerCase() === viewingPatient.name.toLowerCase())
+                          .filter((a) => (a.patientName || '').toLowerCase() === (viewingPatient.name || '').toLowerCase())
                           .map((a) => (
                             <tr key={a.id} className="bg-white">
                               <td className="px-4 py-2 text-slate-400 font-mono text-[9px]">{a.id}</td>
@@ -1844,7 +1844,7 @@ export default function PatientsView({
                   <CreditCard size={14} />
                   <span>Bills summary invoice</span>
                 </h4>
-                {bills.filter((b) => b.patientName.toLowerCase() === viewingPatient.name.toLowerCase()).length === 0 ? (
+                {bills.filter((b) => (b.patientName || '').toLowerCase() === (viewingPatient.name || '').toLowerCase()).length === 0 ? (
                   <p className="text-slate-400 italic">No generated bills exist under this patient's registered credentials.</p>
                 ) : (
                   <div className="border border-slate-100 rounded-xl overflow-hidden shadow-xs">
@@ -1859,7 +1859,7 @@ export default function PatientsView({
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {bills
-                          .filter((b) => b.patientName.toLowerCase() === viewingPatient.name.toLowerCase())
+                          .filter((b) => (b.patientName || '').toLowerCase() === (viewingPatient.name || '').toLowerCase())
                           .map((b) => (
                             <tr key={b.id} className="bg-white">
                               <td className="px-4 py-2 font-mono text-slate-400 text-[10px]">{b.id}</td>

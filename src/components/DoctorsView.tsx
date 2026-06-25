@@ -328,8 +328,8 @@ export default function DoctorsView({
 
   // Search filter
   const filteredDoctors = doctors.filter((doc) => {
-    const matchesSearch = doc.name.toLowerCase().includes(search.toLowerCase()) ||
-                          doc.specialization.toLowerCase().includes(search.toLowerCase()) ||
+    const matchesSearch = (doc.name || '').toLowerCase().includes(search.toLowerCase()) ||
+                          (doc.specialization || '').toLowerCase().includes(search.toLowerCase()) ||
                           (doc.phone && doc.phone.includes(search));
     const matchesDept = deptFilter === 'All' ? true : (doc.department || doc.specialization || '').toLowerCase() === deptFilter.toLowerCase();
     const matchesDuty = dutyFilter === 'All' ? true : (dutyFilter === 'Active' ? (doc.status === 'On Duty') : (doc.status === 'Off Duty'));

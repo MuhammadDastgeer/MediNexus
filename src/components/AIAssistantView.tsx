@@ -25,7 +25,8 @@ import {
   HeartPulse,
   Play,
   Square,
-  ArrowLeft
+  ArrowLeft,
+  Wrench
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -52,6 +53,7 @@ interface Message {
   docType?: string;
   docSize?: string;
   docContent?: string;
+  tool?: TabTool;
 }
 
 interface AIAssistantViewProps {
@@ -64,7 +66,10 @@ interface AIAssistantViewProps {
   backendApiEndpoint?: string;
   restrictFileTypes?: boolean;
   onBack?: () => void;
-  onNavigate?: (view: string) => void;
+  onNavigate?: (view: string, initialMessageData?: any) => void;
+  onExecuteAction?: (action: { type: string; tab: string; item?: any; id?: string }) => void;
+  initialMessage?: any;
+  onClearInitialMessage?: () => void;
 }
 
 // Mock Clinical Images/Scans to let users test Vision capability easily inside the sandbox
@@ -322,12 +327,221 @@ const PlayAudioButton: React.FC<{ url: string }> = ({ url }) => {
   );
 };
 
+const isQueryRelatedToTab = (query: string, tab: string): boolean => {
+  const q = query.toLowerCase();
+  const t = tab.toLowerCase().trim();
+
+  // If it's the main ai-assistant tab or general, it's always related.
+  if (t === 'ai-assistant' || t === 'general' || t === 'general-ai' || !t) {
+    return true;
+  }
+
+  const tabKeywords: Record<string, string[]> = {
+    appointments: ['appointment', 'appt', 'book', 'schedule', 'date', 'time', 'slot', 'calendar', 'visit', 'checkup', 'roster', 'patient name', 'doctor name', 'confirm', 'cancel', 'delay', 'milna', 'tarikh', 'waqt', 'milne'],
+    consultation: ['consultation', 'consult', 'prescription', 'prescribe', 'diagnose', 'diagnosis', 'advice', 'symptom', 'medicine', 'checkup', 'note', 'clinical note', 'nuskh', 'dawai', 'dawae', 'marz'],
+    billing: ['bill', 'invoice', 'pay', 'cost', 'fee', 'charge', 'price', 'financial', 'unpaid', 'paid', 'balance', 'receipt', 'card', 'tax', 'discount', 'paise', 'rupay', 'paisa', 'billin'],
+    inventory: ['inventory', 'stock', 'medicine', 'supply', 'supplies', 'purchase', 'warehouse', 'reorder', 'item', 'batch', 'expiry', 'supplier', 'vendor', 'dawai', 'dawae', 'store'],
+    'ipd-wards': ['ward', 'room', 'bed', 'admit', 'discharge', 'inpatient', 'icu', 'occupancy', 'allocated', 'allot', 'floor', 'kamra', 'bistar'],
+    staff: ['staff', 'roster', 'employee', 'shift', 'nurse', 'duty', 'salary', 'profile', 'work', 'cleaner', 'admin', 'operator', 'hire', 'mulazim', 'kaam'],
+    doctors: ['doctor', 'physician', 'specialist', 'opd', 'duty', 'specialization', 'surgeon', 'fee', 'charge', 'profile', 'hakeem'],
+    patients: ['patient', 'medical record', 'history', 'portfolio', 'age', 'gender', 'blood group', 'disease', 'record', 'allergic', 'diagnosis', 'mareez', 'bimar'],
+    departments: ['department', 'cardiology', 'pediatrics', 'orthopedics', 'dermatology', 'icu', 'opd', 'clinical section', 'wing', 'shuba'],
+    enquiries: ['enquiry', 'inquiry', 'ticket', 'question', 'query', 'ask', 'support ticket', 'contact', 'resolved', 'pending', 'sawaal', 'puchna'],
+    'medical-tourism': ['tourism', 'foreign', 'visa', 'package', 'travel', 'airport', 'currency', 'international', 'passport', 'medical-tourism', 'flight', 'bahar', 'safar'],
+    blogs: ['blog', 'post', 'article', 'publish', 'draft', 'title', 'research', 'news', 'author', 'content', 'khabar'],
+    reports: ['report', 'analytics', 'chart', 'statistics', 'export', 'pdf', 'csv', 'print', 'data', 'download', 'visualize'],
+    finance: ['finance', 'transaction', 'payment', 'expense', 'income', 'ledger', 'account', 'revenue', 'profit', 'tax', 'cash', 'earn', 'hisaab', 'kharcha'],
+    'configure-hospital': ['setting', 'configuration', 'config', 'hospital name', 'contact', 'phone', 'theme', 'title', 'update details'],
+    support: ['support', 'help', 'contact', 'issue', 'technical', 'password', 'error', 'login', 'logout', 'bug', 'madad']
+  };
+
+  const keywords = tabKeywords[t] || [];
+  const allKeywords = [...keywords, t];
+  if (t.includes('-')) {
+    allKeywords.push(...t.split('-'));
+  }
+
+  // Check if any keyword for the current tab is matched
+  const matchedCurrent = allKeywords.some(keyword => q.includes(keyword));
+  if (matchedCurrent) return true;
+
+  // Let's check if it matches keywords of other tabs. If it matches another tab's keywords, it belongs to that other tab!
+  let matchedOther = false;
+  for (const otherTab of Object.keys(tabKeywords)) {
+    if (otherTab === t) continue;
+    const otherKeywords = [...(tabKeywords[otherTab] || []), otherTab];
+    if (otherKeywords.some(keyword => q.includes(keyword))) {
+      matchedOther = true;
+      break;
+    }
+  }
+
+  // If it didn't match current, and matched other, it is NOT related to current.
+  if (matchedOther) {
+    return false;
+  }
+
+  // If it's a completely generic greeting or generic query, we can allow it or keep it here.
+  return true;
+};
+
+export interface TabTool {
+  label: string;
+  type: 'add' | 'edit' | 'delete' | 'view';
+  prompt: string;
+  icon: string;
+}
+
+export const getToolsForTab = (tab: string): TabTool[] => {
+  const normalized = tab ? tab.toLowerCase().trim() : '';
+
+  if (normalized === 'staff' || normalized === 'staff-ai') {
+    return [
+      { label: 'Add Staff Member', type: 'add', icon: '➕', prompt: 'Create/Add a new staff member to the system. Enter their Name, Role (e.g. Ward Assistant, Lab Assistant), Contact number, and Shift timings.' },
+      { label: 'Edit Staff Record', type: 'edit', icon: '✏️', prompt: 'Update/Edit an existing staff member\'s registration details, role designation, or on-duty schedule.' },
+      { label: 'Delete Staff Profile', type: 'delete', icon: '🗑️', prompt: 'Deactivate or safely delete a staff member\'s record from the hospital directory.' },
+      { label: 'View Staff Statuses', type: 'view', icon: '📋', prompt: 'Show the list of registered hospital staff members with their active status, role, and department.' }
+    ];
+  }
+
+  if (normalized === 'doctors' || normalized === 'doctors-ai') {
+    return [
+      { label: 'Add Doctor Profile', type: 'add', icon: '➕', prompt: 'Create/Add a new doctor profile, including their full name, specialization department (e.g. Cardiology), consultation room, and baseline outpatient fee.' },
+      { label: 'Edit Doctor Details', type: 'edit', icon: '✏️', prompt: 'Update/Edit doctor profile details such as room code, OPD schedule times, contact details, or active fee.' },
+      { label: 'Delete Doctor Profile', type: 'delete', icon: '🗑️', prompt: 'Delete or safely remove a doctor\'s roster file when they retire or transfer.' },
+      { label: 'View Doctors List', type: 'view', icon: '📋', prompt: 'Provide a directory list of all active doctors with their consultation rooms, fee levels, and shift availability status.' }
+    ];
+  }
+
+  if (normalized === 'appointments' || normalized === 'appointments-ai') {
+    return [
+      { label: 'Book Appointment Slot', type: 'add', icon: '➕', prompt: 'Create/Add a new patient appointment: Book a doctor slot, patient name, date, time, and type of visit.' },
+      { label: 'Reschedule Appointment', type: 'edit', icon: '✏️', prompt: 'Update/Edit appointment slot: How do I reschedule, shift timings, or change the assigned doctor of an active slot?' },
+      { label: 'Cancel Appointment Slot', type: 'delete', icon: '🗑️', prompt: 'Delete/Cancel appointment: Show the procedure to safely cancel or delete an appointment slot.' },
+      { label: 'View Today\'s Appointments', type: 'view', icon: '📋', prompt: 'Show me a list of patient appointments scheduled for today.' }
+    ];
+  }
+
+  if (normalized === 'patients' || normalized === 'patients-ai') {
+    return [
+      { label: 'Register New Patient', type: 'add', icon: '➕', prompt: 'Create/Add a new patient registration: Register details including age, gender, contact number, blood group, and medical history.' },
+      { label: 'Edit Patient Profile', type: 'edit', icon: '✏️', prompt: 'Update/Edit patient record: How do I update a patient\'s clinical profile, email address, or emergency contacts?' },
+      { label: 'Archive Patient File', type: 'delete', icon: '🗑️', prompt: 'Delete/Archive patient: Archive a redundant patient log while preserving clinical audit history.' },
+      { label: 'View Patients Register', type: 'view', icon: '📋', prompt: 'Show a directory list of recently registered hospital patients.' }
+    ];
+  }
+
+  if (normalized.includes('bill') || normalized.includes('finance')) {
+    return [
+      { label: 'Generate New Invoice', type: 'add', icon: '➕', prompt: 'Create/Add a new hospital billing invoice: Log custom patient fee, items list, discount, tax, and status.' },
+      { label: 'Edit Invoice Details', type: 'edit', icon: '✏️', prompt: 'Update/Edit billing invoice: How do I apply a discount percentage, adjust tax, or update invoice item totals?' },
+      { label: 'Cancel/Delete Invoice', type: 'delete', icon: '🗑️', prompt: 'Delete/Cancel invoice: Void, cancel, or delete a wrongly recorded billing entry.' },
+      { label: 'View Unpaid Invoices', type: 'view', icon: '📋', prompt: 'Show a list of outstanding unpaid patient invoices with high outstanding balances.' }
+    ];
+  }
+
+  if (normalized.includes('invent') || normalized.includes('pharmacy') || normalized.includes('purchases') || normalized.includes('transfers')) {
+    return [
+      { label: 'Add Stock Item', type: 'add', icon: '➕', prompt: 'Create/Add a new medicine or stock item: Register drug name, category, batch code, expiry, unit price, and supplier.' },
+      { label: 'Edit Stock Details', type: 'edit', icon: '✏️', prompt: 'Update/Edit stock details: Adjust minimum threshold limits, unit costs, or supplier profiles.' },
+      { label: 'Remove Expired Stock', type: 'delete', icon: '🗑️', prompt: 'Delete/Discard expired stock: Log, discard, or delete expired medication batches from database.' },
+      { label: 'View Low Stock Items', type: 'view', icon: '📋', prompt: 'Show a list of pharmacy and inventory items that are currently below warning threshold levels.' }
+    ];
+  }
+
+  if (normalized === 'consultation' || normalized === 'consultation-ai') {
+    return [
+      { label: 'Log Clinical Consultation', type: 'add', icon: '➕', prompt: 'Create/Add consultation report: Log patient consultation details, diagnostic notes, and medication prescription.' },
+      { label: 'Modify Prescription Notes', type: 'edit', icon: '✏️', prompt: 'Update/Edit prescription: Edit prescription items, dosages, or administration instructions.' },
+      { label: 'Delete Consultation Record', type: 'delete', icon: '🗑️', prompt: 'Delete/Retract prescription: Void or delete a wrongly entered prescription item or consult.' },
+      { label: 'View Past Diagnosis Logs', type: 'view', icon: '📋', prompt: 'Show a list of past patient clinical diagnoses, prescriptions, and lab test checkups.' }
+    ];
+  }
+
+  if (normalized.includes('ward') || normalized.includes('ipd')) {
+    return [
+      { label: 'Allot Ward Bed', type: 'add', icon: '➕', prompt: 'Create/Add ward allotment: Admit a patient to a ward room, select bed number, and intake checklist.' },
+      { label: 'Transfer Bed Allocation', type: 'edit', icon: '✏️', prompt: 'Update/Edit ward allocation: Transfer an admitted patient to ICU or a different room/bed.' },
+      { label: 'Discharge Patient & Release Bed', type: 'delete', icon: '🗑️', prompt: 'Delete/Discharge ward allotment: Discharge an inpatient, settle billing, and release bed allocation.' },
+      { label: 'View Ward Bed Occupancy', type: 'view', icon: '📋', prompt: 'Show a bed occupancy summary of general wards, emergency rooms, and ICU blocks.' }
+    ];
+  }
+
+  if (normalized === 'departments' || normalized === 'departments-ai') {
+    return [
+      { label: 'Add Department Unit', type: 'add', icon: '➕', prompt: 'Create/Add a new department: Set department name, doctor charge level, and on-duty head.' },
+      { label: 'Edit Department Config', type: 'edit', icon: '✏️', prompt: 'Update/Edit department: Update room codes, department head, or active status.' },
+      { label: 'Delete Empty Department', type: 'delete', icon: '🗑️', prompt: 'Delete/Remove department: Delete or deactivate a department wing when not in use.' },
+      { label: 'View Departments Status', type: 'view', icon: '📋', prompt: 'Show breakdown of clinical departments, their registered doctor counts, and occupancy load.' }
+    ];
+  }
+
+  if (normalized === 'enquiries' || normalized === 'enquiries-ai') {
+    return [
+      { label: 'Log Support Enquiry', type: 'add', icon: '➕', prompt: 'Create/Add public enquiry: File patient question, email address, phone, and selected department.' },
+      { label: 'Resolve Support Ticket', type: 'edit', icon: '✏️', prompt: 'Update/Edit enquiry: Update enquiry status from pending to resolved with response comments.' },
+      { label: 'Delete Spam Enquiry', type: 'delete', icon: '🗑️', prompt: 'Delete/Remove enquiry ticket: Delete spam or invalid patient enquiries from database.' },
+      { label: 'View Unresolved Enquiries', type: 'view', icon: '📋', prompt: 'Show list of pending unresolved patient inquiries that require assistance.' }
+    ];
+  }
+
+  if (normalized.includes('tourism')) {
+    return [
+      { label: 'Add Tourism Request', type: 'add', icon: '➕', prompt: 'Create/Add medical tourism request: Set up patient country, passport ref, fast-track visa letter, and surgery name.' },
+      { label: 'Update Visa/Flight Details', type: 'edit', icon: '✏️', prompt: 'Update/Edit tourism details: Edit medical visa status, flight dates, or hotel pickup options.' },
+      { label: 'Cancel Tourism File', type: 'delete', icon: '🗑️', prompt: 'Delete/Cancel tourism file: Safely cancel or delete an international medical tourism record.' },
+      { label: 'View Received Tourism Enquiries', type: 'view', icon: '📋', prompt: 'Show summary of all international medical tourism requests received by country of origin.' }
+    ];
+  }
+
+  if (normalized === 'blogs' || normalized === 'blogs-ai') {
+    return [
+      { label: 'Publish Blog Article', type: 'add', icon: '➕', prompt: 'Create/Add blog post: Compose title, draft content, select category tags, and set status to published.' },
+      { label: 'Edit Post Content', type: 'edit', icon: '✏️', prompt: 'Update/Edit blog post: Update an existing article title, content, or change author names on file.' },
+      { label: 'Delete/Draft Post', type: 'delete', icon: '🗑️', prompt: 'Delete/Draft blog post: Delete or retract a blog article from public viewing.' },
+      { label: 'View Blog Drafts List', type: 'view', icon: '📋', prompt: 'Show directory of draft clinical research articles and blogs awaiting editorial review.' }
+    ];
+  }
+
+  if (normalized === 'reports' || normalized === 'reports-ai') {
+    return [
+      { label: 'Generate Monthly Report', type: 'add', icon: '➕', prompt: 'Create/Add report compilation: Generate a fresh monthly statistics report for clinical services.' },
+      { label: 'Modify Report Filters', type: 'edit', icon: '✏️', prompt: 'Update/Edit report filters: Filter reports dynamically by custom start date or CSV columns.' },
+      { label: 'Delete Archival Report', type: 'delete', icon: '🗑️', prompt: 'Delete/Remove report file: Purge or delete exported report file logs from history tab.' },
+      { label: 'View Analytics Statistics', type: 'view', icon: '📋', prompt: 'Show summary of main hospital revenue, active bed loads, and doctor productivity charts.' }
+    ];
+  }
+
+  if (normalized.includes('config')) {
+    return [
+      { label: 'Configure Hospital Settings', type: 'add', icon: '➕', prompt: 'Create/Add hospital configuration: Set primary institute name, contact phone, and timezone.' },
+      { label: 'Edit Contact Information', type: 'edit', icon: '✏️', prompt: 'Update/Edit hospital info: Change the institute address, emergency hotline, or default fee currency.' },
+      { label: 'Reset Default Theme', type: 'delete', icon: '🗑️', prompt: 'Delete/Reset configuration: Clear custom portal theme settings back to system defaults.' },
+      { label: 'View Hospital Configuration', type: 'view', icon: '📋', prompt: 'Show current portal configuration profile, emergency details, and support phone numbers.' }
+    ];
+  }
+
+  if (normalized === 'support' || normalized === 'support-ai') {
+    return [
+      { label: 'Submit Support Issue', type: 'add', icon: '➕', prompt: 'Create/Add technical issue ticket: Describe system errors, password lockouts, or application lags.' },
+      { label: 'Edit Ticket Urgency', type: 'edit', icon: '✏️', prompt: 'Update/Edit support ticket: Change the priority level of a ticket from low to high priority.' },
+      { label: 'Close/Delete Ticket', type: 'delete', icon: '🗑️', prompt: 'Delete/Close support ticket: Safely dismiss or delete closed technical issues.' },
+      { label: 'View Active Issues Log', type: 'view', icon: '📋', prompt: 'Show active technical issue tickets currently assigned to support engineers.' }
+    ];
+  }
+
+  return [];
+};
+
 export default function AIAssistantView({ 
   contextData, 
   backendApiEndpoint = '/api/ai-assistant/chat', 
   restrictFileTypes = false,
   onBack,
-  onNavigate
+  onNavigate,
+  onExecuteAction,
+  initialMessage,
+  onClearInitialMessage
 }: AIAssistantViewProps) {
   const activeTabLower = (contextData?.activeTab || '').toLowerCase().trim();
   const isTabSpecific = activeTabLower && 
@@ -366,9 +580,12 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
         }
       ]);
     }
+    setSelectedTool(null);
   }, [contextData?.activeTab]);
 
   const [input, setInput] = useState('');
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<TabTool | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -419,6 +636,112 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isSending, isRecording]);
+
+  // Handle carried initialMessage from other tabs
+  useEffect(() => {
+    if (initialMessage) {
+      const msg = initialMessage;
+      if (onClearInitialMessage) {
+        onClearInitialMessage();
+      }
+
+      const userMsgId = 'user-' + Date.now();
+      const newUserMessage: Message = {
+        id: userMsgId,
+        role: 'user',
+        content: msg.content,
+        image: msg.image,
+        audio: msg.audio,
+        docName: msg.docName,
+        docType: msg.docType,
+        docSize: msg.docSize,
+        docContent: msg.docContent,
+        voiceRecorded: msg.voiceRecorded,
+        audioUrl: msg.audioUrl,
+        audioSize: msg.audioSize,
+        audioDuration: msg.audioDuration,
+        timestamp: new Date()
+      };
+
+      const initialWelcome: Message = {
+        id: 'welcome',
+        role: 'assistant',
+        content: `Hello there! I am your **Clinical & Hospital Management AI Assistant**. \n\nI can assist you with:\n- **Medical & Clinical Queries**: Diagnostic indicators, healthy guidelines, clinical procedures, or drug info.\n- **Hospital Administration & Data**: Active appointment summaries, billing standings, department levels, or staff counts from your current screen.\n- **Vision Recognition**: Upload an image of a clinical prescription, lab report, or diagnostic screen to analyze.\n\n*Security Guideline:* To maintain focus, I will politely decline any off-topic queries that are not related to medical science or hospital context. Let me know how I can help you today!`,
+        timestamp: new Date()
+      };
+
+      setMessages([initialWelcome, newUserMessage]);
+      
+      const triggerSend = async () => {
+        setIsSending(true);
+        try {
+          const chatPayload = {
+            messages: [initialWelcome, newUserMessage].map(m => ({
+              role: m.role,
+              content: m.docName 
+                ? `[Document Attached: ${m.docName} (${m.docType}, ${m.docSize})]\n${m.docContent ? `Document Content:\n${m.docContent}\n\n` : ''}${m.content}`
+                : m.content,
+              image: m.image,
+              audio: m.audio
+            })),
+            context: contextData,
+            selectedModel: 'auto'
+          };
+
+          const response = await fetch(backendApiEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(chatPayload)
+          });
+
+          if (!response.ok) {
+            throw new Error(`Server returned code ${response.status}`);
+          }
+
+          const resData = await response.json();
+          if (resData.attempts) {
+            setLatestAttempts(resData.attempts);
+          }
+
+          let replyContent = resData.reply || "Unable to formulate response from downstream services.";
+          
+          const navMatch = replyContent.match(/\[NAVIGATE:\s*([a-zA-Z0-9_-]+)\]/i);
+          if (navMatch && onNavigate) {
+            const targetView = navMatch[1].trim();
+            replyContent = replyContent.replace(/\[NAVIGATE:\s*[a-zA-Z0-9_-]+\]/gi, '').trim();
+            setTimeout(() => {
+              onNavigate(targetView);
+            }, 3000);
+          }
+
+          const assistantMsg: Message = {
+            id: 'assistant-' + Date.now(),
+            role: 'assistant',
+            content: replyContent,
+            attempts: resData.attempts,
+            timestamp: new Date()
+          };
+
+          setMessages(prev => [...prev, assistantMsg]);
+        } catch (err: any) {
+          console.error(err);
+          const errorMsg: Message = {
+            id: 'error-' + Date.now(),
+            role: 'assistant',
+            content: `⚠️ System error: (${err.message}). No fallback endpoints could respond. \n\nPlease request support or review active API parameter credentials.`,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, errorMsg]);
+        } finally {
+          setIsSending(false);
+        }
+      };
+
+      triggerSend();
+    }
+  }, [initialMessage]);
 
   // Voice recording timer simulation
   useEffect(() => {
@@ -752,7 +1075,7 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
   }) => {
     const textToSend = overrideText !== undefined ? overrideText : input;
     const audioToUse = overrideAudio !== undefined ? overrideAudio : recordedAudio;
-    if (!textToSend.trim() && !imagePreview && !docName && !audioToUse) return;
+    if (!textToSend.trim() && !imagePreview && !docName && !audioToUse && !selectedTool) return;
 
     const userMsgId = 'user-' + Date.now();
     const newUserMessage: Message = {
@@ -769,24 +1092,47 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
       audioUrl: audioToUse?.url || undefined,
       audioSize: audioToUse?.size || undefined,
       audioDuration: audioToUse?.duration || undefined,
+      tool: selectedTool || undefined,
       timestamp: new Date()
     };
+
+    // Strict boundary rule for Voice/Speech: If the query is a voice recording and is NOT related to this tab, redirect to general assistant
+    const isVoice = !!audioToUse;
+    if (isVoice && isTabSpecific && !isQueryRelatedToTab(textToSend, activeTabLower)) {
+      setInput('');
+      removeAttachedFile();
+      setRecordedAudio(null);
+      setSelectedTool(null);
+      if (onNavigate) {
+        alert(`This query is not related to the ${activeTabLower.toUpperCase()} workflow. Redirecting to the main AI Assistant...`);
+        onNavigate('ai-assistant', newUserMessage);
+      }
+      return;
+    }
 
     setMessages(prev => [...prev, newUserMessage]);
     setInput('');
     removeAttachedFile();
+    setSelectedTool(null);
     setIsSending(true);
 
     try {
       const chatPayload = {
-        messages: messages.concat(newUserMessage).map(m => ({
-          role: m.role,
-          content: m.docName 
-            ? `[Document Attached: ${m.docName} (${m.docType}, ${m.docSize})]\n${m.docContent ? `Document Content:\n${m.docContent}\n\n` : ''}${m.content}`
-            : m.content,
-          image: m.image,
-          audio: m.audio
-        })),
+        messages: messages.concat(newUserMessage).map(m => {
+          let content = m.content;
+          if (m.tool) {
+            content = `[Contextual Tool selected: ${m.tool.label} (Operation: ${m.tool.type.toUpperCase()})]\nTool Instruction Guide: ${m.tool.prompt}\n\n${content}`;
+          }
+          if (m.docName) {
+            content = `[Document Attached: ${m.docName} (${m.docType}, ${m.docSize})]\n${m.docContent ? `Document Content:\n${m.docContent}\n\n` : ''}${content}`;
+          }
+          return {
+            role: m.role,
+            content,
+            image: m.image,
+            audio: m.audio
+          };
+        }),
         context: contextData,
         selectedModel
       };
@@ -810,6 +1156,24 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
       }
 
       let replyContent = resData.reply || "Unable to formulate response from downstream services.";
+      
+      // Look for custom [ACTION: {...}] tag inside the reply text (emitted by LLMs)
+      let parsedActionFromTag = null;
+      const actionMatch = replyContent.match(/\[ACTION:\s*({.*?})\s*\]/s);
+      if (actionMatch) {
+        try {
+          parsedActionFromTag = JSON.parse(actionMatch[1]);
+        } catch (e) {
+          console.error("Failed to parse [ACTION] json inside reply tag:", e);
+        }
+        // Always strip the tag from display text so user doesn't see raw JSON blocks
+        replyContent = replyContent.replace(/\[ACTION:\s*({.*?})\s*\]/gs, '').trim();
+      }
+
+      const finalAction = parsedActionFromTag || resData.action;
+      if (finalAction && onExecuteAction) {
+        onExecuteAction(finalAction);
+      }
       
       const navMatch = replyContent.match(/\[NAVIGATE:\s*([a-zA-Z0-9_-]+)\]/i);
       if (navMatch && onNavigate) {
@@ -989,6 +1353,29 @@ Please request support or review active API parameter credentials.`,
                         </p>
                         <p className={`text-[10px] font-mono ${msg.role === 'user' ? 'text-slate-300' : 'text-slate-500'}`}>
                           {msg.audioSize || 'Unknown size'} • 00:{msg.audioDuration ? (msg.audioDuration < 10 ? '0' + msg.audioDuration : msg.audioDuration) : '00'}s
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tool attachment inside bubble */}
+                  {msg.tool && (
+                    <div className={`flex items-center gap-3 mb-3 p-3 rounded-2xl border ${
+                      msg.role === 'user' 
+                        ? 'bg-white/10 border-white/20 text-white' 
+                        : 'bg-indigo-50/50 border-indigo-100/80 text-slate-800'
+                    } max-w-sm`}>
+                      <div className={`p-2.5 rounded-xl shrink-0 text-lg font-bold flex items-center justify-center h-10 w-10 ${
+                        msg.role === 'user' ? 'bg-white/10 text-white' : 'bg-indigo-500 text-white'
+                      }`}>
+                        {msg.tool.icon || '🔧'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-bold truncate ${msg.role === 'user' ? 'text-white' : 'text-slate-800'}`}>
+                          {msg.tool.label}
+                        </p>
+                        <p className={`text-[10px] font-mono uppercase font-semibold ${msg.role === 'user' ? 'text-indigo-200' : 'text-indigo-600'}`}>
+                          {msg.tool.type} Operation
                         </p>
                       </div>
                     </div>
@@ -1266,6 +1653,33 @@ Please request support or review active API parameter credentials.`,
                 </button>
               </motion.div>
             )}
+
+            {selectedTool && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="relative inline-flex items-center gap-2.5 p-2 bg-indigo-50/75 rounded-2xl border border-indigo-200 shadow-xs max-w-fit" 
+                id="selected-tool-preview-wrapper"
+              >
+                <div className="relative h-9 w-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-base">
+                  {selectedTool.icon}
+                </div>
+                <div className="flex flex-col pr-5">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-800">{selectedTool.label}</span>
+                  <span className="text-[8px] sm:text-[9px] text-indigo-700 font-mono tracking-wider uppercase font-semibold">Active {selectedTool.type.toUpperCase()} command loaded</span>
+                </div>
+                <button 
+                  onClick={() => setSelectedTool(null)}
+                  className="absolute -top-1.5 -right-1.5 p-1 bg-white hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 rounded-full border border-indigo-200 cursor-pointer shadow-xs transition-all hover:scale-110 active:scale-90"
+                  title="Remove Selected Tool"
+                  id="remove-selected-tool-btn"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {showVoiceSimulator && (
@@ -1381,6 +1795,103 @@ Please request support or review active API parameter credentials.`,
             {/* Icons Actions Row aligned horizontally (matching screenshot group) */}
             <div className="flex items-center gap-1 sm:gap-1.5 pr-1 shrink-0" id="inner-action-strip">
               
+              {/* TAB-SPECIFIC TOOLS DROPDOWN */}
+              {isTabSpecific && (
+                <div className="relative" id="tab-tools-dropdown-container">
+                  <button
+                    type="button"
+                    onClick={() => setShowToolsMenu(!showToolsMenu)}
+                    className={`p-2 sm:p-2.5 rounded-full hover:scale-105 active:scale-95 transition-all shadow-2xs cursor-pointer flex items-center justify-center ${
+                      showToolsMenu 
+                        ? 'bg-teal-500 text-white border border-teal-500' 
+                        : 'text-indigo-600 hover:text-indigo-700 bg-white border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/20'
+                    }`}
+                    title="Tab Operations (Add, Edit, Delete, View)"
+                    id="tab-tools-action-btn"
+                  >
+                    <Wrench className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                  </button>
+
+                  <AnimatePresence>
+                    {showToolsMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-full right-0 mb-3.5 w-56 sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden py-1.5 flex flex-col"
+                        id="tab-tools-menu-box"
+                      >
+                        <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            ⚙️ {activeTabLower.toUpperCase()} TOOLS
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.2 bg-indigo-50 text-indigo-600 font-bold rounded-full uppercase">
+                            Contextual
+                          </span>
+                        </div>
+                        <div className="max-h-[220px] overflow-y-auto pr-0.5" id="tab-tools-items-list">
+                          {(() => {
+                            const tools = getToolsForTab(contextData.activeTab);
+                            if (tools.length === 0) {
+                              return (
+                                <div className="px-4 py-3 text-center text-xs text-slate-400">
+                                  No specific tools loaded for this tab.
+                                </div>
+                              );
+                            }
+                            return tools.map((tool, index) => {
+                              // Define styles based on tool type
+                              let badgeColor = "bg-slate-50 text-slate-600";
+                              let hoverBg = "hover:bg-slate-50";
+                              if (tool.type === 'add') {
+                                badgeColor = "bg-emerald-50 text-emerald-700";
+                                hoverBg = "hover:bg-emerald-50/50";
+                              } else if (tool.type === 'edit') {
+                                badgeColor = "bg-amber-50 text-amber-700";
+                                hoverBg = "hover:bg-amber-50/50";
+                              } else if (tool.type === 'delete') {
+                                badgeColor = "bg-rose-50 text-rose-700";
+                                hoverBg = "hover:bg-rose-50/50";
+                              } else if (tool.type === 'view') {
+                                badgeColor = "bg-blue-50 text-blue-700";
+                                hoverBg = "hover:bg-blue-50/50";
+                              }
+
+                              return (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedTool(tool);
+                                    setShowToolsMenu(false);
+                                  }}
+                                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-slate-700 transition-all ${hoverBg} border-b border-slate-50 last:border-0 cursor-pointer`}
+                                  title={tool.prompt}
+                                  id={`tool-menu-item-${tool.type}`}
+                                >
+                                  <span className={`text-[10px] h-5 w-5 rounded-md flex items-center justify-center font-bold shrink-0 ${badgeColor}`}>
+                                    {tool.icon}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-semibold block truncate text-[11px] text-slate-800">
+                                      {tool.label}
+                                    </span>
+                                    <span className="text-[9px] text-slate-400 truncate block font-mono">
+                                      {tool.type.toUpperCase()} command
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               {/* MICROPHONE VOICE BUTTON */}
               <button
                 type="button"
@@ -1421,7 +1932,7 @@ Please request support or review active API parameter credentials.`,
               {/* ARROW UP SEND ACTION BUTTON */}
               <button
                 type="submit"
-                disabled={isSending || (!input.trim() && !imagePreview && !docName && !recordedAudio)}
+                disabled={isSending || (!input.trim() && !imagePreview && !docName && !recordedAudio && !selectedTool)}
                 className="p-2 sm:p-2.5 bg-slate-900 hover:bg-teal-600 hover:shadow-lg hover:shadow-teal-600/10 text-white rounded-full transition-all shrink-0 cursor-pointer disabled:opacity-30 disabled:pointer-events-none hover:scale-105 active:scale-95 animate-fade-in"
                 id="arrow-send-message-btn"
               >

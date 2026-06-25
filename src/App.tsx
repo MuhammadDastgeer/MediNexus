@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ActiveView, Patient, Appointment, Doctor, Staff, Bill, InventoryItem, Department, SubDepartment } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -26,8 +26,17 @@ import LandingPageView from './components/LandingPageView';
 import AIAssistantView from './components/AIAssistantView';
 
 export default function App() {
+  const rosterSyncedInSession = useRef(false);
   const [loggedInUser, setLoggedInUser] = useState<{ role: 'patient' | 'doctor' | 'staff'; data: any } | null>(null);
   const [activeView, setActiveViewState] = useState<ActiveView>('landing');
+  const [initialAiMessage, setInitialAiMessage] = useState<any>(null);
+
+  const handleNavigateWithPayload = (view: string, initialMessageData?: any) => {
+    if (initialMessageData) {
+      setInitialAiMessage(initialMessageData);
+    }
+    setActiveView(view as any);
+  };
 
   const isStaff = loggedInUser?.role === 'staff';
   const isDoctor = loggedInUser?.role === 'doctor';
@@ -202,10 +211,11 @@ export default function App() {
   const [subDepartments, setSubDepartments] = useState<SubDepartment[]>([]);
 
   // Robust date comparison helper to verify past dates
-  const isDateInPast = (dateStr: string) => {
+  const isDateInPast = (dateStr: any) => {
     if (!dateStr) return false;
+    const cleanDate = String(dateStr).trim();
     let parsed: Date | null = null;
-    const parts = dateStr.split('-');
+    const parts = cleanDate.split('-');
     if (parts.length === 3) {
       if (parts[0].length === 4) { // YYYY-MM-DD
         parsed = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -213,7 +223,7 @@ export default function App() {
         parsed = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
       }
     } else {
-      const slashParts = dateStr.split('/');
+      const slashParts = cleanDate.split('/');
       if (slashParts.length === 3) {
         if (slashParts[0].length === 4) { // YYYY/MM/DD
           parsed = new Date(parseInt(slashParts[0]), parseInt(slashParts[1]) - 1, parseInt(slashParts[2]));
@@ -224,7 +234,7 @@ export default function App() {
     }
 
     if (!parsed || isNaN(parsed.getTime())) {
-      parsed = new Date(dateStr);
+      parsed = new Date(cleanDate);
     }
 
     if (isNaN(parsed.getTime())) return false;
@@ -353,6 +363,7 @@ export default function App() {
   useEffect(() => {
     // Only proceed once doctors and appointments are cataloged
     if (!doctors || doctors.length === 0) return;
+    if (rosterSyncedInSession.current) return;
 
     // Get current calendar day in local system format
     const todayStr = new Date().toDateString();
@@ -363,10 +374,14 @@ export default function App() {
       console.warn("localStorage is not available in this context:", e);
     }
 
-    if (lastDailyRosterSync === todayStr) return; // Already finished daily verification check
+    if (lastDailyRosterSync === todayStr) {
+      rosterSyncedInSession.current = true;
+      return;
+    }
 
     const syncRosterDaily = async () => {
       console.log("Initiating daily hospital roster automatic sync.");
+      rosterSyncedInSession.current = true;
       let changedAny = false;
       const SwedishDate = new Date();
       const todayDateStr = `${SwedishDate.getFullYear()}-${String(SwedishDate.getMonth() + 1).padStart(2, '0')}-${String(SwedishDate.getDate()).padStart(2, '0')}`;
@@ -374,7 +389,7 @@ export default function App() {
       for (const doc of doctors) {
         // Find if they have any scheduled appointment today
         const hasApptToday = appointments.some(
-          a => (a.doctorName === doc.name || a.doctorName.toLowerCase().includes(doc.name.toLowerCase())) 
+          a => (a.doctorName === doc.name || (a.doctorName && doc.name && a.doctorName.toLowerCase().includes(doc.name.toLowerCase()))) 
                && a.date === todayDateStr 
                && a.status !== 'Cancelled'
         );
@@ -1239,6 +1254,201 @@ export default function App() {
     }
   };
 
+  const handleExecuteAction = async (action: { type: string; tab: string; item?: any; id?: string }) => {
+    console.log("Executing Action on Tab State and Syncing to Backend DB:", action);
+    const { type, tab, item, id } = action;
+    const cleanType = type?.toLowerCase().trim();
+    const cleanTab = tab?.toLowerCase().trim();
+
+    // Map tab names to their exact REST API endpoints
+    const apiMap: Record<string, string> = {
+      'patients': '/api/patients',
+      'doctors': '/api/doctors',
+      'appointments': '/api/appointments',
+      'staff': '/api/staff',
+      'billing': '/api/bills',
+      'inventory': '/api/inventory',
+      'enquiries': '/api/enquiries',
+      'blogs': '/api/blogs',
+      'departments': '/api/departments',
+      'ipd-wards': '/api/wards',
+      'medical-tourism': '/api/medical-tourism',
+      'finance': '/api/finance'
+    };
+
+    const endpoint = apiMap[cleanTab];
+    if (!endpoint) {
+      console.warn(`Tab "${cleanTab}" is not supported for dynamic DB sync.`);
+      return;
+    }
+
+    try {
+      if (cleanType === 'add' && item) {
+        const newId = item.id || `${cleanTab.charAt(0).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        let payload = { ...item, id: newId };
+
+        // Apply useful default values to guarantee smooth visuals in cards/tables
+        if (cleanTab === 'patients') {
+          payload = {
+            registeredAt: new Date().toLocaleDateString(),
+            status: 'New',
+            bloodGroup: 'B+',
+            phone: '0300-1234567',
+            gender: 'Male',
+            age: 30,
+            ...payload
+          };
+        } else if (cleanTab === 'appointments') {
+          payload = {
+            date: new Date().toLocaleDateString(),
+            time: '11:00 AM',
+            status: 'Scheduled',
+            type: 'Opd',
+            specialization: 'General Medicine',
+            ...payload
+          };
+        } else if (cleanTab === 'doctors') {
+          payload = {
+            status: 'On Duty',
+            specialization: 'General Physician',
+            consultationFee: 500,
+            phone: '0312-3456789',
+            ...payload
+          };
+        } else if (cleanTab === 'staff') {
+          payload = {
+            status: 'Active',
+            role: 'Nurse',
+            department: 'Outpatient',
+            ...payload
+          };
+        } else if (cleanTab === 'inventory') {
+          payload = {
+            category: 'Medicine',
+            stock: 100,
+            minStock: 20,
+            price: 150,
+            ...payload
+          };
+        } else if (cleanTab === 'billing') {
+          payload = {
+            date: new Date().toLocaleDateString(),
+            amount: 1200,
+            status: 'Paid',
+            discount: 0,
+            collectedAmount: payload.amount || 1200,
+            pendingAmount: 0,
+            items: '[]',
+            ...payload
+          };
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          console.log(`Successfully added dynamic record to backend endpoint: ${endpoint}`);
+          await handleRefreshAll();
+        } else {
+          console.error(`Failed to add record via backend:`, await res.text());
+        }
+
+      } else if (cleanType === 'edit') {
+        const matchId = String(id || item?.id || '').trim().toLowerCase();
+        let existingItem: any = null;
+
+        const findFn = (list: any[]) => {
+          return list.find(element => {
+            const elemId = String(element.id || element.name || '').trim().toLowerCase();
+            const elemName = String(element.name || element.patientName || element.doctorName || '').trim().toLowerCase();
+            return elemId === matchId || elemName === matchId || elemName.includes(matchId) || matchId.includes(elemName);
+          });
+        };
+
+        switch (cleanTab) {
+          case 'patients': existingItem = findFn(patients); break;
+          case 'doctors': existingItem = findFn(doctors); break;
+          case 'appointments': existingItem = findFn(appointments); break;
+          case 'staff': existingItem = findFn(staffList); break;
+          case 'billing': existingItem = findFn(bills); break;
+          case 'inventory': existingItem = findFn(inventory); break;
+          case 'enquiries': existingItem = findFn(enquiries); break;
+          case 'blogs': existingItem = findFn(blogPosts); break;
+          case 'departments': existingItem = findFn(departments); break;
+          case 'ipd-wards': existingItem = findFn(wards); break;
+        }
+
+        if (existingItem) {
+          const mergedPayload = { ...existingItem, ...item };
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mergedPayload)
+          });
+
+          if (res.ok) {
+            console.log(`Successfully edited record on backend:`, mergedPayload);
+            await handleRefreshAll();
+          } else {
+            console.error(`Failed to edit record via backend:`, await res.text());
+          }
+        } else {
+          console.warn(`Could not find existing item to edit matching: ${matchId}`);
+        }
+
+      } else if (cleanType === 'delete') {
+        const matchId = String(id || '').trim().toLowerCase();
+        let finalIdToDelete = id;
+
+        const findFn = (list: any[]) => {
+          return list.find(element => {
+            const elemId = String(element.id || '').trim().toLowerCase();
+            const elemName = String(element.name || element.patientName || element.doctorName || '').trim().toLowerCase();
+            return elemId === matchId || elemName === matchId || elemName.includes(matchId) || matchId.includes(elemName);
+          });
+        };
+
+        let foundItem: any = null;
+        switch (cleanTab) {
+          case 'patients': foundItem = findFn(patients); break;
+          case 'doctors': foundItem = findFn(doctors); break;
+          case 'appointments': foundItem = findFn(appointments); break;
+          case 'staff': foundItem = findFn(staffList); break;
+          case 'billing': foundItem = findFn(bills); break;
+          case 'inventory': foundItem = findFn(inventory); break;
+          case 'enquiries': foundItem = findFn(enquiries); break;
+          case 'blogs': foundItem = findFn(blogPosts); break;
+          case 'departments': foundItem = findFn(departments); break;
+          case 'ipd-wards': foundItem = findFn(wards); break;
+        }
+
+        if (foundItem) {
+          finalIdToDelete = foundItem.id;
+        }
+
+        if (finalIdToDelete) {
+          const res = await fetch(`${endpoint}/${finalIdToDelete}`, {
+            method: 'DELETE'
+          });
+
+          if (res.ok) {
+            console.log(`Successfully deleted record via backend with ID: ${finalIdToDelete}`);
+            await handleRefreshAll();
+          } else {
+            console.error(`Failed to delete record via backend:`, await res.text());
+          }
+        } else {
+          console.warn(`Could not find record to delete matching: ${matchId}`);
+        }
+      }
+    } catch (e) {
+      console.error("Error syncing dynamic chatbot action to SQLite DB:", e);
+    }
+  };
+
   // Switch rendered view dynamically to match user clicks
   const renderActiveView = () => {
     const isStaffReadOnly = loggedInUser?.role === 'staff';
@@ -1252,12 +1462,12 @@ export default function App() {
     const getFilteredAppointments = () => {
       if (isDoctor && doctorName) {
         return appointments.filter(
-          (a) => a.doctorName?.trim().toLowerCase() === doctorName.trim().toLowerCase()
+          (a) => a.doctorName?.trim().toLowerCase() === (doctorName || '').trim().toLowerCase()
         );
       }
       if (isPatient && patientName) {
         return appointments.filter(
-          (a) => a.patientName?.trim().toLowerCase() === patientName.trim().toLowerCase()
+          (a) => a.patientName?.trim().toLowerCase() === (patientName || '').trim().toLowerCase()
         );
       }
       return appointments;
@@ -1266,11 +1476,17 @@ export default function App() {
     const getFilteredPatientsAndBills = () => {
       if (isDoctor && doctorName) {
         const docAppts = appointments.filter(
-          (a) => a.doctorName?.trim().toLowerCase() === doctorName.trim().toLowerCase()
+          (a) => a.doctorName?.trim().toLowerCase() === (doctorName || '').trim().toLowerCase()
         );
-        const patientNames = new Set(docAppts.map((a) => a.patientName?.trim().toLowerCase()));
-        const filteredPatients = patients.filter((p) => patientNames.has(p.name?.trim().toLowerCase()));
-        const filteredBills = bills.filter((b) => patientNames.has(b.patientName?.trim().toLowerCase()));
+        const patientNames = new Set(docAppts.map((a) => a.patientName?.trim().toLowerCase()).filter(Boolean));
+        const filteredPatients = patients.filter((p) => {
+          const nameLower = p.name?.trim().toLowerCase();
+          return nameLower ? patientNames.has(nameLower) : false;
+        });
+        const filteredBills = bills.filter((b) => {
+          const nameLower = b.patientName?.trim().toLowerCase();
+          return nameLower ? patientNames.has(nameLower) : false;
+        });
         return { filteredPatients, filteredBills };
       }
       if (isPatient && patientName) {
@@ -1280,7 +1496,7 @@ export default function App() {
         );
         // Billing view only shows their own bills
         const filteredBills = bills.filter(
-          (b) => b.patientName?.trim().toLowerCase() === patientName.trim().toLowerCase()
+          (b) => b.patientName?.trim().toLowerCase() === (patientName || '').trim().toLowerCase()
         );
         return { filteredPatients, filteredBills };
       }
@@ -1297,7 +1513,10 @@ export default function App() {
       case 'ai-assistant':
         return (
           <AIAssistantView
-            onNavigate={(target) => setActiveView(target as any)}
+            onNavigate={handleNavigateWithPayload}
+            onExecuteAction={handleExecuteAction}
+            initialMessage={initialAiMessage}
+            onClearInitialMessage={() => setInitialAiMessage(null)}
             contextData={{
               activeTab: activeView,
               userRole: loggedInUser?.role || 'admin',
@@ -1381,7 +1600,8 @@ export default function App() {
             backendApiEndpoint={`/api/ai-assistant/${category}/chat`}
             restrictFileTypes={true}
             onBack={() => setActiveView(category as any)}
-            onNavigate={(target) => setActiveView(target as any)}
+            onNavigate={handleNavigateWithPayload}
+            onExecuteAction={handleExecuteAction}
             contextData={{
               activeTab: category,
               userRole: loggedInUser?.role || 'admin',

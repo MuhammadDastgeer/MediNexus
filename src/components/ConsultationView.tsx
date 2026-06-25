@@ -196,9 +196,9 @@ export default function ConsultationView({
 
     // Search filter
     const matchSearch =
-      a.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.specialization.toLowerCase().includes(searchQuery.toLowerCase());
+      (a.patientName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.doctorName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.specialization || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchDept = selectedDept === 'All Departments' || a.specialization === selectedDept;
     const matchDoc = selectedDoc === 'All Doctors' || a.doctorName === selectedDoc;

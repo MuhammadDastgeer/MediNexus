@@ -63,8 +63,8 @@ export default function DashboardView({
     const todayYYYYMMDD = getTodayDateString();
     const todayLocale = getLocalDateLocale();
     
-    // Check if it matches today's date, or our fallback/demo date '2026-06-15'
-    if (clean === todayYYYYMMDD || clean === todayLocale || clean === '2026-06-15') {
+    // Check if it matches today's date
+    if (clean === todayYYYYMMDD || clean === todayLocale) {
       return true;
     }
 
@@ -222,7 +222,7 @@ export default function DashboardView({
 
     // 1. Appointments
     (appointments || []).forEach(a => {
-      if (isPatient && patientName && a.patientName?.trim().toLowerCase() !== patientName.trim().toLowerCase()) {
+      if (isPatient && patientName && a.patientName?.trim().toLowerCase() !== (patientName || '').trim().toLowerCase()) {
         return;
       }
       list.push({
@@ -237,7 +237,7 @@ export default function DashboardView({
 
     // 2. Patients
     (patients || []).forEach(p => {
-      if (isPatient && patientName && p.name?.trim().toLowerCase() !== patientName.trim().toLowerCase()) {
+      if (isPatient && patientName && p.name?.trim().toLowerCase() !== (patientName || '').trim().toLowerCase()) {
         return;
       }
       list.push({
@@ -252,7 +252,7 @@ export default function DashboardView({
 
     // 3. Bills
     (bills || []).forEach(b => {
-      if (isPatient && patientName && b.patientName?.trim().toLowerCase() !== patientName.trim().toLowerCase()) {
+      if (isPatient && patientName && b.patientName?.trim().toLowerCase() !== (patientName || '').trim().toLowerCase()) {
         return;
       }
       list.push({
@@ -339,7 +339,7 @@ export default function DashboardView({
     } else {
       // Patients get their own specific enquiries / tickets if any
       (enquiries || []).forEach(enq => {
-        if (patientName && enq.name?.trim().toLowerCase() === patientName.trim().toLowerCase()) {
+        if (patientName && enq.name?.trim().toLowerCase() === (patientName || '').trim().toLowerCase()) {
           list.push({
             id: `enq-${enq.id}`,
             title: `Your Helpdesk Inquiry: "${enq.query || 'Status updated'}" - ${enq.status || 'Received'}`,
@@ -421,15 +421,15 @@ export default function DashboardView({
   // Render a responsive custom SVG path for Monthly Trends line.
   // It is styled with green stroke and animated dot connectors. If there are values we can bend the line!
   // If the values are all 0, it renders flat at baseline as in image.
-  const octVal = appointments.filter(a => a.date.includes('-10-') || a.time.includes('Oct')).length;
-  const novVal = appointments.filter(a => a.date.includes('-11-') || a.time.includes('Nov')).length;
-  const decVal = appointments.filter(a => a.date.includes('-12-') || a.time.includes('Dec')).length;
-  const janVal = appointments.filter(a => a.date.includes('-01-') || a.time.includes('Jan')).length;
-  const febVal = appointments.filter(a => a.date.includes('-02-') || a.time.includes('Feb')).length;
-  const marVal = appointments.filter(a => a.date.includes('-03-') || a.time.includes('Mar')).length;
-  const aprVal = appointments.filter(a => a.date.includes('-04-') || a.time.includes('Apr')).length;
-  const mayVal = appointments.filter(a => a.date.includes('-05-') || a.time.includes('May')).length;
-  const junVal = appointments.filter(a => a.date.includes('-06-') || a.time.includes('Jun')).length;
+  const octVal = appointments.filter(a => (a.date && a.date.includes('-10-')) || (a.time && a.time.includes('Oct'))).length;
+  const novVal = appointments.filter(a => (a.date && a.date.includes('-11-')) || (a.time && a.time.includes('Nov'))).length;
+  const decVal = appointments.filter(a => (a.date && a.date.includes('-12-')) || (a.time && a.time.includes('Dec'))).length;
+  const janVal = appointments.filter(a => (a.date && a.date.includes('-01-')) || (a.time && a.time.includes('Jan'))).length;
+  const febVal = appointments.filter(a => (a.date && a.date.includes('-02-')) || (a.time && a.time.includes('Feb'))).length;
+  const marVal = appointments.filter(a => (a.date && a.date.includes('-03-')) || (a.time && a.time.includes('Mar'))).length;
+  const aprVal = appointments.filter(a => (a.date && a.date.includes('-04-')) || (a.time && a.time.includes('Apr'))).length;
+  const mayVal = appointments.filter(a => (a.date && a.date.includes('-05-')) || (a.time && a.time.includes('May'))).length;
+  const junVal = appointments.filter(a => (a.date && a.date.includes('-06-')) || (a.time && a.time.includes('Jun'))).length;
 
   const monthValues = [octVal, novVal, decVal, janVal, febVal, marVal, aprVal, mayVal, junVal];
   const totalActivityValues = monthValues.reduce((sum, v) => sum + v, 0);

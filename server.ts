@@ -338,6 +338,19 @@ const prepopulate = () => {
 
   // Prep Appointments
   const apptsCount = db.prepare('SELECT COUNT(*) as count FROM appointments').get() as { count: number };
+  
+  const todayDate = new Date();
+  const formatYMD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const todayStr = formatYMD(todayDate);
+  const threeDaysAgoDate = new Date(todayDate);
+  threeDaysAgoDate.setDate(todayDate.getDate() - 3);
+  const threeDaysAgoStr = formatYMD(threeDaysAgoDate);
+
   if (apptsCount.count === 0) {
     const insertAppt = db.prepare(`
       INSERT INTO appointments (
@@ -347,25 +360,34 @@ const prepopulate = () => {
     `);
 
     insertAppt.run(
-      'apt-201', 'M. Ramzan', 'Dr. Anil Sharma', 'Cardiology', '2026-06-15', '10:30 AM', 'Confirmed', 'Follow-up', 'Cardiology',
+      'apt-201', 'M. Ramzan', 'Dr. Anil Sharma', 'Cardiology', todayStr, '10:30 AM', 'Confirmed', 'Follow-up', 'Cardiology',
       'ramzan@gmail.com', 'pass123', '+92 300 1234567', '+92 300 1234567', 'Male', 45
     );
     insertAppt.run(
-      'apt-202', 'Kiran Shah', 'Dr. Priya Patel', 'Pediatrics', '2026-06-15', '11:45 AM', 'Scheduled', 'Regular', 'Pediatrics',
+      'apt-202', 'Kiran Shah', 'Dr. Priya Patel', 'Pediatrics', todayStr, '11:45 AM', 'Scheduled', 'Regular', 'Pediatrics',
       'kiran@gmail.com', 'pass123', '+92 321 9876543', '+92 321 9876543', 'Female', 28
     );
     insertAppt.run(
-      'apt-203', 'Arshad Khan', 'Dr. Sameer Khan', 'Orthopedics', '2026-06-15', '02:15 PM', 'Completed', 'Follow-up', 'Orthopedics',
+      'apt-203', 'Arshad Khan', 'Dr. Sameer Khan', 'Orthopedics', todayStr, '02:15 PM', 'Completed', 'Follow-up', 'Orthopedics',
       'arshad@gmail.com', 'pass123', '+92 345 1122334', '+92 345 1122334', 'Male', 35
     );
     insertAppt.run(
-      'apt-204', 'Saira Banu', 'Dr. Rohan Jha', 'Dermatology', '2026-06-15', '04:00 PM', 'Cancelled', 'Regular', 'Dermatology',
+      'apt-204', 'Saira Banu', 'Dr. Rohan Jha', 'Dermatology', todayStr, '04:00 PM', 'Cancelled', 'Regular', 'Dermatology',
       'saira@gmail.com', 'pass123', '+92 312 4455667', '+92 312 4455667', 'Female', 52
     );
     insertAppt.run(
-      'apt-205', 'M. Ramzan', 'Dr. Anil Sharma', 'Cardiology', '2026-06-12', '09:00 AM', 'Completed', 'Regular', 'Cardiology',
+      'apt-205', 'M. Ramzan', 'Dr. Anil Sharma', 'Cardiology', threeDaysAgoStr, '09:00 AM', 'Completed', 'Regular', 'Cardiology',
       'ramzan@gmail.com', 'pass123', '+92 300 1234567', '+92 300 1234567', 'Male', 45
     );
+  } else {
+    // If table already exists, update these seeded records to be relative to today's date so data is updated daily
+    try {
+      db.prepare("UPDATE appointments SET date = ? WHERE id IN ('apt-201', 'apt-202', 'apt-203', 'apt-204')").run(todayStr);
+      db.prepare("UPDATE appointments SET date = ? WHERE id = 'apt-205'").run(threeDaysAgoStr);
+      console.log(`Successfully synced seeded appointment dates to current date: ${todayStr}`);
+    } catch (e) {
+      console.warn("Failed to automatically update existing seeded appointment dates:", e);
+    }
   }
 
   // Prep Departments
