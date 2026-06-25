@@ -104,7 +104,7 @@ interface Chip {
   prompt: string;
 }
 
-const getChipsForTab = (tab: string): Chip[] => {
+const getChipsForTab = (tab: string, userRole?: string): Chip[] => {
   const normalized = tab ? tab.toLowerCase() : '';
 
   if (normalized === 'staff' || normalized === 'staff-ai') {
@@ -267,7 +267,48 @@ const getChipsForTab = (tab: string): Chip[] => {
     ];
   }
 
-  // Fallback for dashboard, general, or others (exactly 15 prompt chips)
+  // Fallback for dashboard, general, or others based on user role
+  if (userRole === 'patient') {
+    return [
+      { label: 'My Appointments Schedule', icon: '📅', prompt: 'Show me my current scheduled appointments and times.' },
+      { label: 'My Bills & Payments', icon: '💳', prompt: 'Summarize my personal outstanding bills and recent payments.' },
+      { label: 'My Registered Profile', icon: '👤', prompt: 'Show my active patient registration file and diagnostic history.' },
+      { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
+      { label: 'Consult Specialty Doctor', icon: '🩺', prompt: 'Explain how I can consult an active on-duty specialist.' },
+      { label: 'All Active Doctors', icon: '👨‍⚕️', prompt: 'Who are the doctors currently available on duty and what are their specializations?' },
+      { label: 'Emergency Protocol Trait', icon: '🚨', prompt: 'What is the hospital\'s priority emergency dispatch protocol for clinical trauma?' }
+    ];
+  }
+
+  if (userRole === 'doctor') {
+    return [
+      { label: 'My Assigned Appointments', icon: '📅', prompt: 'Show appointments scheduled with me today.' },
+      { label: 'My Patient Register', icon: '🩺', prompt: 'Provide a list of patients scheduled for clinical sessions under my care.' },
+      { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
+      { label: 'Consultation Notes', icon: '📝', prompt: 'What are the standard guidelines for logging a clinical prescription?' },
+      { label: 'Room Occupancy Check', icon: '🛌', prompt: 'What is the overall occupancy level of our wards and private rooms?' },
+      { label: 'Emergency Roster', icon: '⏰', prompt: 'Check my upcoming patient appointment charts.' },
+      { label: 'Emergency Protocol Trait', icon: '🚨', prompt: 'What is the hospital\'s priority emergency dispatch protocol for clinical trauma?' }
+    ];
+  }
+
+  if (userRole === 'staff') {
+    return [
+      { label: 'Clinic Appointments', icon: '🗂️', prompt: 'Analyze pending hospital appointments in our dashboard context.' },
+      { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
+      { label: 'Billing Standing', icon: '📊', prompt: 'Review our total pending clinical bills versus collected amounts.' },
+      { label: 'Pharmacy Inventory', icon: '🧱', prompt: 'Generate a summary list of medication inventory items with low-stock count.' },
+      { label: 'All Active Doctors', icon: '👨‍⚕️', prompt: 'Who are the doctors currently available on duty and what are their specializations?' },
+      { label: 'Patient Condition Trends', icon: '🩺', prompt: 'Give me a breakdown of active patient registers and high-risk case reports.' },
+      { label: 'Room Occupancy Check', icon: '🛌', prompt: 'What is the overall occupancy level of our wards and private rooms?' },
+      { label: 'Nurse Shifts & Roster', icon: '⏰', prompt: 'Provide current nurse duty shift allocations and emergency coverage records.' },
+      { label: 'Drug Refill List', icon: '📦', prompt: 'Show pharmaceutical supplier contacts and our lowest stock antibiotics list.' },
+      { label: 'Emergency Protocol Trait', icon: '🚨', prompt: 'What is the hospital\'s priority emergency dispatch protocol for clinical trauma?' },
+      { label: 'Insurance Claim Setup', icon: '💳', prompt: 'What insurance providers do we accept and how is policy billing calculated?' },
+      { label: 'Discharge Daily List', icon: '📋', prompt: 'Show patients scheduled for discharge today and check if bills are settled.' }
+    ];
+  }
+
   return [
     { label: 'Clinic Appointments', icon: '🗂️', prompt: 'Analyze pending hospital appointments in our dashboard context.' },
     { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
@@ -392,7 +433,7 @@ export interface TabTool {
   icon: string;
 }
 
-export const getToolsForTab = (tab: string): TabTool[] => {
+export const getToolsForTab = (tab: string, userRole?: string): TabTool[] => {
   const normalized = tab ? tab.toLowerCase().trim() : '';
 
   if (normalized === 'staff' || normalized === 'staff-ai') {
@@ -527,6 +568,38 @@ export const getToolsForTab = (tab: string): TabTool[] => {
       { label: 'Edit Ticket Urgency', type: 'edit', icon: '✏️', prompt: 'Update/Edit support ticket: Change the priority level of a ticket from low to high priority.' },
       { label: 'Close/Delete Ticket', type: 'delete', icon: '🗑️', prompt: 'Delete/Close support ticket: Safely dismiss or delete closed technical issues.' },
       { label: 'View Active Issues Log', type: 'view', icon: '📋', prompt: 'Show active technical issue tickets currently assigned to support engineers.' }
+    ];
+  }
+
+  if (normalized === 'ai-assistant' || normalized === 'general' || normalized === 'general-ai' || !normalized) {
+    if (userRole === 'patient') {
+      return [
+        { label: 'Book Appointment Slot', type: 'add', icon: '➕', prompt: 'Create/Add a new patient appointment: Book a doctor slot, patient name, date, time, and type of visit.' },
+        { label: 'Edit My Profile', type: 'edit', icon: '✏️', prompt: 'Update/Edit patient record: How do I update a patient\'s clinical profile, email address, or emergency contacts?' },
+        { label: 'View My Bills', type: 'view', icon: '📋', prompt: 'Show a list of my outstanding or paid bills.' }
+      ];
+    }
+    if (userRole === 'doctor') {
+      return [
+        { label: 'Update Doctor Details', type: 'edit', icon: '✏️', prompt: 'Update/Edit doctor profile details such as room code, OPD schedule times, contact details, or active fee.' },
+        { label: 'Log Clinical Consultation', type: 'add', icon: '➕', prompt: 'Create/Add consultation report: Log patient consultation details, diagnostic notes, and medication prescription.' },
+        { label: 'View My Schedule', type: 'view', icon: '📋', prompt: 'Show me a list of my patient appointments scheduled for today.' }
+      ];
+    }
+    if (userRole === 'staff') {
+      return [
+        { label: 'Register New Patient', type: 'add', icon: '➕', prompt: 'Create/Add a new patient registration: Register details including age, gender, contact number, blood group, and medical history.' },
+        { label: 'Book Appointment Slot', type: 'add', icon: '➕', prompt: 'Create/Add a new patient appointment: Book a doctor slot, patient name, date, time, and type of visit.' },
+        { label: 'Generate New Invoice', type: 'add', icon: '➕', prompt: 'Create/Add a new hospital billing invoice: Log custom patient fee, items list, discount, tax, and status.' },
+        { label: 'View Active Staff', type: 'view', icon: '📋', prompt: 'Show the list of registered hospital staff members with their active status, role, and department.' }
+      ];
+    }
+    // Admin / Fallback
+    return [
+      { label: 'Book Appointment Slot', type: 'add', icon: '➕', prompt: 'Create/Add a new patient appointment: Book a doctor slot, patient name, date, time, and type of visit.' },
+      { label: 'Register New Patient', type: 'add', icon: '➕', prompt: 'Create/Add a new patient registration: Register details including age, gender, contact number, blood group, and medical history.' },
+      { label: 'Generate New Invoice', type: 'add', icon: '➕', prompt: 'Create/Add a new hospital billing invoice: Log custom patient fee, items list, discount, tax, and status.' },
+      { label: 'Configure Hospital Settings', type: 'edit', icon: '✏️', prompt: 'Update/Edit hospital info: Change the institute address, emergency hotline, or default fee currency.' }
     ];
   }
 
@@ -1522,7 +1595,7 @@ Please request support or review active API parameter credentials.`,
               </div>
               <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 touch-pan-x scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent" id="quick-chips-scroll-grid">
                 {(() => {
-                  const defaultChips = getChipsForTab(contextData.activeTab);
+                  const defaultChips = getChipsForTab(contextData.activeTab, contextData.userRole);
                   let displayChips = defaultChips;
                   if (input.trim()) {
                     const cleanSearch = input.toLowerCase().trim();
@@ -1832,7 +1905,7 @@ Please request support or review active API parameter credentials.`,
                         </div>
                         <div className="max-h-[220px] overflow-y-auto pr-0.5" id="tab-tools-items-list">
                           {(() => {
-                            const tools = getToolsForTab(contextData.activeTab);
+                            const tools = getToolsForTab(contextData.activeTab, contextData.userRole);
                             if (tools.length === 0) {
                               return (
                                 <div className="px-4 py-3 text-center text-xs text-slate-400">

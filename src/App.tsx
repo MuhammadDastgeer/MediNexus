@@ -1523,6 +1523,7 @@ export default function App() {
               userName: loggedInUser?.data?.name || 'Hospital Administrator',
               data: {
                 appointmentsSummary: filteredAppts.slice(0, 10).map(a => ({
+                  id: a.id,
                   patient: a.patientName,
                   doctor: a.doctorName,
                   specialization: a.specialization,
@@ -1531,12 +1532,14 @@ export default function App() {
                   status: a.status
                 })),
                 patientsSummary: filteredPatients.slice(0, 10).map(p => ({
+                  id: p.id,
                   name: p.name,
                   age: p.age,
                   gender: p.gender,
                   status: p.status
                 })),
                 billsSummary: filteredBills.slice(0, 10).map(b => ({
+                  id: b.id,
                   patient: b.patientName,
                   amount: b.amount,
                   pendingAmount: b.pendingAmount,
@@ -1544,6 +1547,7 @@ export default function App() {
                   status: b.status
                 })),
                 inventorySummary: inventory.slice(0, 10).map(i => ({
+                  id: i.id,
                   name: i.name,
                   category: i.category,
                   stock: i.stock,
@@ -1552,6 +1556,7 @@ export default function App() {
                   sellingPrice: i.sellingPrice
                 })),
                 doctorsSummary: filteredDoctors.slice(0, 10).map(d => ({
+                  id: d.id,
                   name: d.name,
                   specialization: d.specialization,
                   status: d.status
@@ -1602,12 +1607,13 @@ export default function App() {
             onBack={() => setActiveView(category as any)}
             onNavigate={handleNavigateWithPayload}
             onExecuteAction={handleExecuteAction}
-            contextData={{
+             contextData={{
               activeTab: category,
               userRole: loggedInUser?.role || 'admin',
               userName: loggedInUser?.data?.name || 'Hospital Administrator',
               data: {
                 appointmentsSummary: filteredAppts.slice(0, 10).map(a => ({
+                  id: a.id,
                   patient: a.patientName,
                   doctor: a.doctorName,
                   specialization: a.specialization,
@@ -1616,12 +1622,14 @@ export default function App() {
                   status: a.status
                 })),
                 patientsSummary: filteredPatients.slice(0, 10).map(p => ({
+                  id: p.id,
                   name: p.name,
                   age: p.age,
                   gender: p.gender,
                   status: p.status
                 })),
                 billsSummary: filteredBills.slice(0, 10).map(b => ({
+                  id: b.id,
                   patient: b.patientName,
                   amount: b.amount,
                   pendingAmount: b.pendingAmount,
@@ -1629,6 +1637,7 @@ export default function App() {
                   status: b.status
                 })),
                 inventorySummary: inventory.slice(0, 10).map(i => ({
+                  id: i.id,
                   name: i.name,
                   category: i.category,
                   stock: i.stock,
@@ -1637,6 +1646,7 @@ export default function App() {
                   sellingPrice: i.sellingPrice
                 })),
                 doctorsSummary: filteredDoctors.slice(0, 10).map(d => ({
+                  id: d.id,
                   name: d.name,
                   specialization: d.specialization,
                   status: d.status

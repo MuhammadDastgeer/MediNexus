@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
+import db from '../db.js';
 
 const router = Router();
 
@@ -391,8 +392,8 @@ CRITICAL MANDATORY INSTRUCTIONS & SCOPE RESTRICTIONS:
 };
 
 function detectAndParseAction(text: string, userQuery: string, currentTab: string): any {
-  // 1. Try to find an explicit [ACTION: { ... }] JSON tag in the text
-  const actionMatch = text.match(/\[ACTION:\s*({.*?})\s*\]/s);
+  // 1. Try to find an explicit [ACTION: { ... }] JSON tag (case-insensitive, optional brackets)
+  const actionMatch = text.match(/\[?ACTION:\s*({.*?})\s*\]?/is);
   if (actionMatch) {
     try {
       return JSON.parse(actionMatch[1]);
@@ -401,7 +402,22 @@ function detectAndParseAction(text: string, userQuery: string, currentTab: strin
     }
   }
 
-  // 2. Heuristic check to see if we should auto-generate an action from the conversation context.
+  // 2. Scan for any loose JSON containing "type" and "tab" in the text
+  const jsonMatches = text.match(/{[^{}]*"type"\s*:[^{}]*"tab"\s*:[^{}]*}/gs) || text.match(/{[^{}]*"tab"\s*:[^{}]*"type"\s*:[^{}]*}/gs);
+  if (jsonMatches) {
+    for (const jsonStr of jsonMatches) {
+      try {
+        const parsed = JSON.parse(jsonStr);
+        if (parsed && parsed.type && parsed.tab) {
+          return parsed;
+        }
+      } catch (e) {
+        // Ignore
+      }
+    }
+  }
+
+  // 3. Heuristic check to see if we should auto-generate an action from the conversation context.
   const lowerText = text.toLowerCase();
   const lowerQuery = userQuery.toLowerCase();
   const combined = lowerQuery + " " + lowerText;
@@ -410,7 +426,7 @@ function detectAndParseAction(text: string, userQuery: string, currentTab: strin
   let type: 'add' | 'edit' | 'delete' | null = null;
   if (combined.match(/(?:delete|remove|cancel|kharij|delet|hatao|void|discharge)/i)) {
     type = 'delete';
-  } else if (combined.match(/(?:edit|update|change|tabdeel|set |badlo|modify)/i)) {
+  } else if (combined.match(/(?:edit|update|change|tabdeel|set |badlo|modify|fees|fee|price)/i)) {
     type = 'edit';
   } else if (combined.match(/(?:add|create|register|nayi|naya|shamil|insert|admit|add ho)/i)) {
     type = 'add';
@@ -498,15 +514,25 @@ function detectAndParseAction(text: string, userQuery: string, currentTab: strin
     item.phone = phoneMatch[1];
   }
 
-  // Find fee / amount / price / stock
+  // Find fee / amount / price / stock / stand-alone digit
+  let numVal: number | null = null;
   const numMatches = combined.match(/(?:fee|price|amount|cost|stock|qty|paisa|charge|rs|fee:)\s*(?:is|:|=)?\s*(\d+)/i);
   if (numMatches) {
-    const val = Number(numMatches[1]);
-    item.consultationFee = val;
-    item.amount = val;
-    item.price = val;
-    item.stock = val;
-    item.fee = val;
+    numVal = Number(numMatches[1]);
+  } else {
+    // Standalone 3-5 digit number in query (e.g., "600")
+    const standaloneNum = combined.match(/\b(\d{3,5})\b/);
+    if (standaloneNum) {
+      numVal = Number(standaloneNum[1]);
+    }
+  }
+
+  if (numVal !== null) {
+    item.consultationFee = numVal;
+    item.amount = numVal;
+    item.price = numVal;
+    item.stock = numVal;
+    item.fee = numVal;
   }
 
   // Find specialization / department
@@ -525,9 +551,38 @@ function detectAndParseAction(text: string, userQuery: string, currentTab: strin
     item.patientGender = 'Male';
   }
 
-  // ID detection
+  // ID detection & DB matching fallback for edits / deletes
+  let matchedId = '';
+  if (nameValue && (type === 'edit' || type === 'delete')) {
+    try {
+      if (tab === 'patients') {
+        const row: any = db.prepare("SELECT id FROM patients WHERE name LIKE ? COLLATE NOCASE LIMIT 1").get('%' + nameValue + '%');
+        if (row) matchedId = row.id;
+      } else if (tab === 'doctors') {
+        const row: any = db.prepare("SELECT id FROM doctors WHERE name LIKE ? COLLATE NOCASE LIMIT 1").get('%' + nameValue + '%');
+        if (row) matchedId = row.id;
+      } else if (tab === 'appointments') {
+        const row: any = db.prepare("SELECT id FROM appointments WHERE (patientName LIKE ? OR doctorName LIKE ?) COLLATE NOCASE LIMIT 1").get('%' + nameValue + '%', '%' + nameValue + '%');
+        if (row) matchedId = row.id;
+      } else if (tab === 'staff') {
+        const row: any = db.prepare("SELECT id FROM staff WHERE name LIKE ? COLLATE NOCASE LIMIT 1").get('%' + nameValue + '%');
+        if (row) matchedId = row.id;
+      } else if (tab === 'billing') {
+        const row: any = db.prepare("SELECT id FROM bills WHERE patientName LIKE ? COLLATE NOCASE LIMIT 1").get('%' + nameValue + '%');
+        if (row) matchedId = row.id;
+      } else if (tab === 'inventory') {
+        const row: any = db.prepare("SELECT id FROM inventory WHERE name LIKE ? COLLATE NOCASE LIMIT 1").get('%' + nameValue + '%');
+        if (row) matchedId = row.id;
+      }
+    } catch (dbErr) {
+      console.warn("Offline SQL ID lookup failed:", dbErr);
+    }
+  }
+
   let idMatch = combined.match(/(?:id|code|patientId|docId)\s*(?:is|:|=)?\s*([a-zA-Z0-9-]+)/i);
-  if (idMatch) {
+  if (matchedId) {
+    item.id = matchedId;
+  } else if (idMatch) {
     item.id = idMatch[1].trim();
   } else {
     item.id = nameValue ? nameValue.toLowerCase().replace(/\s+/g, '-') : 'ID-' + Math.floor(1000 + Math.random() * 9000);
@@ -565,6 +620,72 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
   // TOOL DETECTION
   const toolMatch = lastMessageText.match(/\[Contextual Tool selected:\s*(.*?)\s*\(Operation:\s*(.*?)\)\]/i);
   const guideMatch = lastMessageText.match(/Tool Instruction Guide:\s*(.*?)(?:\n\n|$)/is);
+
+  // ROLE-BASED CONSOLE TAB RESTRICTION SECURITY CHECKS
+  const userRole = (context.userRole || '').toLowerCase().trim();
+  const activeTabName = (context.activeTab || '').toLowerCase().trim();
+  
+  const isOperationOrSystemQuery = lastMessageText.toLowerCase().includes('add') || 
+                                   lastMessageText.toLowerCase().includes('create') || 
+                                   lastMessageText.toLowerCase().includes('edit') || 
+                                   lastMessageText.toLowerCase().includes('update') || 
+                                   lastMessageText.toLowerCase().includes('delete') || 
+                                   lastMessageText.toLowerCase().includes('remove') || 
+                                   lastMessageText.toLowerCase().includes('list') || 
+                                   lastMessageText.toLowerCase().includes('show') || 
+                                   lastMessageText.toLowerCase().includes('detail') || 
+                                   lastMessageText.toLowerCase().includes('manage') || 
+                                   lastMessageText.toLowerCase().includes('summary') || 
+                                   lastMessageText.toLowerCase().includes('record') || 
+                                   toolMatch !== null;
+
+  // 1. Patient Console Security Restrictions
+  if (userRole === 'patient') {
+    const forbiddenKeywords = ['staff', 'inventory', 'stock', 'replenishment', 'low stock', 'procurement', 'ward', 'bed allotment', 'bed occupancy', 'ipd', 'reports', 'revenue', 'financial analytics', 'ledger', 'setting', 'configuration', 'config'];
+    const matchedForbidden = forbiddenKeywords.find(kw => lastMessageText.toLowerCase().includes(kw));
+    // BUT we must allow general clinical drug or allergy questions if they are medical-only symptoms (not management lists)
+    const isGeneralClinicalDrugAdvice = lastMessageText.toLowerCase().includes('medicine') && (lastMessageText.toLowerCase().includes('fever') || lastMessageText.toLowerCase().includes('cough') || lastMessageText.toLowerCase().includes('allergy') || lastMessageText.toLowerCase().includes('guidance') || lastMessageText.toLowerCase().includes('pain') || lastMessageText.toLowerCase().includes('drug advice'));
+    
+    if (matchedForbidden && isOperationOrSystemQuery && !isGeneralClinicalDrugAdvice) {
+      const responseText = `This operation or data access is restricted to the Staff/Admin console and is not accessible from the Patient Console.
+      
+(Yeh operation ya malumaat Patient console ke ijazat me nahi hai. Barah-e-maherbani apni appointments aur billings tak mehdood rahein. Baqi aap koi bhi medical question, voice ya report upload ke mutalliq pooch sakte hain.)`;
+      return res.json({
+        reply: responseText,
+        attempts: [{ provider: 'Patient Console Permission Guardrails', status: 'success', modelUsed: 'Static-Filter-Rules' }]
+      });
+    }
+  }
+
+  // 2. Doctor Console Security Restrictions
+  if (userRole === 'doctor') {
+    const forbiddenKeywords = ['inventory', 'stock', 'replenishment', 'low stock', 'procurement', 'enquiries', 'ticket', 'tourism', 'reports', 'revenue', 'financial analytics', 'ledger', 'setting', 'configuration', 'config'];
+    const matchedForbidden = forbiddenKeywords.find(kw => lastMessageText.toLowerCase().includes(kw));
+    if (matchedForbidden && isOperationOrSystemQuery) {
+      const responseText = `This operation or information is restricted to Admin/Staff and is not accessible from the Doctor Console.
+      
+(Yeh operation ya malumaat Doctor console ke ijazat me nahi hai. Barah-e-maherbani apni clinical consultations aur scheduled appointments tak mehdood rahein. Baqi aap koi bhi medical question, voice ya report upload ke mutalliq pooch sakte hain.)`;
+      return res.json({
+        reply: responseText,
+        attempts: [{ provider: 'Doctor Console Permission Guardrails', status: 'success', modelUsed: 'Static-Filter-Rules' }]
+      });
+    }
+  }
+
+  // 3. Staff Console Security Restrictions
+  if (userRole === 'staff') {
+    const forbiddenKeywords = ['reports', 'revenue', 'financial analytics', 'ledger', 'setting', 'configuration', 'config'];
+    const matchedForbidden = forbiddenKeywords.find(kw => lastMessageText.toLowerCase().includes(kw));
+    if (matchedForbidden && isOperationOrSystemQuery) {
+      const responseText = `This operation or information is restricted to Administrators and is not accessible from the Staff Console.
+      
+(Yeh operation ya malumaat Staff console ke ijazat me nahi hai. Barah-e-maherbani operational features tak mehdood rahein. Baqi aap koi bhi medical question, voice ya report upload ke mutalliq pooch sakte hain.)`;
+      return res.json({
+        reply: responseText,
+        attempts: [{ provider: 'Staff Console Permission Guardrails', status: 'success', modelUsed: 'Static-Filter-Rules' }]
+      });
+    }
+  }
   
   let isToolWithNoDetails = false;
   let toolLabel = '';
@@ -596,7 +717,6 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
     }
   }
 
-  const activeTabName = (context.activeTab || '').toLowerCase().trim();
   const isTabSpecific = activeTabName && 
                         activeTabName !== 'general' && 
                         activeTabName !== 'general-ai' && 
@@ -943,8 +1063,11 @@ Once the API Key is supplied, Google Gemini will listen to your audio query and 
     }
   }
 
+  const parsedAction = detectAndParseAction(fallbackReply, lastMessageText, activeTabName);
+
   return res.json({
     reply: fallbackReply,
+    action: parsedAction || undefined,
     attempts
   });
 }
