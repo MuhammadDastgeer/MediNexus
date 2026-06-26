@@ -2,14 +2,15 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-let dbPath = 'hospital.db';
+let dbPath = path.join(process.cwd(), 'hospital.db');
 
 if (process.env.VERCEL) {
   const tmpPath = path.join('/tmp', 'hospital.db');
   if (!fs.existsSync(tmpPath)) {
     try {
-      if (fs.existsSync('hospital.db')) {
-        fs.copyFileSync('hospital.db', tmpPath);
+      const srcPath = path.join(process.cwd(), 'hospital.db');
+      if (fs.existsSync(srcPath)) {
+        fs.copyFileSync(srcPath, tmpPath);
         console.log('Database successfully copied to /tmp/hospital.db');
       }
     } catch (err) {
