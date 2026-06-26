@@ -15,13 +15,23 @@ const cleanKey = (key?: string) => {
 };
 
 // Retrieve key values at request time to ensure up-to-date environment parameters
-const getKeys = () => ({
-  gemini: cleanKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
-  openai: cleanKey(process.env.OPENAI_API_KEY),
-  anthropic: cleanKey(process.env.ANTHROPIC_API_KEY),
-  openrouter: cleanKey(process.env.OPENROUTER_API_KEY),
-  groq: cleanKey(process.env.GROQ_API_KEY),
-});
+const getKeys = () => {
+  const keys = {
+    gemini: cleanKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
+    openai: cleanKey(process.env.OPENAI_API_KEY),
+    anthropic: cleanKey(process.env.ANTHROPIC_API_KEY),
+    openrouter: cleanKey(process.env.OPENROUTER_API_KEY),
+    groq: cleanKey(process.env.GROQ_API_KEY),
+  };
+  console.log('[API KEYS DIAGNOSTIC] Loaded keys status:', {
+    gemini: keys.gemini ? `Loaded (len: ${keys.gemini.length})` : 'Missing',
+    openai: keys.openai ? `Loaded (len: ${keys.openai.length})` : 'Missing',
+    anthropic: keys.anthropic ? `Loaded (len: ${keys.anthropic.length})` : 'Missing',
+    openrouter: keys.openrouter ? `Loaded (len: ${keys.openrouter.length})` : 'Missing',
+    groq: keys.groq ? `Loaded (len: ${keys.groq.length})` : 'Missing',
+  });
+  return keys;
+};
 
 // Guardrail instructions that fulfill medical-only requirements and context-specificity
 const SYSTEM_INSTRUCTION = `You are a highly specialised clinical and medical hospital AI assistant. 
@@ -991,18 +1001,18 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
   let providerChain: string[] = [];
 
   if (selectedModel === 'gemini') {
-    providerChain = ['gemini', 'openai', 'claude', 'openrouter', 'groq'];
+    providerChain = ['gemini', 'openai', 'claude', 'groq', 'openrouter'];
   } else if (selectedModel === 'openai') {
-    providerChain = ['openai', 'gemini', 'claude', 'openrouter', 'groq'];
+    providerChain = ['openai', 'claude', 'gemini', 'groq', 'openrouter'];
   } else if (selectedModel === 'claude') {
-    providerChain = ['claude', 'gemini', 'openai', 'openrouter', 'groq'];
+    providerChain = ['claude', 'openai', 'gemini', 'groq', 'openrouter'];
   } else if (selectedModel === 'openrouter') {
-    providerChain = ['openrouter', 'gemini', 'openai', 'claude', 'groq'];
+    providerChain = ['openrouter', 'openai', 'claude', 'gemini', 'groq'];
   } else if (selectedModel === 'groq') {
-    providerChain = ['groq', 'gemini', 'openai', 'claude', 'openrouter'];
+    providerChain = ['groq', 'openai', 'claude', 'gemini', 'openrouter'];
   } else {
     // Default fallback chain (Auto)
-    providerChain = ['gemini', 'openai', 'claude', 'openrouter', 'groq'];
+    providerChain = ['openai', 'claude', 'gemini', 'groq', 'openrouter'];
   }
 
   // Iterate over provider sequence
