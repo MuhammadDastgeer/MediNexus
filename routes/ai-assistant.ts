@@ -1,16 +1,26 @@
 import { Router, Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
+import dotenv from 'dotenv';
 import db from '../db.js';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const router = Router();
 
+// Robust key-cleaning helper to strip accidental quotes and trim spacing
+const cleanKey = (key?: string) => {
+  if (!key) return '';
+  return key.replace(/^["']|["']$/g, '').trim();
+};
+
 // Retrieve key values at request time to ensure up-to-date environment parameters
 const getKeys = () => ({
-  gemini: process.env.GEMINI_API_KEY,
-  openai: process.env.OPENAI_API_KEY,
-  anthropic: process.env.ANTHROPIC_API_KEY,
-  openrouter: process.env.OPENROUTER_API_KEY,
-  groq: process.env.GROQ_API_KEY,
+  gemini: cleanKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
+  openai: cleanKey(process.env.OPENAI_API_KEY),
+  anthropic: cleanKey(process.env.ANTHROPIC_API_KEY),
+  openrouter: cleanKey(process.env.OPENROUTER_API_KEY),
+  groq: cleanKey(process.env.GROQ_API_KEY),
 });
 
 // Guardrail instructions that fulfill medical-only requirements and context-specificity
@@ -126,6 +136,7 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
         throw new Error('Empty response returned from Google Gemini.');
       }
     } catch (err: any) {
+      console.error("tryGemini Error details:", err);
       attempts.push({ provider: 'Google Gemini', status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
@@ -178,6 +189,7 @@ async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any
         throw new Error('Null content returned from OpenAI Chat API.');
       }
     } catch (err: any) {
+      console.error("tryOpenAI Error details:", err);
       attempts.push({ provider: 'OpenAI', status: 'failed', error: err.message });
     }
   } else {
@@ -235,6 +247,7 @@ async function tryAnthropic(keys: any, prompt: string, image: string, attempts: 
         throw new Error('Null response content returned from Anthropic API.');
       }
     } catch (err: any) {
+      console.error("tryAnthropic Error details:", err);
       attempts.push({ provider: 'Anthropic Claude', status: 'failed', error: err.message });
     }
   } else {
@@ -287,6 +300,7 @@ async function tryOpenRouter(keys: any, prompt: string, image: string, attempts:
         throw new Error('Null response content returned from OpenRouter API.');
       }
     } catch (err: any) {
+      console.error("tryOpenRouter Error details:", err);
       attempts.push({ provider: 'OpenRouter', status: 'failed', error: err.message });
     }
   } else {
@@ -330,6 +344,7 @@ async function tryGroq(keys: any, prompt: string, image: string, attempts: any[]
         throw new Error('Null response content returned from Groq API.');
       }
     } catch (err: any) {
+      console.error("tryGroq Error details:", err);
       attempts.push({ provider: 'Groq', status: 'failed', error: err.message });
     }
   } else {

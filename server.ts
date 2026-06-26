@@ -2,6 +2,10 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import Database from 'better-sqlite3';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 const PORT = 3000;
