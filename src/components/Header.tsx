@@ -108,6 +108,20 @@ export default function Header({
 
       {/* User Actions */}
       <div className="flex items-center gap-4" id="header-user-actions">
+        {/* Specialized Tab AI Assistant Button */}
+        {showAIButton && onNavigate && (
+          <button
+            onClick={() => onNavigate(`${activeView}-ai` as any)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-850 bg-teal-50 hover:bg-teal-100 border border-teal-200/60 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-103 active:scale-97"
+            title={`Ask Assistant about ${activeView}`}
+            id="header-tab-specialized-ai-btn"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-teal-600 animate-pulse" />
+            <span className="hidden sm:inline">{getAIButtonLabel(activeView)}</span>
+            <span className="sm:hidden">AI</span>
+          </button>
+        )}
+
         {/* Notification Bell */}
         <button className="w-9 h-9 flex items-center justify-center text-slate-500 hover:text-indigo-600 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/60 rounded-xl transition-all relative" id="bell-btn">
           <Bell size={18} />

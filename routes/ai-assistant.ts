@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { ChatOpenAI } from '@langchain/openai';
+import { ChatAnthropic } from '@langchain/anthropic';
 import dotenv from 'dotenv';
 import db from '../db.js';
 
@@ -171,52 +173,49 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
 async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.openai && keys.openai.trim() !== '') {
     try {
-      const openAiMessages: any[] = [
-        { role: 'system', content: systemInstruction }
-      ];
+      const model = new ChatOpenAI({
+        model: 'gpt-4o-mini',
+        apiKey: keys.openai,
+        temperature: 0.2,
+      });
 
       let contentPayload: any = prompt;
       if (image) {
-        contentPayload = [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: image } }
-        ];
+        const parsed = parseImageData(image);
+        if (parsed) {
+          contentPayload = [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${parsed.mimeType};base64,${parsed.base64Data}`
+              }
+            }
+          ];
+        }
       }
 
-      openAiMessages.push({ role: 'user', content: contentPayload });
+      const response = await model.invoke([
+        ["system", systemInstruction],
+        ["human", contentPayload]
+      ]);
 
-      const fetchRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${keys.openai}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: openAiMessages,
-          temperature: 0.2
-        })
-      });
+      if (response && response.content) {
+        const replyText = typeof response.content === 'string' 
+          ? response.content 
+          : JSON.stringify(response.content);
 
-      if (!fetchRes.ok) {
-        const errDetails = await fetchRes.text();
-        throw new Error(`OpenAI HTTP Error: ${fetchRes.status} - ${errDetails}`);
-      }
-
-      const resData = await fetchRes.json();
-      const reply = resData?.choices?.[0]?.message?.content;
-      if (reply) {
-        attempts.push({ provider: 'OpenAI', status: 'success', modelUsed: 'gpt-4o-mini' });
-        return reply;
+        attempts.push({ provider: 'OpenAI (LangChain)', status: 'success', modelUsed: 'gpt-4o-mini' });
+        return replyText;
       } else {
-        throw new Error('Null content returned from OpenAI Chat API.');
+        throw new Error('Empty response returned from OpenAI via LangChain.');
       }
     } catch (err: any) {
-      console.error("tryOpenAI Error details:", err);
-      attempts.push({ provider: 'OpenAI', status: 'failed', error: err.message });
+      console.error("tryOpenAI LangChain Error details:", err);
+      attempts.push({ provider: 'OpenAI (LangChain)', status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
-    attempts.push({ provider: 'OpenAI', status: 'skipped', error: 'API key is not configured' });
+    attempts.push({ provider: 'OpenAI (LangChain)', status: 'skipped', error: 'API key is not configured' });
   }
   return null;
 }
@@ -224,57 +223,49 @@ async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any
 async function tryAnthropic(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.anthropic && keys.anthropic.trim() !== '') {
     try {
-      let contentPayload: any[] = [{ type: 'text', text: prompt }];
-      
+      const model = new ChatAnthropic({
+        model: 'claude-3-5-sonnet-20241022',
+        apiKey: keys.anthropic,
+        temperature: 0.2,
+      });
+
+      let contentPayload: any = prompt;
       if (image) {
         const parsed = parseImageData(image);
         if (parsed) {
-          contentPayload.push({
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: parsed.mimeType,
-              data: parsed.base64Data
+          contentPayload = [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${parsed.mimeType};base64,${parsed.base64Data}`
+              }
             }
-          });
+          ];
         }
       }
 
-      const fetchRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': keys.anthropic,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
-          system: systemInstruction,
-          messages: [{ role: 'user', content: contentPayload }],
-          max_tokens: 1024,
-          temperature: 0.2
-        })
-      });
+      const response = await model.invoke([
+        ["system", systemInstruction],
+        ["human", contentPayload]
+      ]);
 
-      if (!fetchRes.ok) {
-        const errDetails = await fetchRes.text();
-        throw new Error(`Claude HTTP Error: ${fetchRes.status} - ${errDetails}`);
-      }
+      if (response && response.content) {
+        const replyText = typeof response.content === 'string' 
+          ? response.content 
+          : JSON.stringify(response.content);
 
-      const resData = await fetchRes.json();
-      const reply = resData?.content?.[0]?.text;
-      if (reply) {
-        attempts.push({ provider: 'Anthropic Claude', status: 'success', modelUsed: 'claude-3-5-sonnet' });
-        return reply;
+        attempts.push({ provider: 'Anthropic Claude (LangChain)', status: 'success', modelUsed: 'claude-3-5-sonnet' });
+        return replyText;
       } else {
-        throw new Error('Null response content returned from Anthropic API.');
+        throw new Error('Empty response returned from Anthropic Claude via LangChain.');
       }
     } catch (err: any) {
-      console.error("tryAnthropic Error details:", err);
-      attempts.push({ provider: 'Anthropic Claude', status: 'failed', error: err.message });
+      console.error("tryAnthropic LangChain Error details:", err);
+      attempts.push({ provider: 'Anthropic Claude (LangChain)', status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
-    attempts.push({ provider: 'Anthropic Claude', status: 'skipped', error: 'API key is not configured' });
+    attempts.push({ provider: 'Anthropic Claude (LangChain)', status: 'skipped', error: 'API key is not configured' });
   }
   return null;
 }
@@ -745,6 +736,140 @@ function checkRoleCapability(userRole: string, activeTabName: string, queryText:
   return { allowed: true };
 }
 
+function retrieveRelevantDocs(query: string, data: any): string {
+  if (!data || typeof data !== 'object') return '';
+
+  const matchedDocs: string[] = [];
+  const lowerQuery = query.toLowerCase().trim();
+
+  if (!lowerQuery || lowerQuery.length < 2) return '';
+
+  // 1. Search patients
+  if (Array.isArray(data.allPatients)) {
+    const matchedPatients = data.allPatients.filter((p: any) => 
+      (p.name && p.name.toLowerCase().includes(lowerQuery)) ||
+      (p.id && p.id.toLowerCase().includes(lowerQuery)) ||
+      (p.bloodGroup && p.bloodGroup.toLowerCase().includes(lowerQuery)) ||
+      (p.phone && p.phone.toLowerCase().includes(lowerQuery))
+    );
+    if (matchedPatients.length > 0) {
+      matchedDocs.push(`[Matched Patients in Records]:\n` + matchedPatients.map((p: any) => 
+        `- Patient Name: ${p.name}, ID: ${p.id}, Age: ${p.age}, Gender: ${p.gender}, Status: ${p.status}, Contact: ${p.phone || 'N/A'}, Blood Group: ${p.bloodGroup || 'N/A'}`
+      ).join('\n'));
+    }
+  }
+
+  // 2. Search appointments
+  if (Array.isArray(data.allAppointments)) {
+    const matchedAppointments = data.allAppointments.filter((a: any) =>
+      (a.patient && a.patient.toLowerCase().includes(lowerQuery)) ||
+      (a.doctor && a.doctor.toLowerCase().includes(lowerQuery)) ||
+      (a.specialization && a.specialization.toLowerCase().includes(lowerQuery)) ||
+      (a.id && a.id.toLowerCase().includes(lowerQuery))
+    );
+    if (matchedAppointments.length > 0) {
+      matchedDocs.push(`[Matched Appointments in Records]:\n` + matchedAppointments.map((a: any) =>
+        `- Appt ID: ${a.id} for Patient ${a.patient} with Dr. ${a.doctor} (${a.specialization}) on ${a.date} at ${a.time}. Status: ${a.status}. Reason: ${a.reason || 'N/A'}`
+      ).join('\n'));
+    }
+  }
+
+  // 3. Search Bills
+  if (Array.isArray(data.allBills)) {
+    const matchedBills = data.allBills.filter((b: any) =>
+      (b.patient && b.patient.toLowerCase().includes(lowerQuery)) ||
+      (b.id && b.id.toLowerCase().includes(lowerQuery)) ||
+      (b.status && b.status.toLowerCase().includes(lowerQuery))
+    );
+    if (matchedBills.length > 0) {
+      matchedDocs.push(`[Matched Billing Invoices]:\n` + matchedBills.map((b: any) =>
+        `- Invoice ${b.id} for Patient ${b.patient}: Total Amount: ${b.amount}, Collected: ${b.collectedAmount}, Pending: ${b.pendingAmount}, Status: ${b.status}`
+      ).join('\n'));
+    }
+  }
+
+  // 4. Search Inventory
+  if (Array.isArray(data.allInventory)) {
+    const matchedInventory = data.allInventory.filter((i: any) =>
+      (i.name && i.name.toLowerCase().includes(lowerQuery)) ||
+      (i.category && i.category.toLowerCase().includes(lowerQuery)) ||
+      (i.id && i.id.toLowerCase().includes(lowerQuery)) ||
+      (i.supplier && i.supplier.toLowerCase().includes(lowerQuery))
+    );
+    if (matchedInventory.length > 0) {
+      matchedDocs.push(`[Matched Inventory Items]:\n` + matchedInventory.map((i: any) =>
+        `- Item: ${i.name} (ID: ${i.id}, Category: ${i.category}, Stock: ${i.stock}/${i.minStock} (Min), Price: ${i.price}, Selling Price: ${i.sellingPrice}, Supplier: ${i.supplier || 'N/A'})`
+      ).join('\n'));
+    }
+  }
+
+  // 5. Search Doctors
+  if (Array.isArray(data.allDoctors)) {
+    const matchedDoctors = data.allDoctors.filter((d: any) =>
+      (d.name && d.name.toLowerCase().includes(lowerQuery)) ||
+      (d.specialization && d.specialization.toLowerCase().includes(lowerQuery)) ||
+      (d.id && d.id.toLowerCase().includes(lowerQuery))
+    );
+    if (matchedDoctors.length > 0) {
+      matchedDocs.push(`[Matched Doctors]:\n` + matchedDoctors.map((d: any) =>
+        `- Dr. ${d.name} (ID: ${d.id}, Specialization: ${d.specialization}, Status: ${d.status}, Experience: ${d.experience || 'N/A'} yrs, Consulting Fee/Salary: ${d.salary || 'N/A'}, Phone: ${d.phone || 'N/A'})`
+      ).join('\n'));
+    }
+  }
+
+  // 6. Search Staff
+  if (Array.isArray(data.allStaff)) {
+    const matchedStaff = data.allStaff.filter((s: any) =>
+      (s.name && s.name.toLowerCase().includes(lowerQuery)) ||
+      (s.role && s.role.toLowerCase().includes(lowerQuery)) ||
+      (s.department && s.department.toLowerCase().includes(lowerQuery)) ||
+      (s.id && s.id.toLowerCase().includes(lowerQuery))
+    );
+    if (matchedStaff.length > 0) {
+      matchedDocs.push(`[Matched Clinical/Admin Staff]:\n` + matchedStaff.map((s: any) =>
+        `- Staff: ${s.name} (ID: ${s.id}, Role: ${s.role}, Department: ${s.department}, Status: ${s.status}, Contact: ${s.phone || 'N/A'})`
+      ).join('\n'));
+    }
+  }
+
+  // 7. Search Wards
+  if (Array.isArray(data.allWards)) {
+    const matchedWards = data.allWards.filter((w: any) =>
+      (w.name && w.name.toLowerCase().includes(lowerQuery)) ||
+      (w.type && w.type.toLowerCase().includes(lowerQuery)) ||
+      (w.id && w.id.toLowerCase().includes(lowerQuery))
+    );
+    if (matchedWards.length > 0) {
+      matchedDocs.push(`[Matched Wards]:\n` + matchedWards.map((w: any) =>
+        `- Ward: ${w.name} (ID: ${w.id}, Type: ${w.type}, Beds Occupied: ${w.occupiedBeds}/${w.totalBeds}, Price/Day: ${w.pricePerDay || 'N/A'})`
+      ).join('\n'));
+    }
+  }
+
+  // 8. Search Enquiries
+  if (Array.isArray(data.allEnquiries)) {
+    const matchedEnqs = data.allEnquiries.filter((e: any) =>
+      (e.name && e.name.toLowerCase().includes(lowerQuery)) ||
+      (e.subject && e.subject.toLowerCase().includes(lowerQuery)) ||
+      (e.id && e.id.toLowerCase().includes(lowerQuery))
+    );
+    if (matchedEnqs.length > 0) {
+      matchedDocs.push(`[Matched Desk Enquiries]:\n` + matchedEnqs.map((e: any) =>
+        `- Enq ID: ${e.id} from ${e.name} (${e.email || 'N/A'}). Subject: ${e.subject}. Status: ${e.status}. Message: ${e.message || 'N/A'}`
+      ).join('\n'));
+    }
+  }
+
+  if (matchedDocs.length === 0) {
+    return '';
+  }
+
+  return `\n=== RAG DATABASE MATCHED ENTITIES (Dynamic Query Result) ===\n` + 
+         `These entries match the user query/context terms of "${lowerQuery}" and are retrieved dynamically from the active screen lists:\n\n` + 
+         matchedDocs.join('\n\n') + 
+         `\n==========================================================\n`;
+}
+
 async function processChatRequest(systemInstructionToUse: string, req: Request, res: Response) {
   try {
     const rawBody = req.body || {};
@@ -919,6 +1044,16 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
     finalPrompt = `${contextIntro}\nUser Message: ${lastMessageText}`;
   }
 
+  // ----------------------------------------------------
+  // Dynamic RAG context retrieval
+  // ----------------------------------------------------
+  if (lastMessageText && typeof lastMessageText === 'string') {
+    const ragData = retrieveRelevantDocs(lastMessageText, context.data);
+    if (ragData) {
+      finalPrompt = `${ragData}\n\n${finalPrompt}`;
+    }
+  }
+
   // Build sequential priority list based on user dropdown selection
   let providerChain: string[] = [];
 
@@ -929,8 +1064,8 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
   } else if (selectedModel === 'claude') {
     providerChain = ['claude', 'openai', 'gemini'];
   } else {
-    // Default fallback chain (Auto) - Prioritize Gemini first to ensure super fast and working responses on AI Studio
-    providerChain = ['gemini', 'openai', 'claude'];
+    // Default fallback chain (Auto) - Prioritize OpenAI first, then Claude, then Google Gemini fallback
+    providerChain = ['openai', 'claude', 'gemini'];
   }
 
   // Iterate over provider sequence

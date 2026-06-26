@@ -1595,7 +1595,75 @@ export default function App() {
                   category: b.category,
                   status: b.status,
                   author: b.author
-                }))
+                })),
+                allPatients: filteredPatients.map(p => ({
+                  id: p.id,
+                  name: p.name,
+                  age: p.age,
+                  gender: p.gender,
+                  status: p.status,
+                  phone: p.phone,
+                  registeredAt: p.registeredAt,
+                  bloodGroup: p.bloodGroup,
+                  dob: p.dob
+                })),
+                allAppointments: filteredAppts.map(a => ({
+                  id: a.id,
+                  patient: a.patientName,
+                  doctor: a.doctorName,
+                  specialization: a.specialization,
+                  date: a.date,
+                  time: a.time,
+                  status: a.status,
+                  reason: a.reason,
+                  type: a.type
+                })),
+                allBills: filteredBills.map(b => ({
+                  id: b.id,
+                  patient: b.patientName,
+                  amount: b.amount,
+                  pendingAmount: b.pendingAmount,
+                  collectedAmount: b.collectedAmount,
+                  status: b.status,
+                  date: b.date,
+                  items: b.items
+                })),
+                allInventory: inventory.map(i => ({
+                  id: i.id,
+                  name: i.name,
+                  category: i.category,
+                  stock: i.stock,
+                  minStock: i.minStock,
+                  price: i.price,
+                  sellingPrice: i.sellingPrice,
+                  expiryDate: i.expiryDate,
+                  supplier: i.supplier
+                })),
+                allDoctors: filteredDoctors.map(d => ({
+                  id: d.id,
+                  name: d.name,
+                  specialization: d.specialization,
+                  status: d.status,
+                  phone: d.phone,
+                  email: d.email,
+                  experience: d.experience,
+                  salary: d.salary,
+                  availableSlots: d.availableSlots
+                })),
+                allStaff: staffList.map(s => ({
+                  id: s.id,
+                  name: s.name,
+                  role: s.role,
+                  department: s.department,
+                  status: s.status,
+                  phone: s.phone,
+                  email: s.email,
+                  salary: s.salary
+                })),
+                allWards: wards,
+                allDepartments: departments,
+                allEnquiries: enquiries,
+                allBlogs: blogPosts
               }
             }}
           />
@@ -1720,7 +1788,75 @@ export default function App() {
                   category: b.category,
                   status: b.status,
                   author: b.author
-                }))
+                })),
+                allPatients: filteredPatients.map(p => ({
+                  id: p.id,
+                  name: p.name,
+                  age: p.age,
+                  gender: p.gender,
+                  status: p.status,
+                  phone: p.phone,
+                  registeredAt: p.registeredAt,
+                  bloodGroup: p.bloodGroup,
+                  dob: p.dob
+                })),
+                allAppointments: filteredAppts.map(a => ({
+                  id: a.id,
+                  patient: a.patientName,
+                  doctor: a.doctorName,
+                  specialization: a.specialization,
+                  date: a.date,
+                  time: a.time,
+                  status: a.status,
+                  reason: a.reason,
+                  type: a.type
+                })),
+                allBills: filteredBills.map(b => ({
+                  id: b.id,
+                  patient: b.patientName,
+                  amount: b.amount,
+                  pendingAmount: b.pendingAmount,
+                  collectedAmount: b.collectedAmount,
+                  status: b.status,
+                  date: b.date,
+                  items: b.items
+                })),
+                allInventory: inventory.map(i => ({
+                  id: i.id,
+                  name: i.name,
+                  category: i.category,
+                  stock: i.stock,
+                  minStock: i.minStock,
+                  price: i.price,
+                  sellingPrice: i.sellingPrice,
+                  expiryDate: i.expiryDate,
+                  supplier: i.supplier
+                })),
+                allDoctors: filteredDoctors.map(d => ({
+                  id: d.id,
+                  name: d.name,
+                  specialization: d.specialization,
+                  status: d.status,
+                  phone: d.phone,
+                  email: d.email,
+                  experience: d.experience,
+                  salary: d.salary,
+                  availableSlots: d.availableSlots
+                })),
+                allStaff: staffList.map(s => ({
+                  id: s.id,
+                  name: s.name,
+                  role: s.role,
+                  department: s.department,
+                  status: s.status,
+                  phone: s.phone,
+                  email: s.email,
+                  salary: s.salary
+                })),
+                allWards: wards,
+                allDepartments: departments,
+                allEnquiries: enquiries,
+                allBlogs: blogPosts
               }
             }}
           />

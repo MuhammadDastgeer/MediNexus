@@ -702,6 +702,61 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
     { provider: 'Anthropic Claude', status: 'skipped', error: 'Not run yet' }
   ]);
 
+  const [activeSpeechId, setActiveSpeechId] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  const handleSpeakText = (messageId: string, text: string) => {
+    if (activeSpeechId === messageId) {
+      window.speechSynthesis.cancel();
+      setActiveSpeechId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    
+    // Clean text of markdown format and trigger actions
+    const cleanText = text
+      .replace(/\[NAVIGATE:\s*[a-zA-Z0-9_-]+\]/gi, '')
+      .replace(/\[ACTION:\s*({.*?})\s*\]/gis, '')
+      .replace(/[\*\_`\#\-\+]/g, ' ')
+      .trim();
+
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    const hasUrduArabic = /[\u0600-\u06FF]/.test(cleanText);
+    const hasHindiDev = /[\u0900-\u097F]/.test(cleanText);
+    
+    const voices = window.speechSynthesis.getVoices();
+    if (hasUrduArabic || hasHindiDev) {
+      const urduVoice = voices.find(v => v.lang.startsWith('ur') || v.lang.startsWith('hi'));
+      if (urduVoice) {
+        utterance.voice = urduVoice;
+      }
+    } else {
+      const engVoice = voices.find(v => v.lang.startsWith('en'));
+      if (engVoice) {
+        utterance.voice = engVoice;
+      }
+    }
+
+    utterance.onend = () => {
+      setActiveSpeechId(null);
+    };
+    utterance.onerror = () => {
+      setActiveSpeechId(null);
+    };
+
+    setActiveSpeechId(messageId);
+    window.speechSynthesis.speak(utterance);
+  };
+
   // Voice Recording Simulation states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -972,7 +1027,7 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
               audio: m.audio
             })),
             context: contextData,
-            selectedModel: 'auto'
+            selectedModel: selectedModel
           };
 
           const response = await fetch(backendApiEndpoint, {
@@ -1524,6 +1579,23 @@ Please request support or review active API parameter credentials.`,
           </div>
 
           <div className="flex flex-wrap items-center gap-3" id="header-settings-actions">
+            {/* High-Fidelity Model Selector Dropdown */}
+            <div className="flex items-center gap-1.5 bg-slate-100/80 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300 rounded-xl px-2.5 py-1.5 shadow-2xs transition-all" id="model-selector-container">
+              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500 font-mono hidden lg:inline">Engine:</span>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="bg-transparent border-none text-xs font-bold text-slate-700 focus:ring-0 focus:outline-none cursor-pointer pr-1 py-0"
+                title="Select AI Model Engine Cascade Order"
+                id="engine-select-dropdown"
+              >
+                <option value="auto">⚡ Auto (OpenAI ➔ Claude ➔ Google)</option>
+                <option value="openai">🟢 OpenAI GPT-4o First</option>
+                <option value="claude">🟠 Claude 3.5 Sonnet First</option>
+                <option value="gemini">🔵 Google Gemini 1.5 First</option>
+              </select>
+            </div>
+
             {onBack && (
               <button
                 onClick={onBack}
@@ -1688,9 +1760,41 @@ Please request support or review active API parameter credentials.`,
                     </div>
                   )}
 
-                  <span className={`text-[10px] block font-mono tracking-wider ${msg.role === 'user' ? 'text-slate-400' : 'text-slate-400'}`}>
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <div className="flex items-center justify-between gap-4 mt-2 pt-1 border-t border-slate-100/10">
+                    <span className={`text-[10px] block font-mono tracking-wider text-slate-400`}>
+                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {msg.role === 'assistant' && msg.content && (
+                      <button
+                        onClick={() => handleSpeakText(msg.id, msg.content!)}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase transition-all ${
+                          activeSpeechId === msg.id
+                            ? 'bg-red-500/15 text-red-600 hover:bg-red-500/25 animate-pulse border border-red-500/25'
+                            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                        }`}
+                        title={activeSpeechId === msg.id ? "Stop Speaking" : "Listen to Response (TTS)"}
+                      >
+                        {activeSpeechId === msg.id ? (
+                          <>
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+                            </span>
+                            Stop Voice
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-volume-2">
+                              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                            </svg>
+                            Listen Voice
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
 
 
                 </div>
