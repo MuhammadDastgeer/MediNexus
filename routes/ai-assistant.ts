@@ -596,6 +596,213 @@ function detectAndParseAction(text: string, userQuery: string, currentTab: strin
   };
 }
 
+function checkRoleCapability(userRole: string, activeTabName: string, queryText: string, toolType?: string, toolTab?: string): { allowed: boolean, reason?: string, UrduReason?: string } {
+  const role = userRole.toLowerCase().trim();
+  if (role === 'admin' || !role) {
+    return { allowed: true };
+  }
+  
+  // If the query is purely clinical / medical advice, we always allow it!
+  const isGeneralMedicalAdvice = 
+    queryText.toLowerCase().includes('pain') || queryText.toLowerCase().includes('dard') || 
+    queryText.toLowerCase().includes('fever') || queryText.toLowerCase().includes('cough') || 
+    queryText.toLowerCase().includes('headache') || queryText.toLowerCase().includes('heart') || 
+    queryText.toLowerCase().includes('medicine') || queryText.toLowerCase().includes('drug') || 
+    queryText.toLowerCase().includes('clinical') || queryText.toLowerCase().includes('report') || 
+    queryText.toLowerCase().includes('rash') || queryText.toLowerCase().includes('treatment') || 
+    queryText.toLowerCase().includes('asthma') || queryText.toLowerCase().includes('sugar') || 
+    queryText.toLowerCase().includes('bp') || queryText.toLowerCase().includes('blood pressure') ||
+    queryText.toLowerCase().includes('symptom') || queryText.toLowerCase().includes('prescription') ||
+    queryText.toLowerCase().includes('allergy') || queryText.toLowerCase().includes('guidance') ||
+    queryText.toLowerCase().includes('flu') || queryText.toLowerCase().includes('bukhar') ||
+    queryText.toLowerCase().includes('pneumonia') || queryText.toLowerCase().includes('tb') ||
+    queryText.toLowerCase().includes('infection');
+
+  // Detect target tab of the operation.
+  // We check the toolTab first, otherwise fall back to activeTabName, or look at keywords in the queryText.
+  let targetTab = (toolTab || activeTabName || '').toLowerCase().trim();
+  if (!targetTab || targetTab === 'general' || targetTab === 'general-ai' || targetTab === 'ai-assistant') {
+    // try to guess the target tab based on query keywords
+    const lowerQ = queryText.toLowerCase();
+    if (lowerQ.includes('appointment')) targetTab = 'appointments';
+    else if (lowerQ.includes('bill') || lowerQ.includes('invoice') || lowerQ.includes('payment') || lowerQ.includes('fee')) targetTab = 'billing';
+    else if (lowerQ.includes('patient') || lowerQ.includes('register')) targetTab = 'patients';
+    else if (lowerQ.includes('doctor') || lowerQ.includes('specialist')) targetTab = 'doctors';
+    else if (lowerQ.includes('staff') || lowerQ.includes('nurse')) targetTab = 'staff';
+    else if (lowerQ.includes('inventory') || lowerQ.includes('stock') || lowerQ.includes('medicine')) targetTab = 'inventory';
+    else if (lowerQ.includes('ward') || lowerQ.includes('bed') || lowerQ.includes('room')) targetTab = 'ipd-wards';
+    else if (lowerQ.includes('consultation') || lowerQ.includes('prescribe')) targetTab = 'consultation';
+    else if (lowerQ.includes('blog')) targetTab = 'blogs';
+    else if (lowerQ.includes('report') || lowerQ.includes('analytic')) targetTab = 'reports';
+    else if (lowerQ.includes('finance') || lowerQ.includes('ledger')) targetTab = 'finance';
+    else if (lowerQ.includes('department')) targetTab = 'departments';
+    else if (lowerQ.includes('enquiry') || lowerQ.includes('ticket')) targetTab = 'enquiries';
+    else if (lowerQ.includes('tourism')) targetTab = 'medical-tourism';
+    else if (lowerQ.includes('configure') || lowerQ.includes('setting')) targetTab = 'configure-hospital';
+  }
+
+  // Detect operation type: add, edit, delete, view
+  let opType = (toolType || '').toLowerCase().trim();
+  if (!opType) {
+    const lowerQ = queryText.toLowerCase();
+    if (lowerQ.includes('add') || lowerQ.includes('create') || lowerQ.includes('register') || lowerQ.includes('new') || lowerQ.includes('admit') || lowerQ.includes('naya') || lowerQ.includes('shamil')) {
+      opType = 'add';
+    } else if (lowerQ.includes('edit') || lowerQ.includes('update') || lowerQ.includes('change') || lowerQ.includes('modify') || lowerQ.includes('badal') || lowerQ.includes('set')) {
+      opType = 'edit';
+    } else if (lowerQ.includes('delete') || lowerQ.includes('remove') || lowerQ.includes('cancel') || lowerQ.includes('hatao') || lowerQ.includes('kharij') || lowerQ.includes('void')) {
+      opType = 'delete';
+    } else if (lowerQ.includes('list') || lowerQ.includes('show') || lowerQ.includes('view') || lowerQ.includes('summary') || lowerQ.includes('check') || lowerQ.includes('dekh')) {
+      opType = 'view';
+    }
+  }
+
+  // If there is no operation detected and it's general medical advice, always allow!
+  if (!opType && isGeneralMedicalAdvice) {
+    return { allowed: true };
+  }
+
+  // Apply restrictions based on role:
+  if (role === 'patient') {
+    const allowedTabs = ['appointments', 'billing', 'patients', 'doctors'];
+    if (targetTab && !allowedTabs.includes(targetTab)) {
+      return {
+        allowed: false,
+        reason: `The "${targetTab.toUpperCase()}" view and operations are not accessible from the Patient Console.`,
+        UrduReason: `Yeh "${targetTab.toUpperCase()}" section aur iske operations Patient console ke ijazat me nahi hain. Aap apni appointments aur billing tak mehdood rahein.`
+      };
+    }
+    
+    // Check specific operations on allowed tabs
+    if (targetTab === 'appointments') {
+      if (opType === 'delete' || opType === 'edit') {
+        return {
+          allowed: false,
+          reason: `Patients are only permitted to view or book/add appointments. Editing status or deleting appointments is restricted.`,
+          UrduReason: `Aap appointments sirf dekh ya book (add) kar sakte hain. Appointment status tabdeel karna ya delete karna Patient console me allowed nahi hai.`
+        };
+      }
+    }
+    if (targetTab === 'billing') {
+      if (opType === 'add' || opType === 'edit' || opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Patients are only permitted to view their bills. Invoicing or modifying bills is restricted.`,
+          UrduReason: `Aap billing details sirf dekh sakte hain. Naya bill banana ya bills ko edit/delete karna Patient console me allowed nahi hai.`
+        };
+      }
+    }
+    if (targetTab === 'patients') {
+      if (opType === 'add' || opType === 'edit' || opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Patients are only permitted to view their own profile context. Modifying or deleting patients is restricted.`,
+          UrduReason: `Aap patient profile sirf dekh sakte hain. Naye patients register karna ya clinical files edit/delete karna restricted hai.`
+        };
+      }
+    }
+    if (targetTab === 'doctors') {
+      if (opType === 'add' || opType === 'edit' || opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Patients can view doctors list but cannot add, edit, or delete doctor profiles.`,
+          UrduReason: `Aap doctor list dekh sakte hain, par doctors ke profiles add, edit, ya delete nahi kar sakte.`
+        };
+      }
+    }
+  }
+
+  if (role === 'doctor') {
+    const allowedTabs = ['appointments', 'consultation', 'doctors', 'patients', 'staff', 'blogs', 'ipd-wards'];
+    if (targetTab && !allowedTabs.includes(targetTab)) {
+      return {
+        allowed: false,
+        reason: `The "${targetTab.toUpperCase()}" view and operations are not accessible from the Doctor Console.`,
+        UrduReason: `Yeh "${targetTab.toUpperCase()}" section aur iske operations Doctor console me available nahi hain. Aap clinical consultations, appointments, aur patient logs tak mehdood rahein.`
+      };
+    }
+    
+    // Check specific operations on allowed tabs
+    if (targetTab === 'appointments') {
+      if (opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Doctors can view and update appointment consultation records, but deleting appointments is restricted.`,
+          UrduReason: `Aap appointments status update (edit) kar sakte hain, par appointments ko cancel/delete karna Doctor console me restricted hai.`
+        };
+      }
+    }
+    if (targetTab === 'doctors') {
+      if (opType === 'add' || opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Doctors are only permitted to view profiles or edit their own profile. Adding or deleting doctor registrations is restricted.`,
+          UrduReason: `Aap apna profile update kar sakte hain, par naye doctors register karna ya unhe delete karna restricted hai.`
+        };
+      }
+    }
+    if (targetTab === 'patients') {
+      if (opType === 'add' || opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Doctors can view patient logs but cannot register new patient entries or delete patient profiles.`,
+          UrduReason: `Aap patients ke logs aur diagnostics dekh sakte hain, par naya patient register karna ya record delete karna restricted hai.`
+        };
+      }
+    }
+    if (targetTab === 'staff') {
+      if (opType === 'add' || opType === 'edit' || opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Doctors can view staff schedules, but adding, editing, or deleting staff profiles is restricted.`,
+          UrduReason: `Aap staff duty roster dekh sakte hain, par staff profiles create, edit, ya delete nahi kar sakte.`
+        };
+      }
+    }
+    if (targetTab === 'blogs') {
+      if (opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Doctors can write and edit clinical blog posts, but deleting posts is restricted.`,
+          UrduReason: `Aap blog posts write/edit kar sakte hain, par delete karna restricted hai.`
+        };
+      }
+    }
+  }
+
+  if (role === 'staff') {
+    const allowedTabs = ['appointments', 'consultation', 'billing', 'patients', 'blogs'];
+    if (targetTab && !allowedTabs.includes(targetTab)) {
+      return {
+        allowed: false,
+        reason: `The "${targetTab.toUpperCase()}" view and operations are not accessible from the Staff Console.`,
+        UrduReason: `Yeh "${targetTab.toUpperCase()}" section aur iske operations Staff console ke direct authority me nahi hain. Apne dynamic booking, invoices, aur patient profile registers tak mehdood rahein.`
+      };
+    }
+
+    // Check specific operations on allowed tabs
+    if (targetTab === 'consultation') {
+      if (opType === 'add' || opType === 'edit') {
+        return {
+          allowed: false,
+          reason: `Staff members can view clinical consultations but cannot write prescriptions or log medical diagnosis notes.`,
+          UrduReason: `Consultation notes aur prescriptions likhna sirf Doctors ka kaam hai. Aap in logs ko sirf dekh sakte hain.`
+        };
+      }
+    }
+    if (targetTab === 'patients') {
+      if (opType === 'delete') {
+        return {
+          allowed: false,
+          reason: `Staff members can register and edit patient profiles, but deleting patients is strictly restricted to Administrators.`,
+          UrduReason: `Aap patient register ya edit kar sakte hain, par patient records ko permanently delete karna restricted hai.`
+        };
+      }
+    }
+  }
+
+  return { allowed: true };
+}
+
 async function processChatRequest(systemInstructionToUse: string, req: Request, res: Response) {
   const { messages = [], context = {}, selectedModel = 'auto' } = req.body;
   const keys = getKeys();
@@ -625,66 +832,20 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
   const userRole = (context.userRole || '').toLowerCase().trim();
   const activeTabName = (context.activeTab || '').toLowerCase().trim();
   
-  const isOperationOrSystemQuery = lastMessageText.toLowerCase().includes('add') || 
-                                   lastMessageText.toLowerCase().includes('create') || 
-                                   lastMessageText.toLowerCase().includes('edit') || 
-                                   lastMessageText.toLowerCase().includes('update') || 
-                                   lastMessageText.toLowerCase().includes('delete') || 
-                                   lastMessageText.toLowerCase().includes('remove') || 
-                                   lastMessageText.toLowerCase().includes('list') || 
-                                   lastMessageText.toLowerCase().includes('show') || 
-                                   lastMessageText.toLowerCase().includes('detail') || 
-                                   lastMessageText.toLowerCase().includes('manage') || 
-                                   lastMessageText.toLowerCase().includes('summary') || 
-                                   lastMessageText.toLowerCase().includes('record') || 
-                                   toolMatch !== null;
+  let checkToolType = undefined;
+  if (toolMatch) {
+    checkToolType = toolMatch[2];
+  }
 
-  // 1. Patient Console Security Restrictions
-  if (userRole === 'patient') {
-    const forbiddenKeywords = ['staff', 'inventory', 'stock', 'replenishment', 'low stock', 'procurement', 'ward', 'bed allotment', 'bed occupancy', 'ipd', 'reports', 'revenue', 'financial analytics', 'ledger', 'setting', 'configuration', 'config'];
-    const matchedForbidden = forbiddenKeywords.find(kw => lastMessageText.toLowerCase().includes(kw));
-    // BUT we must allow general clinical drug or allergy questions if they are medical-only symptoms (not management lists)
-    const isGeneralClinicalDrugAdvice = lastMessageText.toLowerCase().includes('medicine') && (lastMessageText.toLowerCase().includes('fever') || lastMessageText.toLowerCase().includes('cough') || lastMessageText.toLowerCase().includes('allergy') || lastMessageText.toLowerCase().includes('guidance') || lastMessageText.toLowerCase().includes('pain') || lastMessageText.toLowerCase().includes('drug advice'));
+  const roleCheck = checkRoleCapability(userRole, activeTabName, lastMessageText, checkToolType);
+  if (!roleCheck.allowed) {
+    const responseText = `${roleCheck.reason}
     
-    if (matchedForbidden && isOperationOrSystemQuery && !isGeneralClinicalDrugAdvice) {
-      const responseText = `This operation or data access is restricted to the Staff/Admin console and is not accessible from the Patient Console.
-      
-(Yeh operation ya malumaat Patient console ke ijazat me nahi hai. Barah-e-maherbani apni appointments aur billings tak mehdood rahein. Baqi aap koi bhi medical question, voice ya report upload ke mutalliq pooch sakte hain.)`;
-      return res.json({
-        reply: responseText,
-        attempts: [{ provider: 'Patient Console Permission Guardrails', status: 'success', modelUsed: 'Static-Filter-Rules' }]
-      });
-    }
-  }
-
-  // 2. Doctor Console Security Restrictions
-  if (userRole === 'doctor') {
-    const forbiddenKeywords = ['inventory', 'stock', 'replenishment', 'low stock', 'procurement', 'enquiries', 'ticket', 'tourism', 'reports', 'revenue', 'financial analytics', 'ledger', 'setting', 'configuration', 'config'];
-    const matchedForbidden = forbiddenKeywords.find(kw => lastMessageText.toLowerCase().includes(kw));
-    if (matchedForbidden && isOperationOrSystemQuery) {
-      const responseText = `This operation or information is restricted to Admin/Staff and is not accessible from the Doctor Console.
-      
-(Yeh operation ya malumaat Doctor console ke ijazat me nahi hai. Barah-e-maherbani apni clinical consultations aur scheduled appointments tak mehdood rahein. Baqi aap koi bhi medical question, voice ya report upload ke mutalliq pooch sakte hain.)`;
-      return res.json({
-        reply: responseText,
-        attempts: [{ provider: 'Doctor Console Permission Guardrails', status: 'success', modelUsed: 'Static-Filter-Rules' }]
-      });
-    }
-  }
-
-  // 3. Staff Console Security Restrictions
-  if (userRole === 'staff') {
-    const forbiddenKeywords = ['reports', 'revenue', 'financial analytics', 'ledger', 'setting', 'configuration', 'config'];
-    const matchedForbidden = forbiddenKeywords.find(kw => lastMessageText.toLowerCase().includes(kw));
-    if (matchedForbidden && isOperationOrSystemQuery) {
-      const responseText = `This operation or information is restricted to Administrators and is not accessible from the Staff Console.
-      
-(Yeh operation ya malumaat Staff console ke ijazat me nahi hai. Barah-e-maherbani operational features tak mehdood rahein. Baqi aap koi bhi medical question, voice ya report upload ke mutalliq pooch sakte hain.)`;
-      return res.json({
-        reply: responseText,
-        attempts: [{ provider: 'Staff Console Permission Guardrails', status: 'success', modelUsed: 'Static-Filter-Rules' }]
-      });
-    }
+(${roleCheck.UrduReason})`;
+    return res.json({
+      reply: responseText,
+      attempts: [{ provider: `${context.userRole || 'User'} Console Guardrails`, status: 'success', modelUsed: 'Static-Filter-Rules' }]
+    });
   }
   
   let isToolWithNoDetails = false;
