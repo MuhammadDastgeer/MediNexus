@@ -699,9 +699,7 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
   const [latestAttempts, setLatestAttempts] = useState<Attempt[]>([
     { provider: 'Google Gemini', status: 'skipped', error: 'Not run yet' },
     { provider: 'OpenAI', status: 'skipped', error: 'Not run yet' },
-    { provider: 'Anthropic Claude', status: 'skipped', error: 'Not run yet' },
-    { provider: 'OpenRouter', status: 'skipped', error: 'Not run yet' },
-    { provider: 'Groq', status: 'skipped', error: 'Not run yet' }
+    { provider: 'Anthropic Claude', status: 'skipped', error: 'Not run yet' }
   ]);
 
   // Voice Recording Simulation states

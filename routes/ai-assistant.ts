@@ -1001,18 +1001,14 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
   let providerChain: string[] = [];
 
   if (selectedModel === 'gemini') {
-    providerChain = ['gemini', 'openai', 'claude', 'groq', 'openrouter'];
+    providerChain = ['gemini', 'openai', 'claude'];
   } else if (selectedModel === 'openai') {
-    providerChain = ['openai', 'claude', 'gemini', 'groq', 'openrouter'];
+    providerChain = ['openai', 'claude', 'gemini'];
   } else if (selectedModel === 'claude') {
-    providerChain = ['claude', 'openai', 'gemini', 'groq', 'openrouter'];
-  } else if (selectedModel === 'openrouter') {
-    providerChain = ['openrouter', 'openai', 'claude', 'gemini', 'groq'];
-  } else if (selectedModel === 'groq') {
-    providerChain = ['groq', 'openai', 'claude', 'gemini', 'openrouter'];
+    providerChain = ['claude', 'openai', 'gemini'];
   } else {
     // Default fallback chain (Auto)
-    providerChain = ['openai', 'claude', 'gemini', 'groq', 'openrouter'];
+    providerChain = ['openai', 'claude', 'gemini'];
   }
 
   // Iterate over provider sequence
@@ -1024,10 +1020,6 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
       reply = await tryOpenAI(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
     } else if (provider === 'claude') {
       reply = await tryAnthropic(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
-    } else if (provider === 'openrouter') {
-      reply = await tryOpenRouter(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
-    } else if (provider === 'groq') {
-      reply = await tryGroq(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
     }
 
     if (reply) {
