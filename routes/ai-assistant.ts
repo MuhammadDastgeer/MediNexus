@@ -747,25 +747,30 @@ function checkRoleCapability(userRole: string, activeTabName: string, queryText:
 }
 
 async function processChatRequest(systemInstructionToUse: string, req: Request, res: Response) {
-  const { messages = [], context = {}, selectedModel = 'auto' } = req.body;
-  const keys = getKeys();
-  const attempts: Array<{ provider: string; status: 'success' | 'failed' | 'skipped'; error?: string; modelUsed?: string }> = [];
+  try {
+    const rawBody = req.body || {};
+    const messages = Array.isArray(rawBody.messages) ? rawBody.messages : [];
+    const context = rawBody.context && typeof rawBody.context === 'object' ? rawBody.context : {};
+    const selectedModel = typeof rawBody.selectedModel === 'string' ? rawBody.selectedModel : 'auto';
 
-  // Compose the screen and user context string to append for the AI to read
-  const contextIntro = `
-  --- SYSTEM CONTEXT ---
-  Current Active Screen: ${context.activeTab || 'Unknown'}
-  Log-In Identity Role: ${context.userRole || 'Admin/Guest'}
-  Logged-In Name: ${context.userName || 'Hospital Administrator'}
-  Current Loaded Data Context JSON: ${JSON.stringify(context.data || {})}
-  ----------------------
-  `;
+    const keys = getKeys();
+    const attempts: Array<{ provider: string; status: 'success' | 'failed' | 'skipped'; error?: string; modelUsed?: string }> = [];
 
-  // Process and align messages
-  const lastMessage = messages[messages.length - 1];
-  let lastMessageText = lastMessage?.content || '';
-  const lastMessageImage = lastMessage?.image || '';
-  const lastMessageAudio = lastMessage?.audio || '';
+    // Compose the screen and user context string to append for the AI to read
+    const contextIntro = `
+    --- SYSTEM CONTEXT ---
+    Current Active Screen: ${context.activeTab || 'Unknown'}
+    Log-In Identity Role: ${context.userRole || 'Admin/Guest'}
+    Logged-In Name: ${context.userName || 'Hospital Administrator'}
+    Current Loaded Data Context JSON: ${JSON.stringify(context.data || {})}
+    ----------------------
+    `;
+
+    // Process and align messages safely
+    const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+    let lastMessageText = lastMessage && typeof lastMessage.content === 'string' ? lastMessage.content : '';
+    const lastMessageImage = lastMessage && typeof lastMessage.image === 'string' ? lastMessage.image : '';
+    const lastMessageAudio = lastMessage && typeof lastMessage.audio === 'string' ? lastMessage.audio : '';
 
   // TOOL DETECTION
   const toolMatch = lastMessageText.match(/\[Contextual Tool selected:\s*(.*?)\s*\(Operation:\s*(.*?)\)\]/i);
@@ -1161,11 +1166,18 @@ Once the API Key is supplied, Google Gemini will listen to your audio query and 
 
   const parsedAction = detectAndParseAction(fallbackReply, lastMessageText, activeTabName);
 
-  return res.json({
-    reply: fallbackReply,
-    action: parsedAction || undefined,
-    attempts
-  });
+    return res.json({
+      reply: fallbackReply,
+      action: parsedAction || undefined,
+      attempts
+    });
+  } catch (err: any) {
+    console.error("CRITICAL error in processChatRequest:", err);
+    return res.status(500).json({
+      reply: `⚠️ System Exception: ${err.message || 'Unknown server error occurred.'}\n\nPlease check your input/parameters or try re-sending.`,
+      attempts: [{ provider: 'Express Global Error Guard', status: 'failed', error: err.message || 'Server Exception' }]
+    });
+  }
 }
 
 // Default Global Chat POST Route
