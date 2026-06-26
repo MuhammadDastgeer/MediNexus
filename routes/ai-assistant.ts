@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import dotenv from 'dotenv';
 import db from '../db.js';
 
@@ -109,63 +110,60 @@ function parseImageData(dataUrl: string) {
 async function tryGemini(keys: any, prompt: string, image: string, audio: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.gemini && keys.gemini !== 'MY_GEMINI_API_KEY' && keys.gemini.trim() !== '') {
     try {
-      const ai = new GoogleGenAI({
+      const model = new ChatGoogleGenerativeAI({
+        model: 'gemini-3.5-flash',
         apiKey: keys.gemini,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
+        temperature: 0.2,
+      });
+
+      let contentPayload: any = prompt;
+      if (image || audio) {
+        contentPayload = [{ type: 'text', text: prompt }];
+        if (image) {
+          const parsed = parseImageData(image);
+          if (parsed) {
+            contentPayload.push({
+              type: 'image_url',
+              image_url: {
+                url: `data:${parsed.mimeType};base64,${parsed.base64Data}`
+              }
+            });
           }
         }
-      });
-
-      const contentsParts: any[] = [];
-      if (image) {
-        const parsed = parseImageData(image);
-        if (parsed) {
-          contentsParts.push({
-            inlineData: {
-              mimeType: parsed.mimeType,
-              data: parsed.base64Data
-            }
-          });
+        if (audio) {
+          const parsedAudio = parseImageData(audio);
+          if (parsedAudio) {
+            contentPayload.push({
+              type: 'image_url',
+              image_url: {
+                url: `data:${parsedAudio.mimeType};base64,${parsedAudio.base64Data}`
+              }
+            });
+          }
         }
       }
 
-      if (audio) {
-        const parsedAudio = parseImageData(audio);
-        if (parsedAudio) {
-          contentsParts.push({
-            inlineData: {
-              mimeType: parsedAudio.mimeType,
-              data: parsedAudio.base64Data
-            }
-          });
-        }
-      }
+      const response = await model.invoke([
+        ["system", systemInstruction],
+        ["human", contentPayload]
+      ]);
 
-      contentsParts.push({ text: prompt });
+      if (response && response.content) {
+        const replyText = typeof response.content === 'string' 
+          ? response.content 
+          : JSON.stringify(response.content);
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: contentsParts,
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.2
-        }
-      });
-
-      if (response && response.text) {
-        attempts.push({ provider: 'Google Gemini', status: 'success', modelUsed: 'gemini-3.5-flash' });
-        return response.text;
+        attempts.push({ provider: 'Google Gemini (LangChain)', status: 'success', modelUsed: 'gemini-3.5-flash' });
+        return replyText;
       } else {
-        throw new Error('Empty response returned from Google Gemini.');
+        throw new Error('Empty response returned from Google Gemini via LangChain.');
       }
     } catch (err: any) {
-      console.error("tryGemini Error details:", err);
-      attempts.push({ provider: 'Google Gemini', status: 'failed', error: err.message || 'Unknown network error' });
+      console.error("tryGemini LangChain Error details:", err);
+      attempts.push({ provider: 'Google Gemini (LangChain)', status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
-    attempts.push({ provider: 'Google Gemini', status: 'skipped', error: 'API key is not configured' });
+    attempts.push({ provider: 'Google Gemini (LangChain)', status: 'skipped', error: 'API key is not configured' });
   }
   return null;
 }
@@ -363,7 +361,8 @@ function detectAndParseAction(text: string, userQuery: string, currentTab: strin
   // 3. Heuristic check to see if we should auto-generate an action from the conversation context.
   const lowerText = text.toLowerCase();
   const lowerQuery = userQuery.toLowerCase();
-  const combined = lowerQuery + " " + lowerText;
+  // We use the user's query for intent and operation detection to prevent false-positives from long conversational model responses
+  const combined = lowerQuery;
 
   // Identify operation type
   let type: 'add' | 'edit' | 'delete' | null = null;
@@ -930,8 +929,8 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
   } else if (selectedModel === 'claude') {
     providerChain = ['claude', 'openai', 'gemini'];
   } else {
-    // Default fallback chain (Auto)
-    providerChain = ['openai', 'claude', 'gemini'];
+    // Default fallback chain (Auto) - Prioritize Gemini first to ensure super fast and working responses on AI Studio
+    providerChain = ['gemini', 'openai', 'claude'];
   }
 
   // Iterate over provider sequence
