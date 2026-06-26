@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import Database from 'better-sqlite3';
 import dotenv from 'dotenv';
@@ -14,7 +15,24 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Initialize SQLite Database
-const db = new Database('hospital.db');
+let dbPath = 'hospital.db';
+
+if (process.env.VERCEL) {
+  const tmpPath = path.join('/tmp', 'hospital.db');
+  if (!fs.existsSync(tmpPath)) {
+    try {
+      if (fs.existsSync('hospital.db')) {
+        fs.copyFileSync('hospital.db', tmpPath);
+        console.log('Database successfully copied to /tmp/hospital.db in server.ts');
+      }
+    } catch (err) {
+      console.error('Failed to copy database to /tmp in server.ts:', err);
+    }
+  }
+  dbPath = tmpPath;
+}
+
+const db = new Database(dbPath);
 
 // Enable WAL mode for better concurrency
 db.pragma('journal_mode = WAL');
