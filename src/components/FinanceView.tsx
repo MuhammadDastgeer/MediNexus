@@ -279,11 +279,19 @@ export default function FinanceView({
   });
 
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
 
   const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
     setShowExportDropdown(false);
     if (filteredByMonthAndTab.length === 0) {
-      alert("No matching financial ledger transactions to export.");
+      showToast("No matching financial ledger transactions to export.");
       return;
     }
     const headers = ['Transaction ID', 'Flow Type', 'Category Head', 'Description', 'Transaction Date', 'Amount (₹)'];
@@ -292,12 +300,16 @@ export default function FinanceView({
 
     if (format === 'CSV') {
       downloadCSV(filteredByMonthAndTab, headers, keys, filename);
+      showToast("Financial ledger exported smoothly as CSV.");
     } else if (format === 'Excel') {
       downloadExcel(filteredByMonthAndTab, headers, keys, filename);
+      showToast("Financial ledger exported smoothly as Excel sheet.");
     } else if (format === 'Word') {
       downloadWord(filteredByMonthAndTab, headers, keys, filename, 'Hospital Financial Ledger Statement');
+      showToast("Financial ledger exported smoothly as Word document.");
     } else if (format === 'PDF') {
       downloadPDFFile(filteredByMonthAndTab, headers, keys, filename, 'Hospital Audit Financial Transactions Roll');
+      showToast("Financial ledger exported smoothly as PDF file.");
     }
   };
 
@@ -360,6 +372,14 @@ export default function FinanceView({
 
   return (
     <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-700" id="finance-view-root">
+      
+      {/* Toast Alert popup */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 animate-bounce">
+          <CheckCircle className="text-[#007f6e]" size={18} />
+          <span className="text-xs font-semibold">{toastMessage}</span>
+        </div>
+      )}
       
       {/* HEADER SECTION */}
       <div className="flex justify-between items-center" id="finance-top-panel">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileText, Plus, Pencil, Trash2, Eye, X, BookOpen, AlertTriangle, Upload, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, Plus, Pencil, Trash2, Eye, X, BookOpen, AlertTriangle, Upload, CheckCircle2, CheckCircle } from 'lucide-react';
 import { InventoryItem, Supplier } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
 
@@ -62,11 +62,19 @@ export default function InventoryItemsTab({
   });
 
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
 
   const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
     setShowExportDropdown(false);
     if (filteredItems.length === 0) {
-      alert("No inventory items found to export.");
+      showToast("No inventory items found to export.");
       return;
     }
     const headers = ['Item ID', 'Name', 'Generic Name', 'Brand Name', 'Category', 'Unit', 'Price', 'MRP', 'Selling Price', 'GST Rate', 'Min Stock', 'Barcode', 'Status'];
@@ -75,12 +83,16 @@ export default function InventoryItemsTab({
 
     if (format === 'CSV') {
       downloadCSV(filteredItems, headers, keys, filename);
+      showToast("Inventory list exported smoothly as CSV.");
     } else if (format === 'Excel') {
       downloadExcel(filteredItems, headers, keys, filename);
+      showToast("Inventory list exported smoothly as Excel sheet.");
     } else if (format === 'Word') {
       downloadWord(filteredItems, headers, keys, filename, 'Hospital Inventory Stock Register');
+      showToast("Inventory list exported smoothly as Word document.");
     } else if (format === 'PDF') {
       downloadPDFFile(filteredItems, headers, keys, filename, 'Hospital Inventory Stock Ledger');
+      showToast("Inventory list exported smoothly as PDF file.");
     }
   };
 
@@ -183,6 +195,14 @@ export default function InventoryItemsTab({
 
   return (
     <div className="space-y-6" id="inventory-items-tab">
+      
+      {/* Toast Alert popup */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 animate-bounce">
+          <CheckCircle className="text-[#007f6e]" size={18} />
+          <span className="text-xs font-semibold">{toastMessage}</span>
+        </div>
+      )}
       {/* Top Cards in Items Tab */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="items-kpis">
         <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center justify-between shadow-xs">

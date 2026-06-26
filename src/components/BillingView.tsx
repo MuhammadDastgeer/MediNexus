@@ -62,11 +62,19 @@ export default function BillingView({
   // Modal & Wizard State
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
 
   const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
     setShowExportDropdown(false);
     if (filtered.length === 0) {
-      alert("No bills to export.");
+      showToast("No bills to export.");
       return;
     }
     const headers = ['Bill ID', 'Patient Name', 'Date', 'Type', 'Amount', 'Discount', 'Tax', 'Paid', 'Pending', 'Status'];
@@ -75,12 +83,16 @@ export default function BillingView({
 
     if (format === 'CSV') {
       downloadCSV(filtered, headers, keys, filename);
+      showToast("Bills exported smoothly as CSV.");
     } else if (format === 'Excel') {
       downloadExcel(filtered, headers, keys, filename);
+      showToast("Bills exported smoothly as Excel sheet.");
     } else if (format === 'Word') {
       downloadWord(filtered, headers, keys, filename, 'Hospital Financial Billings Portfolio');
+      showToast("Bills exported smoothly as Word document.");
     } else if (format === 'PDF') {
       downloadPDFFile(filtered, headers, keys, filename, 'Hospital Audit Financial Statements Ledger');
+      showToast("Bills exported smoothly as PDF file.");
     }
   };
 
@@ -302,6 +314,14 @@ export default function BillingView({
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-700 font-sans" id="billing-queue-view">
       
+      {/* Toast Alert popup */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 animate-bounce">
+          <CheckCircle className="text-[#007f6e]" size={18} />
+          <span className="text-xs font-semibold">{toastMessage}</span>
+        </div>
+      )}
+      
       {/* Header Row (Same to same header as requested!) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" id="billing-header">
         <div>
@@ -449,15 +469,15 @@ export default function BillingView({
       </div>
 
       {/* FILTER TABS */}
-      <div className="flex items-center gap-1.5" id="billing-filter-tabs">
+      <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit gap-1 mb-4" id="billing-filter-tabs">
         {(['All', 'Pending', 'Paid'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all active:scale-95 ${
               activeTab === tab
-                ? 'bg-emerald-50 text-[#007f6e] border border-emerald-150 shadow-xs'
-                : 'bg-white hover:bg-slate-50 text-slate-500 border border-slate-200'
+                ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white shadow-md shadow-teal-600/10'
+                : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             {tab === 'All' ? 'All Bills' : tab}

@@ -260,22 +260,25 @@ export default function Sidebar({
         mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
       } ${collapsed ? 'md:w-20' : 'md:w-64'}`} id="app-sidebar">
         {/* Brand Logo & Collapse Toggle */}
-        <div className={`p-5 flex items-center justify-between border-b border-slate-50 ${collapsed ? 'flex-col gap-4 py-6' : ''}`}>
+        <div className={`p-5 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 ${collapsed ? 'flex-col gap-4 py-6' : ''}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#007f6e] rounded-xl flex items-center justify-center text-white shrink-0" id="brand-logo-icon">
+            <div className="w-10 h-10 bg-gradient-to-tr from-teal-500 via-emerald-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/10 animate-pulse shrink-0" id="brand-logo-icon">
               <Stethoscope size={22} />
             </div>
             {!collapsed && (
               <div>
-                <h2 className="font-bold text-slate-800 text-[16px] leading-tight" id="brand-logo-name">Code</h2>
-                <span className="text-xs text-slate-400 font-medium" id="brand-logo-subtitle">{displayRole}</span>
+                <h2 className="font-extrabold text-slate-900 text-[16px] leading-tight tracking-tight flex items-center gap-1.5" id="brand-logo-name">
+                  <span>CarePoint</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                </h2>
+                <span className="text-[10px] bg-slate-200/60 text-slate-700 font-bold px-1.5 py-0.5 rounded uppercase tracking-wider block mt-0.5" id="brand-logo-subtitle">{displayRole}</span>
               </div>
             )}
           </div>
           
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className={`p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors border border-slate-100 bg-white shadow-xs cursor-pointer`}
+            className={`p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors border border-slate-200/60 bg-white shadow-xs cursor-pointer`}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             id="collapse-sidebar-toggle-btn"
           >
@@ -299,15 +302,15 @@ export default function Sidebar({
                   <li key={item.id}>
                     <button
                       onClick={() => handleNavClick(item.id)}
-                      className={`w-full flex items-center ${collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3 py-2'} rounded-xl text-sm font-medium transition-all duration-200 text-left cursor-pointer ${
+                      className={`w-full flex items-center ${collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3.5 py-2.5'} rounded-xl text-xs font-bold transition-all duration-300 text-left cursor-pointer active:scale-95 ${
                         isActive
-                          ? 'bg-[#e6f4f1] text-[#007f6e]'
-                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-805'
+                          ? 'bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 text-white shadow-md shadow-teal-600/15'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent hover:border-slate-100'
                       }`}
                       title={collapsed ? item.label : undefined}
                       id={`menu-item-${item.id}`}
                     >
-                      <Icon size={18} className={isActive ? 'text-[#007f6e]' : 'text-slate-400'} />
+                      <Icon size={18} className={isActive ? 'text-white' : 'text-slate-400'} />
                       {!collapsed && <span>{item.label}</span>}
                     </button>
                   </li>
@@ -331,15 +334,15 @@ export default function Sidebar({
                     <li key={item.id}>
                       <button
                         onClick={() => handleNavClick(item.id)}
-                        className={`w-full flex items-center ${collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3 py-2'} rounded-xl text-sm font-medium transition-all duration-200 text-left cursor-pointer ${
+                        className={`w-full flex items-center ${collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3.5 py-2.5'} rounded-xl text-xs font-bold transition-all duration-300 text-left cursor-pointer active:scale-95 ${
                           isActive
-                            ? 'bg-[#e6f4f1] text-[#007f6e]'
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-850'
+                            ? 'bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 text-white shadow-md shadow-teal-600/15'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent hover:border-slate-100'
                         }`}
                         title={collapsed ? item.label : undefined}
                         id={`menu-item-${item.id}`}
                       >
-                        <Icon size={18} className={isActive ? 'text-[#007f6e]' : 'text-slate-400'} />
+                        <Icon size={18} className={isActive ? 'text-white' : 'text-slate-400'} />
                         {!collapsed && <span>{item.label}</span>}
                       </button>
                     </li>

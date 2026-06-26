@@ -1560,6 +1560,41 @@ export default function App() {
                   name: d.name,
                   specialization: d.specialization,
                   status: d.status
+                })),
+                staffSummary: staffList.slice(0, 10).map(s => ({
+                  id: s.id,
+                  name: s.name,
+                  role: s.role,
+                  department: s.department,
+                  status: s.status
+                })),
+                wardsSummary: wards.slice(0, 10).map(w => ({
+                  id: w.id,
+                  name: w.name,
+                  type: w.type,
+                  totalBeds: w.totalBeds,
+                  occupiedBeds: w.occupiedBeds,
+                  pricePerDay: w.pricePerDay
+                })),
+                departmentsSummary: departments.slice(0, 10).map(d => ({
+                  id: d.id,
+                  name: d.name,
+                  head: d.head,
+                  status: d.status
+                })),
+                enquiriesSummary: enquiries.slice(0, 10).map(e => ({
+                  id: e.id,
+                  name: e.name,
+                  email: e.email,
+                  subject: e.subject,
+                  status: e.status
+                })),
+                blogsSummary: blogPosts.slice(0, 10).map(b => ({
+                  id: b.id,
+                  title: b.title,
+                  category: b.category,
+                  status: b.status,
+                  author: b.author
                 }))
               }
             }}
@@ -1650,6 +1685,41 @@ export default function App() {
                   name: d.name,
                   specialization: d.specialization,
                   status: d.status
+                })),
+                staffSummary: staffList.slice(0, 10).map(s => ({
+                  id: s.id,
+                  name: s.name,
+                  role: s.role,
+                  department: s.department,
+                  status: s.status
+                })),
+                wardsSummary: wards.slice(0, 10).map(w => ({
+                  id: w.id,
+                  name: w.name,
+                  type: w.type,
+                  totalBeds: w.totalBeds,
+                  occupiedBeds: w.occupiedBeds,
+                  pricePerDay: w.pricePerDay
+                })),
+                departmentsSummary: departments.slice(0, 10).map(d => ({
+                  id: d.id,
+                  name: d.name,
+                  head: d.head,
+                  status: d.status
+                })),
+                enquiriesSummary: enquiries.slice(0, 10).map(e => ({
+                  id: e.id,
+                  name: e.name,
+                  email: e.email,
+                  subject: e.subject,
+                  status: e.status
+                })),
+                blogsSummary: blogPosts.slice(0, 10).map(b => ({
+                  id: b.id,
+                  title: b.title,
+                  category: b.category,
+                  status: b.status,
+                  author: b.author
                 }))
               }
             }}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Bed, Plus, Search, RefreshCw, FileSpreadsheet, Trash2, Edit3, Eye, 
-  X, Check, AlertCircle, Shield, Home, Users, CheckCircle2, UserCheck, Sparkles
+  X, Check, AlertCircle, Shield, Home, Users, CheckCircle2, UserCheck, Sparkles, CheckCircle
 } from 'lucide-react';
 import { Patient } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -40,6 +40,14 @@ export default function IpdWardsView({
   const [showWardModal, setShowWardModal] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [editingWard, setEditingWard] = useState<any | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
 
   // Ward Form States
   const [wardName, setWardName] = useState('');
@@ -279,7 +287,7 @@ export default function IpdWardsView({
   const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
     setShowExportDropdown(false);
     if (admittedPatients.length === 0) {
-      alert('No active patient admissions recorded to export.');
+      showToast('No active patient admissions recorded to export.');
       return;
     }
 
@@ -303,17 +311,29 @@ export default function IpdWardsView({
 
     if (format === 'CSV') {
       downloadCSV(mappedAdmitted, headers, keys, filename);
+      showToast("Admissions list exported smoothly as CSV.");
     } else if (format === 'Excel') {
       downloadExcel(mappedAdmitted, headers, keys, filename);
+      showToast("Admissions list exported smoothly as Excel sheet.");
     } else if (format === 'Word') {
       downloadWord(mappedAdmitted, headers, keys, filename, 'IPD Active Ward Admissions Ledger');
+      showToast("Admissions list exported smoothly as Word document.");
     } else if (format === 'PDF') {
       downloadPDFFile(mappedAdmitted, headers, keys, filename, 'IPD Ward Bed Admissions Ledger');
+      showToast("Admissions list exported smoothly as PDF file.");
     }
   };
 
   return (
     <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-700" id="ipd-wards-view">
+      
+      {/* Toast Alert popup */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 animate-bounce">
+          <CheckCircle className="text-[#007f6e]" size={18} />
+          <span className="text-xs font-semibold">{toastMessage}</span>
+        </div>
+      )}
       
       {/* Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" id="ipd-header">

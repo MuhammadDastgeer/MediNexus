@@ -786,13 +786,13 @@ export default function AppointmentsView({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" id="view-mode-controller-header">
         
         {/* Toggle Pills block */}
-        <div className="inline-flex items-center gap-1.5 bg-white border border-slate-200 p-1.5 rounded-2xl shadow-xs">
+        <div className="inline-flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl shadow-xs">
           <button
             onClick={() => setActiveMode('appointments')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
               activeMode === 'appointments'
-                ? 'bg-[#007f6e] text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                ? 'bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 text-white shadow-md shadow-teal-600/15'
+                : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             <Calendar size={14} />
@@ -801,10 +801,10 @@ export default function AppointmentsView({
           
           <button
             onClick={() => setActiveMode('followups')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
               activeMode === 'followups'
-                ? 'bg-[#007f6e] text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                ? 'bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 text-white shadow-md shadow-teal-600/15'
+                : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             <RefreshCw size={14} className={activeMode === 'followups' ? 'animate-spin' : ''} />

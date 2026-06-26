@@ -93,29 +93,35 @@ export default function Header({
           </span>
           <input
             type="text"
-            placeholder="Search..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs text-slate-700 bg-slate-50 border border-slate-100/80 rounded-lg focus:outline-none focus:border-[#007f6e] focus:bg-white transition-all placeholder:text-slate-400"
+            placeholder="Search CarePoint database..."
+            className="w-full pl-9 pr-4 py-1.5 text-xs font-medium text-slate-700 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 focus:bg-white transition-all placeholder:text-slate-400"
             id="search-input"
           />
+        </div>
+
+        {/* Console Role Indicator (Vibrant Pill badge) */}
+        <div className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-teal-50/80 to-indigo-50/80 border border-teal-100/80 rounded-full px-3.5 py-1 select-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="text-[10px] text-teal-800 font-extrabold uppercase tracking-wider">{displayRole} Active</span>
         </div>
       </div>
 
       {/* User Actions */}
       <div className="flex items-center gap-4" id="header-user-actions">
         {/* Notification Bell */}
-        <button className="w-9 h-9 flex items-center justify-center text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg transition-colors relative" id="bell-btn">
+        <button className="w-9 h-9 flex items-center justify-center text-slate-500 hover:text-indigo-600 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/60 rounded-xl transition-all relative" id="bell-btn">
           <Bell size={18} />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full border border-white" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-gradient-to-r from-teal-500 to-indigo-600 rounded-full animate-bounce" />
         </button>
 
         {/* User Card */}
         <div className="flex items-center gap-3 pl-3 border-l border-slate-100 cursor-pointer hover:opacity-95" id="header-profile-dropdown">
-          <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center text-xs font-bold" id="dropdown-initial">
+          <div className="w-8 h-8 bg-gradient-to-tr from-teal-500 via-emerald-500 to-indigo-600 text-white rounded-xl flex items-center justify-center text-xs font-extrabold shadow-sm shadow-teal-500/10" id="dropdown-initial">
             {initials}
           </div>
           <div className="hidden sm:block text-left">
-            <h4 className="text-xs font-semibold text-slate-800 leading-tight" id="dropdown-name">{displayName}</h4>
-            <span className="text-[10px] text-slate-400 font-medium" id="dropdown-role">{displayRole}</span>
+            <h4 className="text-xs font-bold text-slate-950 leading-tight" id="dropdown-name">{displayName}</h4>
+            <span className="text-[9px] bg-indigo-50 text-indigo-700 font-extrabold px-1.5 py-0.2 rounded uppercase block mt-0.5 tracking-wider" id="dropdown-role">{displayRole}</span>
           </div>
           <ChevronDown size={14} className="text-slate-400" />
         </div>

@@ -26,7 +26,19 @@ import {
   Play,
   Square,
   ArrowLeft,
-  Wrench
+  Wrench,
+  Edit2,
+  Trash,
+  Database,
+  Search,
+  PlusCircle,
+  Check,
+  Settings,
+  XCircle,
+  Briefcase,
+  Layers,
+  HelpCircle,
+  Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -705,6 +717,210 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Unified Hospital Command Console states
+  const [activePanel, setActivePanel] = useState<'chat' | 'commands'>('chat');
+  const [activeConsoleCategory, setActiveConsoleCategory] = useState<string>('patients');
+  const [consoleSearchQuery, setConsoleSearchQuery] = useState<string>('');
+  const [showCrudModal, setShowCrudModal] = useState<boolean>(false);
+  const [crudOperation, setCrudOperation] = useState<'add' | 'edit'>('add');
+  const [crudCategory, setCrudCategory] = useState<string>('patients');
+  const [crudEditingItem, setCrudEditingItem] = useState<any>(null);
+  const [crudFormData, setCrudFormData] = useState<any>({});
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showToastIcon, setShowToastIcon] = useState<boolean>(true);
+
+  const showConsoleToast = (msg: string, success: boolean = true) => {
+    setToastMessage(msg);
+    setShowToastIcon(success);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
+
+  const getFieldsForCategory = (category: string) => {
+    switch (category) {
+      case 'patients':
+        return [
+          { name: 'name', label: 'Patient Name', type: 'text', required: true, placeholder: 'e.g. Ali Khan' },
+          { name: 'age', label: 'Age', type: 'number', required: true, placeholder: 'e.g. 28' },
+          { name: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'], required: true },
+          { name: 'bloodGroup', label: 'Blood Group', type: 'select', options: ['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'], required: true },
+          { name: 'phone', label: 'Phone Number', type: 'text', required: true, placeholder: 'e.g. 0300-1234567' },
+          { name: 'status', label: 'Status', type: 'select', options: ['New', 'Active', 'Discharged', 'Admitted'], required: true },
+        ];
+      case 'doctors':
+        return [
+          { name: 'name', label: 'Doctor Name', type: 'text', required: true, placeholder: 'e.g. Dr. Sarah Ahmad' },
+          { name: 'specialization', label: 'Specialization', type: 'text', required: true, placeholder: 'e.g. Cardiologist' },
+          { name: 'consultationFee', label: 'Consultation Fee (PKR)', type: 'number', required: true, placeholder: 'e.g. 1500' },
+          { name: 'phone', label: 'Contact Phone', type: 'text', required: true, placeholder: 'e.g. 0312-3456789' },
+          { name: 'status', label: 'Status', type: 'select', options: ['On Duty', 'Off Duty', 'On Leave'], required: true },
+        ];
+      case 'appointments':
+        return [
+          { name: 'patientName', label: 'Patient Name', type: 'text', required: true, placeholder: 'e.g. Ali Khan' },
+          { name: 'doctorName', label: 'Doctor Name', type: 'text', required: true, placeholder: 'e.g. Dr. Sarah Ahmad' },
+          { name: 'date', label: 'Date', type: 'text', required: true, placeholder: 'e.g. 2026-06-28 or Today' },
+          { name: 'time', label: 'Time Slot', type: 'text', required: true, placeholder: 'e.g. 11:30 AM' },
+          { name: 'type', label: 'Visit Type', type: 'select', options: ['Opd', 'Ipd', 'Emergency'], required: true },
+          { name: 'specialization', label: 'Specialization / Dept', type: 'text', required: true, placeholder: 'e.g. Cardiology' },
+          { name: 'status', label: 'Status', type: 'select', options: ['Scheduled', 'Completed', 'Cancelled', 'Pending'], required: true },
+        ];
+      case 'staff':
+        return [
+          { name: 'name', label: 'Staff Name', type: 'text', required: true, placeholder: 'e.g. Nurse Fatima' },
+          { name: 'role', label: 'Staff Role', type: 'text', required: true, placeholder: 'e.g. Senior Nurse' },
+          { name: 'department', label: 'Department Name', type: 'text', required: true, placeholder: 'e.g. Emergency' },
+          { name: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive', 'On Leave'], required: true },
+        ];
+      case 'billing':
+        return [
+          { name: 'patientName', label: 'Patient Name', type: 'text', required: true, placeholder: 'e.g. Ali Khan' },
+          { name: 'amount', label: 'Total Amount (PKR)', type: 'number', required: true, placeholder: 'e.g. 5000' },
+          { name: 'collectedAmount', label: 'Collected Amount (PKR)', type: 'number', required: true, placeholder: 'e.g. 4500' },
+          { name: 'discount', label: 'Discount Amount (PKR)', type: 'number', required: true, placeholder: 'e.g. 500' },
+          { name: 'status', label: 'Payment Status', type: 'select', options: ['Paid', 'Unpaid', 'Partially Paid', 'Refunded'], required: true },
+        ];
+      case 'inventory':
+        return [
+          { name: 'name', label: 'Item Name', type: 'text', required: true, placeholder: 'e.g. Panadol 500mg' },
+          { name: 'category', label: 'Category', type: 'select', options: ['Medicine', 'Consumable', 'Equipment', 'Surgical'], required: true },
+          { name: 'stock', label: 'Current Stock Qty', type: 'number', required: true, placeholder: 'e.g. 250' },
+          { name: 'minStock', label: 'Minimum Stock Level', type: 'number', required: true, placeholder: 'e.g. 50' },
+          { name: 'price', label: 'Cost Price (PKR)', type: 'number', required: true, placeholder: 'e.g. 100' },
+          { name: 'sellingPrice', label: 'Selling Price (PKR)', type: 'number', required: true, placeholder: 'e.g. 120' },
+        ];
+      case 'ipd-wards':
+        return [
+          { name: 'name', label: 'Ward Bed Code / Name', type: 'text', required: true, placeholder: 'e.g. Bed-ICU-04' },
+          { name: 'type', label: 'Ward Class Type', type: 'select', options: ['General', 'Semi-Private', 'Private', 'ICU', 'Deluxe'], required: true },
+          { name: 'totalBeds', label: 'Total Beds', type: 'number', required: true, placeholder: 'e.g. 10' },
+          { name: 'occupiedBeds', label: 'Occupied Beds', type: 'number', required: true, placeholder: 'e.g. 3' },
+          { name: 'pricePerDay', label: 'Daily Tariff (PKR)', type: 'number', required: true, placeholder: 'e.g. 3500' },
+        ];
+      case 'departments':
+        return [
+          { name: 'name', label: 'Department Name', type: 'text', required: true, placeholder: 'e.g. Cardiology' },
+          { name: 'head', label: 'Department Head', type: 'text', required: true, placeholder: 'e.g. Dr. Sarah Ahmad' },
+          { name: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive'], required: true },
+        ];
+      case 'enquiries':
+        return [
+          { name: 'name', label: 'Sender Name', type: 'text', required: true, placeholder: 'e.g. Hassan Raza' },
+          { name: 'email', label: 'Sender Email', type: 'text', required: true, placeholder: 'e.g. hassan@gmail.com' },
+          { name: 'subject', label: 'Subject Line', type: 'text', required: true, placeholder: 'e.g. Consultation Slots Inquiry' },
+          { name: 'status', label: 'Status', type: 'select', options: ['Pending', 'Resolved', 'Ignored'], required: true },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const handleOpenAdd = (category: string) => {
+    const fields = getFieldsForCategory(category);
+    const initialForm: any = {};
+    fields.forEach(f => {
+      if (f.type === 'select' && f.options) {
+        initialForm[f.name] = f.options[0];
+      } else if (f.type === 'number') {
+        initialForm[f.name] = 0;
+      } else {
+        initialForm[f.name] = '';
+      }
+    });
+    setCrudCategory(category);
+    setCrudOperation('add');
+    setCrudEditingItem(null);
+    setCrudFormData(initialForm);
+    setShowCrudModal(true);
+  };
+
+  const handleOpenEdit = (category: string, item: any) => {
+    setCrudCategory(category);
+    setCrudOperation('edit');
+    setCrudEditingItem(item);
+    
+    // Map existing summary fields to form fields
+    const formMap: any = { ...item };
+    if (category === 'patients' && item.name) {
+      formMap.name = item.name;
+    } else if (category === 'appointments') {
+      formMap.patientName = item.patient;
+      formMap.doctorName = item.doctor;
+    } else if (category === 'billing') {
+      formMap.patientName = item.patient;
+    }
+    
+    setCrudFormData(formMap);
+    setShowCrudModal(true);
+  };
+
+  const handleCrudSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onExecuteAction) {
+      showConsoleToast("Action execution handler not connected.", false);
+      return;
+    }
+
+    try {
+      // Map form fields to backend expected format
+      const payload: any = { ...crudFormData };
+      
+      // Let's adapt keys back to what App.tsx handles
+      if (crudCategory === 'appointments') {
+        payload.patientName = crudFormData.patientName;
+        payload.doctorName = crudFormData.doctorName;
+      } else if (crudCategory === 'billing') {
+        payload.patientName = crudFormData.patientName;
+      }
+
+      if (crudOperation === 'add') {
+        onExecuteAction({
+          type: 'add',
+          tab: crudCategory,
+          item: payload
+        });
+        showConsoleToast(`Successfully added new record to ${crudCategory}!`);
+      } else {
+        onExecuteAction({
+          type: 'edit',
+          tab: crudCategory,
+          id: crudEditingItem.id,
+          item: payload
+        });
+        showConsoleToast(`Successfully updated record in ${crudCategory}!`);
+      }
+      setShowCrudModal(false);
+    } catch (err: any) {
+      showConsoleToast(`Error: ${err.message}`, false);
+    }
+  };
+
+  const handleCrudDelete = (category: string, item: any) => {
+    if (!onExecuteAction) return;
+    if (window.confirm(`Are you sure you want to delete this ${category} record (${item.name || item.patient || item.title || item.id})?`)) {
+      onExecuteAction({
+        type: 'delete',
+        tab: category,
+        id: item.id
+      });
+      showConsoleToast(`Successfully deleted ${category} record!`);
+    }
+  };
+
+  const handleCrudCancel = (category: string, item: any) => {
+    if (!onExecuteAction) return;
+    if (window.confirm(`Are you sure you want to cancel this appointment (${item.patient || item.id})?`)) {
+      onExecuteAction({
+        type: 'edit',
+        tab: category,
+        id: item.id,
+        item: { status: 'Cancelled' }
+      });
+      showConsoleToast(`Appointment cancelled successfully!`);
+    }
+  };
+
   // Scroll to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1290,7 +1506,6 @@ Please request support or review active API parameter credentials.`,
       className="flex flex-col min-h-0 h-full w-full text-slate-800 overflow-hidden pb-1" 
       id="ai-assistant-container-parent"
     >
-      {/* HEADER CONTROL AND CHAT */}
       <motion.div 
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -2016,11 +2231,8 @@ Please request support or review active API parameter credentials.`,
           </form>
         </div>
       </motion.div>
-
-
-
-
     </motion.div>
+
   );
 }
 

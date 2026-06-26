@@ -3,7 +3,7 @@ import {
   User, Plus, Search, Calendar, RefreshCw, BarChart2, Users, 
   CheckSquare, Activity, ShieldCheck, CreditCard, Clock, MapPin, 
   ArrowLeft, Eye, Edit, Trash2, X, Check, EyeOff, Landmark,
-  FolderPlus, Heart, FileText, UserPlus, FileDown, Camera, Phone, Sparkles
+  FolderPlus, Heart, FileText, UserPlus, FileDown, Camera, Phone, Sparkles, CheckCircle
 } from 'lucide-react';
 import { Patient, Doctor, Bill, Appointment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -46,11 +46,19 @@ export default function PatientsView({
   const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
   const [detailActiveTab, setDetailActiveTab] = useState<'overview' | 'appointments' | 'medical-history' | 'billing' | 'treatment-plans'>('overview');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
 
   const handleExport = (format: 'CSV' | 'Excel' | 'Word' | 'PDF') => {
     setShowExportDropdown(false);
     if (filteredPatients.length === 0) {
-      alert("No patient logs to export.");
+      showToast("No patient logs to export.");
       return;
     }
     const headers = ['Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Blood Group', 'Address', 'Status', 'Registered At'];
@@ -59,12 +67,16 @@ export default function PatientsView({
 
     if (format === 'CSV') {
       downloadCSV(filteredPatients, headers, keys, filename);
+      showToast("Patients list exported smoothly as CSV.");
     } else if (format === 'Excel') {
       downloadExcel(filteredPatients, headers, keys, filename);
+      showToast("Patients list exported smoothly as Excel sheet.");
     } else if (format === 'Word') {
       downloadWord(filteredPatients, headers, keys, filename, 'Hospital Admitted Patients Board');
+      showToast("Patients list exported smoothly as Word document.");
     } else if (format === 'PDF') {
       downloadPDFFile(filteredPatients, headers, keys, filename, 'Hospital Admitted Patients Roll');
+      showToast("Patients list exported smoothly as PDF file.");
     }
   };
 
@@ -824,15 +836,23 @@ export default function PatientsView({
   return (
     <div className="p-8 space-y-6 overflow-y-auto h-full bg-[#f4f7f6] select-none text-slate-705 font-sans" id="patient-management-view-container">
       
+      {/* Toast Alert popup */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 animate-bounce">
+          <CheckCircle className="text-[#007f6e]" size={18} />
+          <span className="text-xs font-semibold">{toastMessage}</span>
+        </div>
+      )}
+      
       {/* Dynamic Upper Tab selector pill-bar */}
       {!showForm && (
-        <div className="flex items-center gap-3 border-b border-slate-200 pb-4" id="patient-tab-pills">
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit gap-1 pb-1.5 mb-4" id="patient-tab-pills">
           <button
             onClick={() => setActiveTab('members')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
               activeTab === 'members'
-                ? 'bg-[#e6f4f1] text-[#007f6e] border border-[#007f6e]'
-                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white shadow-md shadow-teal-600/10'
+                : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             <Users size={15} />
@@ -841,10 +861,10 @@ export default function PatientsView({
 
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
               activeTab === 'overview'
-                ? 'bg-[#e6f4f1] text-[#007f6e] border border-[#007f6e]'
-                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white shadow-md shadow-teal-600/10'
+                : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             <BarChart2 size={15} />
