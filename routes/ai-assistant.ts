@@ -19,17 +19,13 @@ const getKeys = () => {
   const rawGemini = cleanKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
   const rawOpenai = cleanKey(process.env.OPENAI_API_KEY);
   const rawAnthropic = cleanKey(process.env.ANTHROPIC_API_KEY);
-  const rawOpenrouter = cleanKey(process.env.OPENROUTER_API_KEY);
-  const rawGroq = cleanKey(process.env.GROQ_API_KEY);
 
   // Initialize correct targets with raw values as defaults
   let gemini = rawGemini;
   let openai = rawOpenai;
   let anthropic = rawAnthropic;
-  let openrouter = rawOpenrouter;
-  let groq = rawGroq;
 
-  const allRawKeys = [rawGemini, rawOpenai, rawAnthropic, rawOpenrouter, rawGroq].filter(k => k !== '');
+  const allRawKeys = [rawGemini, rawOpenai, rawAnthropic].filter(k => k !== '');
 
   // Detect and dynamically assign based on signature prefixes
   for (const key of allRawKeys) {
@@ -37,21 +33,17 @@ const getKeys = () => {
       gemini = key;
     } else if (key.startsWith('sk-ant-')) {
       anthropic = key;
-    } else if (key.startsWith('gsk_')) {
-      groq = key;
     } else if (key.startsWith('sk-')) {
       openai = key;
     }
   }
 
-  const keys = { gemini, openai, anthropic, openrouter, groq };
+  const keys = { gemini, openai, anthropic };
 
   console.log('[API KEYS DIAGNOSTIC] Loaded keys status (after smart auto-routing):', {
     gemini: keys.gemini ? `Loaded (len: ${keys.gemini.length})` : 'Missing',
     openai: keys.openai ? `Loaded (len: ${keys.openai.length})` : 'Missing',
     anthropic: keys.anthropic ? `Loaded (len: ${keys.anthropic.length})` : 'Missing',
-    openrouter: keys.openrouter ? `Loaded (len: ${keys.openrouter.length})` : 'Missing',
-    groq: keys.groq ? `Loaded (len: ${keys.groq.length})` : 'Missing',
   });
   return keys;
 };
@@ -285,103 +277,6 @@ async function tryAnthropic(keys: any, prompt: string, image: string, attempts: 
     }
   } else {
     attempts.push({ provider: 'Anthropic Claude', status: 'skipped', error: 'API key is not configured' });
-  }
-  return null;
-}
-
-async function tryOpenRouter(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
-  if (keys.openrouter && keys.openrouter.trim() !== '') {
-    try {
-      const openRouterMessages: any[] = [
-        { role: 'system', content: systemInstruction }
-      ];
-
-      let contentPayload: any = prompt;
-      if (image) {
-        contentPayload = [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: image } }
-        ];
-      }
-
-      openRouterMessages.push({ role: 'user', content: contentPayload });
-
-      const fetchRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${keys.openrouter}`
-        },
-        body: JSON.stringify({
-          model: 'meta-llama/llama-3-8b-instruct:free',
-          messages: openRouterMessages,
-          temperature: 0.2
-        })
-      });
-
-      if (!fetchRes.ok) {
-        const errDetails = await fetchRes.text();
-        throw new Error(`OpenRouter HTTP Error: ${fetchRes.status} - ${errDetails}`);
-      }
-
-      const resData = await fetchRes.json();
-      const reply = resData?.choices?.[0]?.message?.content;
-      if (reply) {
-        attempts.push({ provider: 'OpenRouter', status: 'success', modelUsed: 'llama-3-free' });
-        return reply;
-      } else {
-        throw new Error('Null response content returned from OpenRouter API.');
-      }
-    } catch (err: any) {
-      console.error("tryOpenRouter Error details:", err);
-      attempts.push({ provider: 'OpenRouter', status: 'failed', error: err.message });
-    }
-  } else {
-    attempts.push({ provider: 'OpenRouter', status: 'skipped', error: 'API key is not configured' });
-  }
-  return null;
-}
-
-async function tryGroq(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
-  if (keys.groq && keys.groq.trim() !== '') {
-    try {
-      const groqMessages = [
-        { role: 'system', content: systemInstruction },
-        { role: 'user', content: prompt }
-      ];
-
-      const fetchRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${keys.groq}`
-        },
-        body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
-          messages: groqMessages,
-          temperature: 0.2
-        })
-      });
-
-      if (!fetchRes.ok) {
-        const errDetails = await fetchRes.text();
-        throw new Error(`Groq HTTP Error: ${fetchRes.status} - ${errDetails}`);
-      }
-
-      const resData = await fetchRes.json();
-      const reply = resData?.choices?.[0]?.message?.content;
-      if (reply) {
-        attempts.push({ provider: 'Groq', status: 'success', modelUsed: 'llama-3.1-8b-instant' });
-        return reply;
-      } else {
-        throw new Error('Null response content returned from Groq API.');
-      }
-    } catch (err: any) {
-      console.error("tryGroq Error details:", err);
-      attempts.push({ provider: 'Groq', status: 'failed', error: err.message });
-    }
-  } else {
-    attempts.push({ provider: 'Groq', status: 'skipped', error: 'API key is not configured' });
   }
   return null;
 }
