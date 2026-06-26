@@ -14,16 +14,39 @@ const cleanKey = (key?: string) => {
   return key.replace(/^["']|["']$/g, '').trim();
 };
 
-// Retrieve key values at request time to ensure up-to-date environment parameters
+// Retrieve key values at request time with auto-correcting routing to fix accidental key mix-ups
 const getKeys = () => {
-  const keys = {
-    gemini: cleanKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
-    openai: cleanKey(process.env.OPENAI_API_KEY),
-    anthropic: cleanKey(process.env.ANTHROPIC_API_KEY),
-    openrouter: cleanKey(process.env.OPENROUTER_API_KEY),
-    groq: cleanKey(process.env.GROQ_API_KEY),
-  };
-  console.log('[API KEYS DIAGNOSTIC] Loaded keys status:', {
+  const rawGemini = cleanKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+  const rawOpenai = cleanKey(process.env.OPENAI_API_KEY);
+  const rawAnthropic = cleanKey(process.env.ANTHROPIC_API_KEY);
+  const rawOpenrouter = cleanKey(process.env.OPENROUTER_API_KEY);
+  const rawGroq = cleanKey(process.env.GROQ_API_KEY);
+
+  // Initialize correct targets with raw values as defaults
+  let gemini = rawGemini;
+  let openai = rawOpenai;
+  let anthropic = rawAnthropic;
+  let openrouter = rawOpenrouter;
+  let groq = rawGroq;
+
+  const allRawKeys = [rawGemini, rawOpenai, rawAnthropic, rawOpenrouter, rawGroq].filter(k => k !== '');
+
+  // Detect and dynamically assign based on signature prefixes
+  for (const key of allRawKeys) {
+    if (key.startsWith('AIzaSy')) {
+      gemini = key;
+    } else if (key.startsWith('sk-ant-')) {
+      anthropic = key;
+    } else if (key.startsWith('gsk_')) {
+      groq = key;
+    } else if (key.startsWith('sk-')) {
+      openai = key;
+    }
+  }
+
+  const keys = { gemini, openai, anthropic, openrouter, groq };
+
+  console.log('[API KEYS DIAGNOSTIC] Loaded keys status (after smart auto-routing):', {
     gemini: keys.gemini ? `Loaded (len: ${keys.gemini.length})` : 'Missing',
     openai: keys.openai ? `Loaded (len: ${keys.openai.length})` : 'Missing',
     anthropic: keys.anthropic ? `Loaded (len: ${keys.anthropic.length})` : 'Missing',
