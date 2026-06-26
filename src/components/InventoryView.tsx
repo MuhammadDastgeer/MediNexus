@@ -39,24 +39,37 @@ export default function InventoryView({
 
   // Fetch SQLite backends for tabs
   const fetchLocalTables = async () => {
+    // 1. Fetch Suppliers
     try {
       const supRes = await fetch('/api/suppliers');
       if (supRes.ok) {
         const data = await supRes.json();
-        setSuppliers(data);
+        setSuppliers(Array.isArray(data) ? data : []);
       }
+    } catch (err) {
+      console.error('Error fetching suppliers:', err);
+    }
+
+    // 2. Fetch Purchases
+    try {
       const purRes = await fetch('/api/purchases');
       if (purRes.ok) {
         const data = await purRes.json();
-        setPurchases(data);
+        setPurchases(Array.isArray(data) ? data : []);
       }
+    } catch (err) {
+      console.error('Error fetching purchases:', err);
+    }
+
+    // 3. Fetch Transfers
+    try {
       const trRes = await fetch('/api/transfers2');
       if (trRes.ok) {
         const data = await trRes.json();
-        setTransfers(data);
+        setTransfers(Array.isArray(data) ? data : []);
       }
     } catch (err) {
-      console.error('Error fetching inventory sub-tables:', err);
+      console.error('Error fetching transfers:', err);
     }
   };
 
