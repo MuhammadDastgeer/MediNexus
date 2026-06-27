@@ -1,13 +1,13 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { Router, Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
-import dotenv from 'dotenv';
 import db from '../db.js';
-
-// Load environment variables from .env file
-dotenv.config();
+import { MODEL_CONFIG } from './model-config.js';
 
 const router = Router();
 
@@ -54,25 +54,25 @@ const getKeys = () => {
 // Guardrail instructions that fulfill medical-only requirements and context-specificity
 const SYSTEM_INSTRUCTION = `You are a highly specialised clinical and medical hospital AI assistant. 
 You MUST adhere to these strict limits and instructions:
-1. ONLY answer queries that are:
+1. ONLY answer queries (including text, voice, documents, and images) that are:
    a. Related to medical knowledge, healthy lifestyles, clinical symptoms, wellness guidance, medical analysis, pharmacology, diagnostics, procedures, etc.
-   b. Related to the provided Screen and Role Context (e.g. queries about appointment lists, bills, financial records, inventory items, ward structures, doctor lists).
-2. If the user asks about ANYTHING ELSE that is NOT related to medical/clinical care, healthcare, or hospital data management (for example: general knowledge, weather, sports, politics, pop culture, irrelevant coding, cooking recipes, general storytelling, or general file contents of a non-medical file/image/document):
+   b. Related to this hospital website/app itself, its design, features, pages, tabs, active clinical views, or how to use the system (e.g., how to schedule appointments, register patients, check billing records, manage ward beds or stock inventories).
+2. If the user asks about ANYTHING ELSE that is NOT related to medical/clinical care, healthcare, or this hospital website/application (for example: general knowledge, weather, sports, politics, pop culture, unrelated software coding, cooking recipes, general storytelling, etc.):
    - You MUST detect the language of the user's message/query.
-   - You MUST reply to them in that EXACT SAME LANGUAGE stating ONLY that you can only answer medical questions.
+   - You MUST reply to them in that EXACT SAME LANGUAGE stating ONLY that you can only answer medical and hospital website questions.
    - Do NOT provide any other information, explanation, or reasoning.
-   - Examples of exact matching replies for non-medical queries per language detected:
-     * Roman Urdu / Roman Hindi / Hinglish (e.g., "kya haal hai", "gaana sunao", "France ka capital kya hai", "ap kya kr skte ho"): "Only medical questions ka answer da sakta hu"
-     * English (e.g., "Hello, tell me a joke", "What is the capital of...", "write a poem", "how to code"): "I can only answer medical questions."
-     * Urdu Script (Nastaliq, e.g., "آپ کیا کر سکتے ہیں؟", "فرانس کا دارالحکومت"): "صرف طبی سوالات کے جوابات دے سکتا ہوں۔"
-     * Hindi Script (Devanagari, e.g., "आप क्या कर सकते हैं?", "फ्रांस की राजधानी क्या है?"): "मैं केवल चिकित्सा संबंधी प्रश्नों के उत्तर दे 😊क्ता हूँ।"
-     * Spanish (e.g., "¿Cuál es la capital...", "¿Qué puedes hacer?"): "Solo puedo responder a preguntas médicas."
-     * French (e.g., "Quelle est la capitale...", "Que pouvez-vous faire?"): "Je ne peux répondre qu'aux questions médicales."
-     * German (e.g., "Was kannst du tun?"): "Ich kann nur medizinische Fragen beantworten."
-     * Arabic (e.g., "ما هي عاصمة فرنسا؟"): "يمكنني فقط الإجابة على الأسئلة الطبية."
-     * Other languages: Translate the phrase "I can only answer medical questions" or "Only medical questions ka answer da sakta hu" into that language, and output ONLY that phrase.
+   - Examples of exact matching replies for non-medical/non-website queries per language detected:
+     * Roman Urdu / Roman Hindi / Hinglish (e.g., "kya haal hai", "gaana sunao", "France ka capital kya hai", "ap kya kr skte ho"): "Only medical aur hospital website questions ka answer da sakta hu"
+     * English (e.g., "Hello, tell me a joke", "What is the capital of...", "write a poem", "how to code"): "I can only answer medical or hospital website-related questions."
+     * Urdu Script (Nastaliq, e.g., "آپ کیا کر سکتے ہیں؟", "فرانس کا دارالحکومت"): "صرف طبی اور ہسپتال کی ویب سائٹ کے سوالات کے جوابات دے سکتا ہوں۔"
+     * Hindi Script (Devanagari, e.g., "आप क्या कर सकते हैं?", "फ्रांस की राजधानी क्या है?"): "मैं केवल चिकित्सा और अस्पताल वेबसाइट संबंधी प्रश्नों के उत्तर दे सकता हूँ।"
+     * Spanish (e.g., "¿Cuál es la capital...", "¿Qué puedes hacer?"): "Solo puedo responder a preguntas médicas o de la web del hospital."
+     * French (e.g., "Quelle est la capitale...", "Que pouvez-vous faire?"): "Je ne peux répondre qu'aux questions médicales ou liées au site de l'hôpital."
+     * German (e.g., "Was kannst du tun?"): "Ich kann nur medizinische oder Krankenhaus-Website-Fragen beantworten."
+     * Arabic (e.g., "ما هي عاصمة فرنسا؟"): "يمكنني فقط الإجابة على الأسئلة الطبية أو المتعلقة بموقع المستشفى."
+     * Other languages: Translate the phrase "I can only answer medical or hospital website-related questions" or "Only medical aur hospital website questions ka answer da sakta hu" into that language, and output ONLY that phrase.
 3. Respond in a highly professional, clinical, helpful, and concise manner.
-4. If an image or any other document file is uploaded (such as a lab report, prescription, skin rash, clinical medical records, spreadsheets with hospital/patient metrics, csv data of symptoms), check it thoroughly and provide your clinical insight. If the file content is not related to healthcare/medical/hospital records, treat it as a non-medical query and reply ONLY in the same language as the user's accompanying message/query using the translation as specified in Rule 2.
+4. If an image or any other document file is uploaded (such as a lab report, prescription, skin rash, clinical medical records, spreadsheets with hospital/patient metrics, csv data of symptoms), check it thoroughly and provide your clinical insight. If the file content is not related to healthcare/medical/hospital records or website features, treat it as a non-medical query and reply ONLY in the same language as the user's accompanying message/query using the translation as specified in Rule 2.
 5. Voice / Audio (and Typed Text) Navigation and Tab-switching Guidance:
    - If the user sent a voice/audio query OR typed a query inquiring about or referencing a specific tab/domain (e.g., 'billing/paisa', 'appointments/consulting/doctor duty', 'wardbed/occupancy', 'medicine stock/pharmacy inventory count', 'patient records', etc.):
      * You MUST understand what they said or typed.
@@ -111,9 +111,11 @@ function parseImageData(dataUrl: string) {
 
 async function tryGemini(keys: any, prompt: string, image: string, audio: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.gemini && keys.gemini !== 'MY_GEMINI_API_KEY' && keys.gemini.trim() !== '') {
+    const apiModel = MODEL_CONFIG.getApiGeminiModel();
+    const configName = MODEL_CONFIG.geminiModel;
     try {
       const model = new ChatGoogleGenerativeAI({
-        model: 'gemini-3.5-flash',
+        model: apiModel,
         apiKey: keys.gemini,
         temperature: 0.2,
       });
@@ -155,26 +157,28 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
           ? response.content 
           : JSON.stringify(response.content);
 
-        attempts.push({ provider: 'Google Gemini (LangChain)', status: 'success', modelUsed: 'gemini-3.5-flash' });
+        attempts.push({ provider: `${configName} (Google)`, status: 'success', modelUsed: configName });
         return replyText;
       } else {
-        throw new Error('Empty response returned from Google Gemini via LangChain.');
+        throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.error("tryGemini LangChain Error details:", err);
-      attempts.push({ provider: 'Google Gemini (LangChain)', status: 'failed', error: err.message || 'Unknown network error' });
+      console.error(`tryGemini (${configName}) LangChain Error details:`, err);
+      attempts.push({ provider: `${configName} (Google)`, status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
-    attempts.push({ provider: 'Google Gemini (LangChain)', status: 'skipped', error: 'API key is not configured' });
+    attempts.push({ provider: `${MODEL_CONFIG.geminiModel} (Google)`, status: 'skipped', error: 'API key is not configured' });
   }
   return null;
 }
 
 async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.openai && keys.openai.trim() !== '') {
+    const apiModel = MODEL_CONFIG.getApiOpenAIModel();
+    const configName = MODEL_CONFIG.openaiModel;
     try {
       const model = new ChatOpenAI({
-        model: 'gpt-4o-mini',
+        model: apiModel,
         apiKey: keys.openai,
         temperature: 0.2,
       });
@@ -205,26 +209,28 @@ async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any
           ? response.content 
           : JSON.stringify(response.content);
 
-        attempts.push({ provider: 'OpenAI (LangChain)', status: 'success', modelUsed: 'gpt-4o-mini' });
+        attempts.push({ provider: `${configName} (OpenAI)`, status: 'success', modelUsed: configName });
         return replyText;
       } else {
-        throw new Error('Empty response returned from OpenAI via LangChain.');
+        throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.error("tryOpenAI LangChain Error details:", err);
-      attempts.push({ provider: 'OpenAI (LangChain)', status: 'failed', error: err.message || 'Unknown network error' });
+      console.error(`tryOpenAI (${configName}) LangChain Error details:`, err);
+      attempts.push({ provider: `${configName} (OpenAI)`, status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
-    attempts.push({ provider: 'OpenAI (LangChain)', status: 'skipped', error: 'API key is not configured' });
+    attempts.push({ provider: `${MODEL_CONFIG.openaiModel} (OpenAI)`, status: 'skipped', error: 'API key is not configured' });
   }
   return null;
 }
 
 async function tryAnthropic(keys: any, prompt: string, image: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
   if (keys.anthropic && keys.anthropic.trim() !== '') {
+    const apiModel = MODEL_CONFIG.getApiClaudeModel();
+    const configName = MODEL_CONFIG.claudeModel;
     try {
       const model = new ChatAnthropic({
-        model: 'claude-3-5-sonnet-20241022',
+        model: apiModel,
         apiKey: keys.anthropic,
         temperature: 0.2,
       });
@@ -255,17 +261,17 @@ async function tryAnthropic(keys: any, prompt: string, image: string, attempts: 
           ? response.content 
           : JSON.stringify(response.content);
 
-        attempts.push({ provider: 'Anthropic Claude (LangChain)', status: 'success', modelUsed: 'claude-3-5-sonnet' });
+        attempts.push({ provider: `${configName} (Anthropic)`, status: 'success', modelUsed: configName });
         return replyText;
       } else {
-        throw new Error('Empty response returned from Anthropic Claude via LangChain.');
+        throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.error("tryAnthropic LangChain Error details:", err);
-      attempts.push({ provider: 'Anthropic Claude (LangChain)', status: 'failed', error: err.message || 'Unknown network error' });
+      console.error(`tryAnthropic (${configName}) LangChain Error details:`, err);
+      attempts.push({ provider: `${configName} (Anthropic)`, status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
-    attempts.push({ provider: 'Anthropic Claude (LangChain)', status: 'skipped', error: 'API key is not configured' });
+    attempts.push({ provider: `${MODEL_CONFIG.claudeModel} (Anthropic)`, status: 'skipped', error: 'API key is not configured' });
   }
   return null;
 }
@@ -296,30 +302,33 @@ const getCategoryInstruction = (category: string): string => {
 
   const domainFocus = specializedPROMPTS[category] || 'You are a clinical specialist and healthcare workflow assistant.';
 
-  return `You are a highly specialised clinical and medical hospital AI assistant. 
+  return `You are a highly specialised clinical and medical hospital AI assistant operating using LangChain constructs. 
 Category / Current Tab Focus: [${category}]
 Current Tab Role: ${domainFocus}
 
 CRITICAL MANDATORY INSTRUCTIONS & SCOPE RESTRICTIONS:
-1. You are accessed from the specific, specialized [${category}] tab. You MUST ONLY answer queries (whether typed or SPOKEN via voice audio) that are directly related to the current "${category}" tab's roles, operations, data management, listing, creating/adding new records, editing/updating records, or deleting/deactivating records.
-2. You are STRICTLY FORBIDDEN from answering any other general medical questions, miscellaneous general knowledge, coding, weather, or ANY query that does not concern managing, editing, adding, or deleting data in this specific "${category}" tab.
-3. If the user asks ANY other general, clinical, or unrelated question (even if it is medical, and even if they spoke it in a VOICE/AUDIO query) that is not about this specific "${category}" tab's operations and data:
-   - You MUST politely refuse to answer.
-   - You MUST instruct them that this assistant only performs "${category}" tab operations and they should go to the main "AI Assistant" tab to ask other questions.
-   - Example replies (in Hindi/Urdu/English depending on the language they asked):
-     * English: "This assistant is restricted strictly to "${category}" operations and data. For other general or clinical questions, please go to the main \"AI Assistant\" tab."
-     * Hindi/Urdu/Roman Urdu (Hinglish): "Yeh assistant sirf "${category}" tab ke operations aur data se mutalik jawab de sakta hai. Kisi aur qism ke clinical ya general sawal ke liye, barah-e-maherbani main \"AI Assistant\" tab par jayen."
-4. Respond in a very concise, helpful, and professional clinical manner, referencing data context when asked about current items. Keep it short.
-5. Voice / Audio Query Processing Guidance:
+1. You are accessed from the specific, specialized [${category}] tab. You MUST ONLY answer queries (whether typed or spoken via voice audio) that are directly related to the current "${category}" tab's roles, operations, data management, listing, creating/adding new records, editing/updating records, or deleting/deactivating records in this specific tab.
+2. DATABASE CRUD ACTIONS (Add, Edit, Delete):
+   - You MUST fully support adding, editing/updating, and deleting/cancelling records inside this specific "${category}" tab via both text commands and spoken voice commands!
+   - When the user expresses a clear intent to perform a CRUD action (whether they type or speak it), first formulate a polite confirmation response. At the very end of your response, you MUST append exactly this trigger tag:
+     [ACTION: {"type": "add" | "edit" | "delete", "tab": "${category}", "id": "<id_to_edit_or_delete_if_applicable>", "item": { ...fields... }}]
+   - Keep the fields matching the data model of the current "${category}" tab.
+3. REDIRECTING OTHER TAB QUESTIONS:
+   - If the user asks a question or gives a command that belongs to a DIFFERENT tab (for example, asking about "billing/paisa/invoice" while on the "appointments" or "staff" tab, or asking about "medicine stock/inventory" while on the "billing" tab, etc.):
+     * You MUST refuse politely.
+     * Tell them to navigate to that specific tab to ask their question or perform that action.
+     * Use their detected language (Urdu/Hindi, Roman Urdu, or English).
+     * Example: "Barah-e-maherbani aap billing tab par ja kar ye billing se mutalik sawal karein." or "This belongs to the billing tab. Please go to the billing tab to ask this question."
+4. REDIRECTING GENERAL MEDICAL QUESTIONS:
+   - If the user asks a general clinical or medical question (for example: "fever ka ilaj kya hai?", "what are symptoms of flu?", "blood pressure monitor kaise karein?") while on this specialized "${category}" tab:
+     * You MUST refuse politely.
+     * Tell them that this assistant only performs "${category}" operations, and they should go to the main "AI Assistant" tab for general medical queries.
+     * Example: "Barah-e-maherbani aap main \"AI Assistant\" tab par ja kar ye medical/clinical sawal karein." or "Please go to the main \"AI Assistant\" tab to ask general medical questions."
+5. Voice / Audio Query Processing:
    - If the user sent a VOICE/AUDIO query, first transcribe and comprehend what they said.
-   - If their spoken query is related to this current "${category}" tab, answer their question directly.
-   - If their spoken query belongs to a DIFFERENT tab (such as talking about "billing/paisa/invoice/amount" while in "staff" tab, or speaking about "staff/doctor/nurse/duty" while in "billing" tab, or speaking about "ward/bed/room occupancy" while in "inventory" tab):
-     * You MUST identify which tab their spoken query corresponds to.
-     * State clearly what they talked about in the voice snippet (e.g. transcribing/summarizing their spoken request in Roman Urdu/Hindi or English).
-     * Provide a helpful, concise response to their question using your general capability as a hospital assistant, so they get their answer immediately.
-     * Explicitly inform them that you are automatically redirecting them to that relevant tab now so they can view the correct context and data.
-     * At the very end of your response, you MUST append EXACTLY this trigger tag: \`[NAVIGATE: <tab_name>-ai]\` (e.g., \`[NAVIGATE: billing-ai]\`, \`[NAVIGATE: staff-ai]\`, \`[NAVIGATE: appointments-ai]\`, \`[NAVIGATE: ipd-wards-ai]\`, \`[NAVIGATE: inventory-ai]\`, \`[NAVIGATE: doctors-ai]\`, \`[NAVIGATE: patients-ai]\`, \`[NAVIGATE: consultation-ai]\`).
-     * Keep it highly helpful, concise, and in the language they spoke (Urdu, Hindi, Roman Urdu, or English).
+   - If their spoken query is related to this current "${category}" tab, answer/perform action directly.
+   - If their spoken query belongs to a different tab, provide a redirection instruction as defined in rule 3, and append exactly this trigger tag: \`[NAVIGATE: <tab_name>-ai]\`.
+6. Respond in a highly professional, concise, and helpful clinical tone. Keep responses short and directly focused.
 `;
 };
 
@@ -955,62 +964,127 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
                         activeTabName !== 'general-ai' && 
                         activeTabName !== 'ai-assistant';
 
-  if (isTabSpecific && !lastMessageAudio) {
+  if (isTabSpecific) {
     const query = lastMessageText.toLowerCase();
     
-    // Check if the query is general and unrelated to this specific tab's core operations.
-    // We allow basic greeting, or questions targeting operations such as add, edit, delete, roles, data list, or containing key words of the tab name.
-    const isBasicGreeting = query.length < 15 && (
-      query.includes('hi') || 
-      query.includes('hello') || 
-      query.includes('hey') || 
-      query.includes('salaam') || 
-      query.includes('aoa') || 
-      query.includes('help') || 
-      query.includes('intro') ||
-      query.trim() === '?'
-    );
+    // Only apply static text check if we have text input, to let un-transcribed audio/images proceed to live multimodal models if available
+    if (query.trim().length > 0) {
+      let referredOtherTab: string | null = null;
+      let otherTabUrdu = '';
+      let otherTabEng = '';
 
-    // Let's list general check verbs and also the specific category terms
-    const hasCategoryKeywords = 
-      query.includes(activeTabName) || 
-      (activeTabName === 'doctors' && (query.includes('doctor') || query.includes('doc') || query.includes('roster') || query.includes('dr.'))) ||
-      (activeTabName === 'staff' && (query.includes('staff') || query.includes('member') || query.includes('nurse') || query.includes('shazib') || query.includes('duty') || query.includes('roster'))) ||
-      (activeTabName === 'appointments' && (query.includes('appoint') || query.includes('book') || query.includes('slot'))) ||
-      (activeTabName === 'billing' && (query.includes('bill') || query.includes('invoice') || query.includes('collect') || query.includes('payment') || query.includes('amount') || query.includes('billon') || query.includes('paisa'))) ||
-      (activeTabName === 'inventory' && (query.includes('invent') || query.includes('stock') || query.includes('medicine') || query.includes('drug') || query.includes('pharma'))) ||
-      (activeTabName === 'patients' && (query.includes('patient') || query.includes('sick') || query.includes('admit') || query.includes('allergic'))) ||
-      (activeTabName === 'consultation' && (query.includes('consult') || query.includes('prescribe') || query.includes('visit') || query.includes('symptom'))) ||
-      (activeTabName === 'ipd-wards' && (query.includes('ward') || query.includes('bed') || query.includes('room') || query.includes('occupy')));
+      // Check if they are referring to other tabs
+      if (activeTabName !== 'billing' && (query.includes('bill') || query.includes('invoice') || query.includes('paisa') || query.includes('rupees') || query.includes('payment') || query.includes('amount') || query.includes('billon') || query.includes('finance') || query.includes('transaction'))) {
+        referredOtherTab = 'billing';
+        otherTabUrdu = 'Billing / Invoice';
+        otherTabEng = 'Billing / Finance';
+      } else if (activeTabName !== 'inventory' && (query.includes('inventory') || query.includes('stock') || query.includes('medicine') || query.includes('drug') || query.includes('pharma') || query.includes('paracetamol') || query.includes('tablet') || query.includes('syrup') || query.includes('drug list'))) {
+        referredOtherTab = 'inventory';
+        otherTabUrdu = 'Inventory (Medicine Stock)';
+        otherTabEng = 'Inventory / Medicines';
+      } else if (activeTabName !== 'doctors' && (query.includes('doctor') || query.includes('dr.') || query.includes('roster') || query.includes('specializ') || query.includes('surgeon') || query.includes('physician') || query.includes('availab'))) {
+        referredOtherTab = 'doctors';
+        otherTabUrdu = 'Doctors';
+        otherTabEng = 'Doctors';
+      } else if (activeTabName !== 'patients' && (query.includes('patient') || query.includes('sick') || query.includes('allergic') || query.includes('blood group') || query.includes('bloodgroup') || query.includes('admit') || query.includes('all Patients'))) {
+        referredOtherTab = 'patients';
+        otherTabUrdu = 'Patients';
+        otherTabEng = 'Patients';
+      } else if (activeTabName !== 'staff' && (query.includes('staff') || query.includes('member') || query.includes('nurse') || query.includes('duty') || query.includes('timings') || query.includes('salary') || query.includes('cleaner') || query.includes('duty list'))) {
+        referredOtherTab = 'staff';
+        otherTabUrdu = 'Staff';
+        otherTabEng = 'Staff';
+      } else if (activeTabName !== 'ipd-wards' && (query.includes('ward') || query.includes('bed') || query.includes('room') || query.includes('occupy') || query.includes('room fee') || query.includes('beds'))) {
+        referredOtherTab = 'ipd-wards';
+        otherTabUrdu = 'IPD Wards';
+        otherTabEng = 'IPD Wards';
+      } else if (activeTabName !== 'appointments' && (query.includes('appointment') || query.includes('booking') || query.includes('slot') || query.includes('schedule'))) {
+        referredOtherTab = 'appointments';
+        otherTabUrdu = 'Appointments';
+        otherTabEng = 'Appointments';
+      } else if (activeTabName !== 'consultation' && (query.includes('consult') || query.includes('prescribe') || query.includes('visit') || query.includes('symptom'))) {
+        referredOtherTab = 'consultation';
+        otherTabUrdu = 'Consultation';
+        otherTabEng = 'Consultation';
+      }
 
-    const hasOperationKeywords = 
-      query.includes('add') || 
-      query.includes('create') || 
-      query.includes('edit') || 
-      query.includes('update') || 
-      query.includes('delete') || 
-      query.includes('remove') || 
-      query.includes('list') || 
-      query.includes('show') || 
-      query.includes('modify') || 
-      query.includes('change') || 
-      query.includes('details') || 
-      query.includes('role') || 
-      query.includes('naya') || 
-      query.includes('nayi') || 
-      query.includes('tab') || 
-      query.includes('data') ||
-      toolMatch !== null; // Selected tool is always valid for the tab operations
+      if (referredOtherTab) {
+        const responseText = `This specialized assistant on the **"${activeTabName}"** console is strictly restricted to current active data and operations. 
+Your query concerns the **${otherTabEng}** tab. Please go to the **${otherTabEng}** tab to perform actions or ask questions about its records.
 
-    if (!isBasicGreeting && !hasCategoryKeywords && !hasOperationKeywords) {
-      // The query is unrelated to this tab! Return a polite rejection directing them to the main AI Assistant tab.
-      const responseText = `This specialized assistant is strictly restricted to "${activeTabName}" operations (add, edit, delete, and list tasks). For other general, general clinical, or miscellaneous questions, please visit the main "AI Assistant" tab.
+(Yeh assistant sirf **"${activeTabName}"** tab ke data aur operations ke liye restricted hai. Aap ka sawal **${otherTabUrdu}** tab se mutalik hai. Barah-e-maherbani aap **${otherTabUrdu}** tab par ja kar ye sawal ya action karein.)
+
+[NAVIGATE: ${referredOtherTab}-ai]`;
+
+        return res.json({
+          reply: responseText,
+          attempts: [{ provider: 'Specialized Console Routing', status: 'success', modelUsed: 'Static-Filter-Rules' }]
+        });
+      }
+
+      // Block general clinical queries on specialized tabs
+      const isGeneralClinicalKeyword = query.includes('fever') || query.includes('cough') || query.includes('bukhar') || query.includes('flu') || query.includes('cold') || query.includes('asthma') || query.includes('diabetes') || query.includes('cancer') || query.includes('pain') || query.includes('headache') || query.includes('treatment') || query.includes('prevention') || query.includes('symptoms');
       
-(Yeh assistant sirf "${activeTabName}" tab ke operations aur data se mutalik jawab de sakta hai. Kisi aur qism ke general ya clinical sawal ke liye, barah-e-maherbani main "AI Assistant" tab par jayen.)`;
-      return res.json({
-        reply: responseText,
-        attempts: [{ provider: 'Specialized Tab Constraint Checks', status: 'success', modelUsed: 'Static-Filter-Rules' }]
-      });
+      const isBasicGreeting = query.length < 15 && (
+        query.includes('hi') || 
+        query.includes('hello') || 
+        query.includes('hey') || 
+        query.includes('salaam') || 
+        query.includes('aoa') || 
+        query.includes('help') || 
+        query.includes('intro') ||
+        query.trim() === '?'
+      );
+
+      const hasCategoryKeywords = 
+        query.includes(activeTabName) || 
+        (activeTabName === 'doctors' && (query.includes('doctor') || query.includes('doc') || query.includes('dr.'))) ||
+        (activeTabName === 'staff' && (query.includes('staff') || query.includes('member') || query.includes('nurse'))) ||
+        (activeTabName === 'patients' && (query.includes('patient') || query.includes('sick'))) ||
+        (activeTabName === 'billing' && (query.includes('bill') || query.includes('invoice') || query.includes('paisa') || query.includes('payment') || query.includes('amount'))) ||
+        (activeTabName === 'inventory' && (query.includes('invent') || query.includes('stock') || query.includes('medicine') || query.includes('drug'))) ||
+        (activeTabName === 'appointments' && (query.includes('appoint') || query.includes('book'))) ||
+        (activeTabName === 'ipd-wards' && (query.includes('ward') || query.includes('bed') || query.includes('room')));
+
+      const hasOperationKeywords = 
+        query.includes('add') || 
+        query.includes('create') || 
+        query.includes('edit') || 
+        query.includes('update') || 
+        query.includes('delete') || 
+        query.includes('remove') || 
+        query.includes('list') || 
+        query.includes('show') || 
+        query.includes('modify') || 
+        query.includes('change') || 
+        query.includes('details') || 
+        query.includes('naya') || 
+        query.includes('nayi') || 
+        query.includes('data') ||
+        toolMatch !== null;
+
+      if (isGeneralClinicalKeyword && !hasCategoryKeywords && !hasOperationKeywords && !isBasicGreeting) {
+        const responseText = `General medical and clinical questions can only be answered on the main "AI Assistant" tab. This console is dedicated strictly to managing "${activeTabName}" data and operations.
+
+(General medical ya clinical sawalat ke jawab sirf main "AI Assistant" tab par diye ja sakte hain. Yeh console sirf "${activeTabName}" tab ke data aur operations ke liye dedicated hai. Barah-e-maherbani aap main "AI Assistant" tab par ja kar ye sawal karein.)`;
+
+        return res.json({
+          reply: responseText,
+          attempts: [{ provider: 'General Clinical Redirection', status: 'success', modelUsed: 'Static-Filter-Rules' }]
+        });
+      }
+
+      // If query is completely unrelated and not basic greeting
+      if (!isBasicGreeting && !hasCategoryKeywords && !hasOperationKeywords && !isGeneralClinicalKeyword && !lastMessageImage) {
+        const responseText = `This specialized assistant is restricted strictly to "${activeTabName}" data and operations. For other questions, please go to the main "AI Assistant" tab.
+
+(Yeh assistant sirf "${activeTabName}" tab ke data aur operations se mutalik jawab de sakta hai. Kisi aur qism ke sawal ke liye, barah-e-maherbani main "AI Assistant" tab par jayen.)`;
+
+        return res.json({
+          reply: responseText,
+          attempts: [{ provider: 'Specialized Tab Constraint Checks', status: 'success', modelUsed: 'Static-Filter-Rules' }]
+        });
+      }
     }
   }
 
@@ -1227,15 +1301,39 @@ Aap ki di gayi details ke mutabik task process ho chuka hai:
 
   // Analyze simple keyword topics to formulate smart response in urdu/english medical context
   const query = lastMessageText.toLowerCase();
-  let fallbackReply = `⚠️ Note: Selected AI model and fallbacks are currently unconfigured or unreachable.
-
-I have analyzed your screen context and medical query locally:
+  let fallbackReply = `⚠️ Note: Selected AI model is currently unconfigured, but I can read and reply to your screen's active console data!
 
 **1. Data Screen Analysis (${context.activeTab || 'General'}):**
 - You are logged in as **${context.userName || 'Hospital Admin'}** (${context.userRole || 'Admin'}).
-- Based on the current view data, I can see you are looking at clinical metrics.
-
 `;
+
+  // Dynamically attach the active tab's output data showing on the user's console
+  if (activeTabName === 'doctors' && Array.isArray(context.data?.doctorsSummary)) {
+    const list = context.data.doctorsSummary.map((d: any) => `- **Dr. ${d.name}** (${d.specialization}) - Status: **${d.status}** (ID: ${d.id})`).join('\n');
+    fallbackReply += `\n**📋 Active Doctors Duty List (Live Console Output):**\n${list || '*No doctor entries found.*'}\n`;
+  } else if (activeTabName === 'patients' && Array.isArray(context.data?.patientsSummary)) {
+    const list = context.data.patientsSummary.map((p: any) => `- **${p.name}** (Age: ${p.age}, Gender: ${p.gender}) - Status: **${p.status}** (ID: ${p.id})`).join('\n');
+    fallbackReply += `\n**📋 Active Patients Care List (Live Console Output):**\n${list || '*No patient entries found.*'}\n`;
+  } else if (activeTabName === 'staff' && Array.isArray(context.data?.staffSummary)) {
+    const list = context.data.staffSummary.map((s: any) => `- **${s.name}** (${s.role}, ${s.department}) - Status: **${s.status}** (ID: ${s.id})`).join('\n');
+    fallbackReply += `\n**📋 Active Medical Staff List (Live Console Output):**\n${list || '*No staffing entries found.*'}\n`;
+  } else if (activeTabName === 'billing' && Array.isArray(context.data?.billsSummary)) {
+    const list = context.data.billsSummary.map((b: any) => `- **${b.patient}** - Bill Amount: **${b.amount}**, Pending: **${b.pendingAmount}**, Status: **${b.status}** (ID: ${b.id})`).join('\n');
+    fallbackReply += `\n**📋 Active Bills & Invoices List (Live Console Output):**\n${list || '*No billing records found.*'}\n`;
+  } else if (activeTabName === 'inventory' && Array.isArray(context.data?.inventorySummary)) {
+    const list = context.data.inventorySummary.map((i: any) => `- **${i.name}** (${i.category}) - Stock Level: **${i.stock}/${i.minStock}**, Price: **${i.price}** (ID: ${i.id})`).join('\n');
+    fallbackReply += `\n**📋 Active Pharmacy & Medicine Inventory (Live Console Output):**\n${list || '*No inventory records found.*'}\n`;
+  } else if (activeTabName === 'appointments' && Array.isArray(context.data?.appointmentsSummary)) {
+    const list = context.data.appointmentsSummary.map((a: any) => `- **${a.patient}** with Dr. ${a.doctor} (${a.specialization}) at ${a.time} - Status: **${a.status}** (ID: ${a.id})`).join('\n');
+    fallbackReply += `\n**📋 Active Appointments List (Live Console Output):**\n${list || '*No appointment slots found.*'}\n`;
+  } else if (activeTabName === 'ipd-wards' && Array.isArray(context.data?.wardsSummary)) {
+    const list = context.data.wardsSummary.map((w: any) => `- **${w.name}** (${w.type}) - Bed Occupancy: **${w.occupiedBeds}/${w.totalBeds}** (Price/Day: ${w.pricePerDay}) (ID: ${w.id})`).join('\n');
+    fallbackReply += `\n**📋 Active Wards & Beds List (Live Console Output):**\n${list || '*No wards records found.*'}\n`;
+  } else {
+    fallbackReply += `- Based on the current view data, I can see you are looking at clinical metrics.`;
+  }
+
+  fallbackReply += `\n\n`;
 
   // Guardrail test offline
   const hasAttachment = !!lastMessageImage || !!lastMessageAudio || query.includes('[document attached:') || query.includes('document content:');
@@ -1245,7 +1343,9 @@ I have analyzed your screen context and medical query locally:
     query.includes('doctor') || query.includes('patient') || query.includes('appointment') || query.includes('bill') || query.includes('heart') ||
     query.includes('medicine') || query.includes('drug') || query.includes('clinical') || query.includes('report') || query.includes('rash') ||
     query.includes('treatment') || query.includes('hospital') || query.includes('tab') || query.includes('asthma') || query.includes('sugar') ||
-    query.includes('bp') || query.includes('blood pressure');
+    query.includes('bp') || query.includes('blood pressure') || query.includes('website') || query.includes('page') || query.includes('feature') ||
+    query.includes('screen') || query.includes('how to') || query.includes('tarika') || query.includes('help') || query.includes('system') ||
+    query.includes('app');
 
   if (lastMessageAudio && attempts.every(att => att.status !== 'success')) {
     fallbackReply = `⚠️ Note: No live AI model keys are currently configured to process other languages or perform actual speech recognition.
@@ -1268,15 +1368,15 @@ Once the API Key is supplied, Google Gemini will listen to your audio query and 
     const hasRomanUrdu = /\b(kya|tum|mujhse|hai|hein|kar|sakte|sunao|gana|haal|kaise|shairi|da|sakta)\b/i.test(query);
 
     if (hasUrduArabic) {
-      fallbackReply = `صرف طبی سوالات کے جوابات دے سکتا ہوں۔`;
+      fallbackReply = `صرف طبی اور ہسپتال کی ویب سائٹ کے سوالات کے جوابات دے سکتا ہوں۔`;
     } else if (hasHindiDev) {
-      fallbackReply = `मैं केवल चिकित्सा संबंधी प्रश्नों के उत्तर दे सकता हूँ।`;
+      fallbackReply = `मैं केवल चिकित्सा और अस्पताल वेबसाइट संबंधी प्रश्नों के उत्तर दे सकता हूँ।`;
     } else if (hasSpanish) {
-      fallbackReply = `Solo puedo responder a preguntas médicas.`;
+      fallbackReply = `Solo puedo responder a preguntas médicas o de la web del hospital.`;
     } else if (hasRomanUrdu) {
-      fallbackReply = `Only medical questions ka answer da sakta hu`;
+      fallbackReply = `Only medical aur hospital website questions ka answer da sakta hu`;
     } else {
-      fallbackReply = `I can only answer medical questions.`;
+      fallbackReply = `I can only answer medical or hospital website-related questions.`;
     }
   } else {
     if (query.includes('heart') || query.includes('dil') || query.includes('chest') || query.includes('cardiac')) {

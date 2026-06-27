@@ -121,222 +121,182 @@ const getChipsForTab = (tab: string, userRole?: string): Chip[] => {
 
   if (normalized === 'staff' || normalized === 'staff-ai') {
     return [
-      { label: 'Total Active Staff', icon: '👥', prompt: 'Give me a summary of total active staff members currently on duty and their roles.' },
-      { label: 'Staff Roles Breakdown', icon: '👔', prompt: 'What are the main staff roles (Doctors, Nurses, Receptionists, Admins) and their counts?' },
-      { label: 'Add New Staff Member', icon: '➕', prompt: 'How do I add a new staff member to the system? Explain the required fields and access levels.' },
-      { label: 'Edit Staff Records', icon: '✏️', prompt: 'Explain the process of editing or updating a staff member\'s contact info or department.' },
-      { label: 'Staff Shift Allocations', icon: '📅', prompt: 'How can we view or update the roster/shifts of our nursing staff and general practitioners?' },
-      { label: 'Safely Delete Staff', icon: '🗑️', prompt: 'What is the procedure to deactivate or safely delete a staff record if they leave the hospital?' },
-      { label: 'Grant Portal Access', icon: '🔑', prompt: 'How can I grant, edit, or revoke dashboard portal access and credentials for a staff member?' },
-      { label: 'Nurses Shift Coverage', icon: '🩺', prompt: 'Check if we have adequate nursing shift coverage for the ICU and Emergency departments tonight.' },
-      { label: 'Staff Contact Directory', icon: '📞', prompt: 'Show the quick phone contact and email directory list of our active staff members.' },
-      { label: 'Check Admin Roles', icon: '🛡️', prompt: 'Who are the active administrators currently registered with portal system privileges?' },
-      { label: 'Shift Coverage Hours', icon: '⏰', prompt: 'How do I generate a report of scheduled duty hours for our hospital staff this week?' },
-      { label: 'Staff Attendance Logs', icon: '📈', prompt: 'Summarize standard staff attendance logs, performance records, or duty logs.' },
-      { label: 'Emergency Shift Alerts', icon: '🚨', prompt: 'How are emergency shifts assigned and what is the current checklist for on-call nursing staff?' },
-      { label: 'License & Credentials', icon: '📜', prompt: 'How can I update an employee\'s medical license or clinical certification expiry date in the profile?' },
-      { label: 'Staff Leave Requests', icon: '🌴', prompt: 'How do we track staff leave requests, holidays, or temporary duty substitutes?' }
+      { label: 'Active Staff List', icon: '👥', prompt: 'Give me a summary of total active staff members currently on duty and their roles. (Active staff members aur unke roles ki details batayein.)' },
+      { label: 'Staff Roles Breakdown', icon: '👔', prompt: 'What are the main staff roles (Doctors, Nurses, Receptionists, Admins) and their counts? (Designations count aur roles list de.)' },
+      { label: 'Nurses Shift Coverage', icon: '🩺', prompt: 'Check if we have adequate nursing shift coverage for the ICU and Emergency departments tonight. (Nurses ki emergency duty coverage dekhein.)' },
+      { label: 'Add New Staff Member', icon: '➕', prompt: 'How do I add a new staff member to the system? Explain the required fields and access levels. (Naya staff add krne ka tariqa.)' },
+      { label: 'Edit Staff Records', icon: '✏️', prompt: 'Explain the process of editing or updating a staff member\'s contact info or department. (Staff record edit krne ka procedure.)' },
+      { label: 'Safely Delete Staff', icon: '🗑️', prompt: 'What is the procedure to deactivate or safely delete a staff record if they leave the hospital? (Staff member deactivate kaise karein?)' },
+      { label: 'Staff Contact Directory', icon: '📞', prompt: 'Show the quick phone contact and email directory list of our active staff members. (Active staff contact directory.)' },
+      { label: 'Emergency Shift Alerts', icon: '🚨', prompt: 'How are emergency shifts assigned and what is the current checklist for on-call nursing staff? (Emergency shift assignment process.)' }
     ];
   }
 
   if (normalized === 'doctors' || normalized === 'doctors-ai') {
     return [
-      { label: 'Active Doctors List', icon: '👨‍⚕️', prompt: 'Provide a list of all active doctors currently registered, along with their availability statuses.' },
-      { label: 'Specialties Breakdown', icon: '🩺', prompt: 'Give me a breakdown of our registered doctors grouped by their specialty and department loads.' },
-      { label: 'Add Doctor Profile', icon: '➕', prompt: 'Explain the steps to add a new doctor profile, schedule, and their consultation fees.' },
-      { label: 'Edit Doctor Profile', icon: '✏️', prompt: 'How do I update a doctor\'s fee, designation, consultation rooms, or email details?' },
-      { label: 'On-Call Doctors Today', icon: '⏰', prompt: 'Check who are the on-call doctors and specialists available right now in the hospital.' },
-      { label: 'Room Allocations', icon: '🏢', prompt: 'Which doctors are assigned to Room 101, Room 102, and Room 201? Show room allocations.' },
-      { label: 'Doctor Shift Schedules', icon: '📅', prompt: 'How do we configure or adjust the morning, evening, and night timetables for our doctors?' },
-      { label: 'Delete Doctor Profile', icon: '🗑️', prompt: 'Explain the protocol to deactivate or delete a doctor\'s record when they resign or retire.' },
-      { label: 'Consultation Fees List', icon: '💰', prompt: 'Show a summary list of doctors along with their active consultation fee structures.' },
-      { label: 'Cardiology Status', icon: '❤️', prompt: 'Are there cardiology specialists active on the roster right now? Check Dr. Anil Sharma\'s availability.' },
-      { label: 'Pediatricians Status', icon: '👶', prompt: 'Are there pediatric doctors active on the scheduling chart right now? Check Dr. Priya Patel\'s status.' },
-      { label: 'Doctor Booking Loads', icon: '📊', prompt: 'Identify which doctor has the highest appointment load and patient bookings today.' },
-      { label: 'License Verification', icon: '📜', prompt: 'How do I keep doctor credentials, clinical license keys, or MD certificates updated?' },
-      { label: 'Department Transfers', icon: '🔄', prompt: 'How can I transfer a doctor to another clinical department roster or sub-specialization?' },
-      { label: 'Emergency Coverage', icon: '🚨', prompt: 'Who is the backup doctor assigned to handle emergency trauma and cardiac arrests tonight?' }
+      { label: 'Active Doctors List', icon: '👨‍⚕️', prompt: 'Provide a list of all active doctors currently registered, along with their availability statuses. (Active doctors ki status list de.)' },
+      { label: 'Specialties Breakdown', icon: '🩺', prompt: 'Give me a breakdown of our registered doctors grouped by their specialty and department loads. (Specializations and departments check.)' },
+      { label: 'On-Call Doctors Today', icon: '⏰', prompt: 'Check who are the on-call doctors and specialists available right now in the hospital. (Aaj kaunse doctors duty pr available hain?)' },
+      { label: 'Add Doctor Profile', icon: '➕', prompt: 'Explain the steps to add a new doctor profile, schedule, and their consultation fees. (Naya doctor profile add krne ka tariqa.)' },
+      { label: 'Edit Doctor Profile', icon: '✏️', prompt: 'How do I update a doctor\'s fee, designation, consultation rooms, or email details? (Doctor profile updates or fee change info.)' },
+      { label: 'Room Allocations', icon: '🏢', prompt: 'Which doctors are assigned to Room 101, Room 102, and Room 201? Show room allocations. (Doctor room assignments dekhein.)' },
+      { label: 'Consultation Fees List', icon: '💰', prompt: 'Show a summary list of doctors along with their active consultation fee structures. (Doctor consultation fees summary.)' },
+      { label: 'Doctor Booking Loads', icon: '📊', prompt: 'Identify which doctor has the highest appointment load and patient bookings today. (Aaj kis doctor ke paas sabse ziada appointments hain?)' }
     ];
   }
 
   if (normalized === 'appointments' || normalized === 'appointments-ai') {
     return [
-      { label: 'Overdue Appointments', icon: '📅', prompt: 'Summarize any pending appointments that have overdue status or require urgent rescheduled action.' },
-      { label: 'Available Doctors Roster', icon: '👨‍⚕️', prompt: 'Analyze doctor roster statuses and check who is available for immediate patient consultation.' },
-      { label: 'Clinic Peak Hours', icon: '🕒', prompt: 'Tell me which departments have the highest volume of patient appointments scheduled today.' },
-      { label: 'Add New Appointment', icon: '➕', prompt: 'What is the procedure to book or create a new patient appointment slot in the system?' },
-      { label: 'Edit Scheduled Slot', icon: '✏️', prompt: 'How do I reschedule, shift, or update an existing patient\'s appointment timing?' },
-      { label: 'Cancel Appointment', icon: '❌', prompt: 'Explain how to cancel or safely delete an appointment while notifying the clinical department.' },
-      { label: 'Today\'s Appointments List', icon: '📋', prompt: 'Show me a structured list of patient appointments scheduled for today.' },
-      { label: 'Pending Checkups Search', icon: '🔍', prompt: 'List any pending clinical appointments awaiting doctor approval or check-in.' },
-      { label: 'Completed Sessions Report', icon: '✅', prompt: 'Show recently completed patient consultations and their logged outcome status.' },
-      { label: 'Appointment Status Stats', icon: '📈', prompt: 'Give a breakdown of appointments grouped by status: Scheduled, Checked-In, Done, and Cancelled.' },
-      { label: 'Specialization Load Chart', icon: '📊', prompt: 'Which clinical specialties (e.g., Cardiology, Pediatrics) have the largest booking queue this week?' },
-      { label: 'Doctor-Specific Booking', icon: '🩺', prompt: 'How do I check the scheduled patient booking list for a specific doctor?' },
-      { label: 'Patient Queue Delay', icon: '⚠️', prompt: 'Identify any ongoing delays or slot clashes in the clinical consultation rooms.' },
-      { label: 'Auto Slot Allocation', icon: '🔄', prompt: 'How does the reservation queue system handle double-booking safety and slot conflicts?' },
-      { label: 'Follow-Up Scheduling', icon: '🚨', prompt: 'What is the protocol to book secondary follow-up slots for chronic care patients?' }
+      { label: 'Today\'s Appointments', icon: '📋', prompt: 'Show me a structured list of patient appointments scheduled for today. (Aaj ki total appointments scheduled list.)' },
+      { label: 'Overdue Appointments', icon: '📅', prompt: 'Summarize any pending appointments that have overdue status or require urgent rescheduled action. (Reschedule ya delay slots details.)' },
+      { label: 'Doctor Availability Roster', icon: '👨‍⚕️', prompt: 'Analyze doctor roster statuses and check who is available for immediate patient consultation. (Konsay doctors immediate session k liyay available hain?)' },
+      { label: 'Add New Appointment', icon: '➕', prompt: 'What is the procedure to book or create a new patient appointment slot in the system? (Nayi appointment booking ka process.)' },
+      { label: 'Edit Scheduled Slot', icon: '✏️', prompt: 'How do I reschedule, shift, or update an existing patient\'s appointment timing? (Appointment rescheduling steps.)' },
+      { label: 'Cancel Appointment', icon: '❌', prompt: 'Explain how to cancel or safely delete an appointment while notifying the clinical department. (Appointment cancellation protocol.)' },
+      { label: 'Clinic Peak Hours', icon: '🕒', prompt: 'Tell me which departments have the highest volume of patient appointments scheduled today. (Clinic peak rush hours check.)' },
+      { label: 'Appointment Status Stats', icon: '📈', prompt: 'Give a breakdown of appointments grouped by status: Scheduled, Checked-In, Done, and Cancelled. (Status metrics load.)' }
     ];
   }
 
   if (normalized === 'patients' || normalized === 'patients-ai') {
     return [
-      { label: 'Active Patients Summary', icon: '🩺', prompt: 'Give me a breakdown of currently admitted active patients, summarizing their conditions and ages.' },
-      { label: 'High Risk Patients', icon: '⚠️', prompt: 'Are there patient records presenting critical or severe statuses? Summarize their recent logs.' },
-      { label: 'Demographics Analysis', icon: '📈', prompt: 'Analyze our patient age patterns to inspect specialized pediatric or geriatric trends.' },
-      { label: 'Add New Patient Record', icon: '➕', prompt: 'What are the required data fields and registration flows to add a new patient profile?' },
-      { label: 'Edit Patient Details', icon: '✏️', prompt: 'How can I update a patient\'s medical history, blood group, contact, or insurance information?' },
-      { label: 'Delete/Archive Profile', icon: '🗑️', prompt: 'Explain how to archive or remove a redundant patient record while maintaining clinical audits.' },
-      { label: 'Registered Patients List', icon: '📋', prompt: 'Show me a directory list of the most recently registered patients.' },
-      { label: 'Patient Admission Flow', icon: '🏥', prompt: 'What is the clinical intake checklist for admitting a patient to inpatient care?' },
-      { label: 'Check Symptoms Chart', icon: '🌡️', prompt: 'How can we record or log daily patient clinical symptoms and key vitals?' },
-      { label: 'Allergy Alerts & Warning', icon: '🚫', prompt: 'Search patient profiles for registered severe drug allergies or dietary flags.' },
-      { label: 'Chronic Disease Group', icon: '🧬', prompt: 'Summarize patients registered under chronic disease groups like diabetes or hypertension.' },
-      { label: 'Patient Vital Signs Log', icon: '💓', prompt: 'How do I record heart rate, blood pressure, temperature, and SpO2 in the logs?' },
-      { label: 'Discharge Checklist', icon: '📋', prompt: 'What is the standard procedure to discharge a patient and settle their medical charts?' },
-      { label: 'Insurance Information', icon: '💳', prompt: 'Explain how insurance provider files and policy coverage terms are assigned to a patient\'s profile.' },
-      { label: 'Pediatric Demographics', icon: '🍼', prompt: 'Show pediatric registrations and summarize their primary clinical consultants.' }
+      { label: 'Active Patients Summary', icon: '🩺', prompt: 'Give me a breakdown of currently admitted active patients, summarizing their conditions and ages. (Admitted patients aur unki status summary.)' },
+      { label: 'High Risk Patients', icon: '⚠️', prompt: 'Are there patient records presenting critical or severe statuses? Summarize their recent logs. (Critical patients list aur status details.)' },
+      { label: 'Registered Patients List', icon: '📋', prompt: 'Show me a directory list of the most recently registered patients. (Recently registered patients list check.)' },
+      { label: 'Add New Patient Record', icon: '➕', prompt: 'What are the required data fields and registration flows to add a new patient profile? (Naya patient profile register krne ka tariqa.)' },
+      { label: 'Edit Patient Details', icon: '✏️', prompt: 'How can I update a patient\'s medical history, blood group, contact, or insurance information? (Patient clinical fields edit guidelines.)' },
+      { label: 'Delete/Archive Profile', icon: '🗑️', prompt: 'Explain how to archive or remove a redundant patient record while maintaining clinical audits. (Patient record archive krne ka protocol.)' },
+      { label: 'Discharge Checklist', icon: '🏥', prompt: 'What is the standard procedure to discharge a patient and settle their medical charts? (Patient discharge process checklist.)' },
+      { label: 'Allergy Alerts & Warning', icon: '🚫', prompt: 'Search patient profiles for registered severe drug allergies or dietary flags. (Allergy details check.)' }
     ];
   }
 
   if (normalized.includes('bill') || normalized.includes('finance')) {
     return [
-      { label: 'High Pending Bills', icon: '💰', prompt: 'Identify patient billing records with high outstanding or pending payments.' },
-      { label: 'Fee Collection Efficiency', icon: '📊', prompt: 'Provide a report comparing completed collected fees versus pending amounts.' },
-      { label: 'Unpaid Invoices List', icon: '💳', prompt: 'Which departments or appointments have the largest unpaid billing logs?' },
-      { label: 'Create New Invoice', icon: '➕', prompt: 'Explain how to generate and log a new patient bill, including consultation and pharmacy charges.' },
-      { label: 'Edit Billing Record', icon: '✏️', prompt: 'How do I update an invoice amount, apply discounts, or adjust taxes?' },
-      { label: 'Settle/Delete Bill', icon: '🗑️', prompt: 'What is the protocol to cancel, refund, or delete a wrongly recorded billing entry?' },
-      { label: 'Completed Payments Report', icon: '✅', prompt: 'Show a summary of recently completed fee collections and methods used (Cash, Card, UPI).' },
-      { label: 'Outstanding Balance Alert', icon: '⚠️', prompt: 'Generate a list of patients with active outstanding balance totals above emergency limits.' },
-      { label: 'Department Fee Analysis', icon: '🏢', prompt: 'Provide a breakdown of total revenue generated by each medical department this month.' },
-      { label: 'Tax & Discount Audits', icon: '📜', prompt: 'How are clinician discounts, insurance covers, and government taxes calculated on invoices?' },
-      { label: 'Refund Protocol Flow', icon: '🔄', prompt: 'What is the workflow to process payment refunds and log receipt adjustment entries?' },
-      { label: 'Payment Reminders List', icon: '📞', prompt: 'How can we trigger outstanding payment reminders for patients with pending balances?' },
-      { label: 'Daily Receipts Summary', icon: '🕒', prompt: 'Provide a summary analysis of total cash receipts and digital collections since morning.' },
-      { label: 'Pharmacy Drug Billing', icon: '💊', prompt: 'How are medicine purchases synced automatically from inventory to patient bills?' },
-      { label: 'Ward Occupancy Costing', icon: '🛌', prompt: 'Explain how daily ward charges and nursing service fees are calculated in the main bill.' }
+      { label: 'High Pending Bills', icon: '💰', prompt: 'Identify patient billing records with high outstanding or pending payments. (Pending bills and overdue collections.)' },
+      { label: 'Fee Collection Efficiency', icon: '📊', prompt: 'Provide a report comparing completed collected fees versus pending amounts. (Revenue collections vs outstanding balances.)' },
+      { label: 'Unpaid Invoices List', icon: '💳', prompt: 'Which departments or appointments have the largest unpaid billing logs? (Unpaid receipts load.)' },
+      { label: 'Create New Invoice', icon: '➕', prompt: 'Explain how to generate and log a new patient bill, including consultation and pharmacy charges. (Naya bill ya invoice create krne ka procedure.)' },
+      { label: 'Edit Billing Record', icon: '✏️', prompt: 'How do I update an invoice amount, apply discounts, or adjust taxes? (Invoice edit ya discount calculation updates.)' },
+      { label: 'Settle/Delete Bill', icon: '🗑️', prompt: 'What is the protocol to cancel, refund, or delete a wrongly recorded billing entry? (Invoice cancel or refund details.)' },
+      { label: 'Completed Payments', icon: '✅', prompt: 'Show a summary of recently completed fee collections and methods used (Cash, Card, UPI). (Completed digital payments summary.)' },
+      { label: 'Daily Receipts Summary', icon: '🕒', prompt: 'Provide a summary analysis of total cash receipts and digital collections since morning. (Daily collections sheet.)' }
     ];
   }
 
   if (normalized.includes('invent') || normalized.includes('pharmacy') || normalized.includes('purchases') || normalized.includes('transfers')) {
     return [
-      { label: 'Low Stock Safeguard', icon: '🧱', prompt: 'Confirm which critical pharmacological items in the inventory have stock levels below their warning threshold limit.' },
-      { label: 'Pharmacy Spends Analysis', icon: '💊', prompt: 'Report on our pharmacy inventory categories and identify our highest value assets.' },
-      { label: 'Replenishment Schedule', icon: '📦', prompt: 'Based on active stock counts versus minimum thresholds, formulate a pharmacy replenishment priority order.' },
-      { label: 'Add Inventory Item', icon: '➕', prompt: 'Explain how to register a new clinical equipment unit or pharmacological medicine batch in stock.' },
-      { label: 'Edit Stock Item Details', icon: '✏️', prompt: 'How can I update an item\'s description, supplier, minimum threshold, or cost prices?' },
-      { label: 'Remove Defective Stock', icon: '🗑️', prompt: 'What are the rules and logs to delete, discard, or report decayed or expired stock items?' },
-      { label: 'Supplier Directory List', icon: '📞', prompt: 'Provide a list of registered pharmaceutical suppliers along with their active contacts.' },
-      { label: 'Expired Batches Alert', icon: '🚨', prompt: 'Scan medicine shelves and report on batches approaching their expiration date.' },
-      { label: 'Stock Transfer Log', icon: '🔄', prompt: 'How do I log a stock transfer from the main central medical store to ward pharmacies?' },
-      { label: 'Supplier Purchase Orders', icon: '📋', prompt: 'Explain the procedure to generate a draft purchase order for low-stock antibiotics.' },
-      { label: 'Restocking Protocols', icon: '📦', prompt: 'How are items restocked, and what logs track bulk inventory delivery receipts?' },
-      { label: 'Shelf Location Audit', icon: '🗺️', prompt: 'How do we record shelf codes, cold storage temperature zones, and location tags for vaccines?' },
-      { label: 'Valuation Reports', icon: '💰', prompt: 'Calculate the total financial asset valuation of our pharmacy and equipment stock.' },
-      { label: 'Narcotics & Controlled Drugs', icon: '🔒', prompt: 'How do we audit or record high-risk narcotic substance logs and restricted drug dispensations?' },
-      { label: 'Daily Dispensed Medicines', icon: '🩺', prompt: 'How can I view a report of dispensed stock items linked to doctor prescriptions?' }
+      { label: 'Low Stock Safeguard', icon: '🧱', prompt: 'Confirm which critical pharmacological items in the inventory have stock levels below their warning threshold limit. (Kaunsi medicines ka stock short hai?)' },
+      { label: 'Pharmacy Spends Analysis', icon: '💊', prompt: 'Report on our pharmacy inventory categories and identify our highest value assets. (Pharmacy inventory assets assessment.)' },
+      { label: 'Expired Batches Alert', icon: '🚨', prompt: 'Scan medicine shelves and report on batches approaching their expiration date. (Expiry close items alert.)' },
+      { label: 'Add Inventory Item', icon: '➕', prompt: 'Explain how to register a new clinical equipment unit or pharmacological medicine batch in stock. (Naya stock item add krne ka process.)' },
+      { label: 'Edit Stock Item Details', icon: '✏️', prompt: 'How can I update an item\'s description, supplier, minimum threshold, or cost prices? (Stock item attributes edit.)' },
+      { label: 'Remove Defective Stock', icon: '🗑️', prompt: 'What are the rules and logs to delete, discard, or report decayed or expired stock items? (Stock removal or write-off protocols.)' },
+      { label: 'Supplier Directory List', icon: '📞', prompt: 'Provide a list of registered pharmaceutical suppliers along with their active contacts. (Medicine supplier contact list.)' },
+      { label: 'Replenishment Schedule', icon: '📦', prompt: 'Based on active stock counts versus minimum thresholds, formulate a pharmacy replenishment priority order. (Replenishment priority schedule.)' }
     ];
   }
 
   if (normalized === 'consultation' || normalized === 'consultation-ai') {
     return [
-      { label: 'General Drug Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
-      { label: 'Allergy Symptoms Check', icon: '🌡️', prompt: 'How are clinical allergy skin symptoms and diagnostic rashes diagnosed?' },
-      { label: 'Add Consultation Record', icon: '➕', prompt: 'Detail the steps to log a patient\'s consultation notes, symptom logs, and vitals.' },
-      { label: 'Modify Prescription Notes', icon: '✏️', prompt: 'Explain how to edit or modify clinical prescriptions and drug dosages on file.' },
-      { label: 'Delete Wrong Prescription', icon: '🗑️', prompt: 'What is the safety rule to safely delete or retract a wrong prescription entry?' },
-      { label: 'General Lab Tests Checklist', icon: '🔬', prompt: 'What are the standard recommended lab tests for suspected blood sugar or anemia?' },
-      { label: 'Chronic Care Guidance', icon: '💖', prompt: 'Generate guidelines for chronic hypertension wellness and low-sodium diets.' },
-      { label: 'Pediatrics Dose Formula', icon: '🍼', prompt: 'How are standard drug dosages adjusted based on pediatric patient weights?' },
-      { label: 'Pregnancy Drug Safety', icon: '🤰', prompt: 'Summarize critical FDA drug category restrictions during patient pregnancies.' },
-      { label: 'Clinical Followup Rules', icon: '📅', prompt: 'What are the clinical indicators for booking patient follow-up consults?' },
-      { label: 'Patient Symptoms Triage', icon: '⏱️', prompt: 'Outline an emergency clinical triage workflow for acute abdominal pain.' },
-      { label: 'Vaccine Scheduler Guide', icon: '💉', prompt: 'Provide a standard pediatric vaccination schedule and dose intervals.' },
-      { label: 'Cardiac Vitals Watch', icon: '💓', prompt: 'What are critical physiological alerts for resting heart rates and ECG anomalies?' },
-      { label: 'Write Medication Plan', icon: '📝', prompt: 'Suggest a model therapeutic medication schedule for standard Type-2 diabetes.' },
-      { label: 'OTC Treatment Guides', icon: '🍃', prompt: 'Are there any standard OTC recommendations for mild cold and throat irritation?' }
+      { label: 'Drug Dosage Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies. (Cough aur skin allergy ki general clinical drug parameters.)' },
+      { label: 'Allergy Symptoms Check', icon: '🌡️', prompt: 'How are clinical allergy skin symptoms and diagnostic rashes diagnosed? (Allergy skin symptoms clinical check.)' },
+      { label: 'Add Consultation Record', icon: '➕', prompt: 'Detail the steps to log a patient\'s consultation notes, symptom logs, and vitals. (Naya clinical consult note add krne ka tariqa.)' },
+      { label: 'Modify Prescription Notes', icon: '✏️', prompt: 'Explain how to edit or modify clinical prescriptions and drug dosages on file. (Prescription edits or adjustments.)' },
+      { label: 'Delete Wrong Prescription', icon: '🗑️', prompt: 'What is the safety rule to safely delete or retract a wrong prescription entry? (Wrong prescription delete krne ke protocols.)' },
+      { label: 'General Lab Tests', icon: '🔬', prompt: 'What are the standard recommended lab tests for suspected blood sugar or anemia? (Recommended clinical lab test checklists.)' },
+      { label: 'Chronic Care Guidance', icon: '💖', prompt: 'Generate guidelines for chronic hypertension wellness and low-sodium diets. (Hypertension chronic care rules.)' }
     ];
   }
 
   if (normalized.includes('ward') || normalized.includes('ipd')) {
     return [
-      { label: 'Ward Occupancy Count', icon: '🛌', prompt: 'Give me the total available versus occupied beds count in our general wards.' },
-      { label: 'ICU Critical Bed Alert', icon: '🚨', prompt: 'Check ICU bed availability and count occupied beds for trauma emergencies.' },
-      { label: 'Add New Ward Bed', icon: '➕', prompt: 'How can I add a new bed, room number, or special ward category to our database register?' },
-      { label: 'Edit Bed Placement', icon: '✏️', prompt: 'How do we edit bed assignments, swap patient beds, or update daily room tariff costs?' },
-      { label: 'Discharge Room Cleaning', icon: '🗑️', prompt: 'Explain the protocol to set a bed status to cleaning or delete redundant entries.' },
-      { label: 'Patient Admission Map', icon: '🏥', prompt: 'Show the current directory list of admitted patients mapped to their specific ward rooms.' },
-      { label: 'Pediatric Ward Occupancy', icon: '🍼', prompt: 'Check the active patient occupancy status in our pediatric ward block.' },
-      { label: 'ICU On-Call Nursing Shift', icon: '👩‍⚕️', prompt: 'Who are the nurses assigned to ICU Ward A and Emergency Room duties tonight?' },
-      { label: 'Ward Tariff Comparison', icon: '💰', prompt: 'Provide a room tariff comparison list showing daily bed rates for ICU, Semi-Private, and General Wards.' },
-      { label: 'Bed Maintenance Logs', icon: '🔧', prompt: 'How do we report defective bedside monitors or mark beds as under maintenance?' },
-      { label: 'Bed Transfer Protocols', icon: '🔄', prompt: 'Explain how to transfer an admitted patient from General Ward to Private ICU Care.' },
-      { label: 'Emergency Room Placements', icon: '🏎️', prompt: 'Are there vacant resuscitation beds registered in our triage emergency department?' },
-      { label: 'Daily Admitted Vitals', icon: '📋', prompt: 'Show the scheduled times nurses check vitals (BP, SpO2) in General Ward beds.' },
-      { label: 'Quarantine Room Allocation', icon: '🛡️', prompt: 'What beds or wings are isolated for infectious diseases or quarantine requirements?' },
-      { label: 'Doctors Ward Visits', icon: '🩺', prompt: 'How are doctor morning ward rounds and check-ins recorded for admitted patients?' }
+      { label: 'Ward Bed Occupancy', icon: '🛌', prompt: 'Give me the total available versus occupied beds count in our general wards. (General wards bed occupancy statistics.)' },
+      { label: 'ICU Critical Bed Alert', icon: '🚨', prompt: 'Check ICU bed availability and count occupied beds for trauma emergencies. (ICU occupied beds aur emergency vacancy checks.)' },
+      { label: 'Patient Bed Mapping', icon: '🏥', prompt: 'Show the current directory list of admitted patients mapped to their specific ward rooms. (Admitted patients kis beds pr register hain?)' },
+      { label: 'Add New Ward Bed', icon: '➕', prompt: 'How can I add a new bed, room number, or special ward category to our database register? (Naya bed registry me kaise add karein?)' },
+      { label: 'Edit Bed Placement', icon: '✏️', prompt: 'How do we edit bed assignments, swap patient beds, or update daily room tariff costs? (Bed mapping edits or swapping process.)' },
+      { label: 'Discharge Room Cleaning', icon: '🗑️', prompt: 'Explain the protocol to set a bed status to cleaning or delete redundant entries. (Discharged room service clean log updates.)' },
+      { label: 'Ward Tariff Comparison', icon: '💰', prompt: 'Provide a room tariff comparison list showing daily bed rates for ICU, Semi-Private, and General Wards. (Wards charges list.)' }
+    ];
+  }
+
+  if (normalized === 'departments' || normalized === 'departments-ai') {
+    return [
+      { label: 'Active Clinical Departments', icon: '🏢', prompt: 'Give me a list of all active clinical departments in the hospital. (Saray active clinical departments ki detail.)' },
+      { label: 'Department Patient Load', icon: '📈', prompt: 'Which department currently has the highest inpatient and outpatient loads? (Inpatient aur outpatient load details.)' }
+    ];
+  }
+
+  if (normalized === 'enquiries' || normalized === 'enquiries-ai') {
+    return [
+      { label: 'Pending Patient Enquiries', icon: '✉️', prompt: 'Summarize all pending clinical and general patient enquiries. (Pending patient feedback aur enquiries check.)' },
+      { label: 'General Resolution Speed', icon: '⏱️', prompt: 'What is our average turnaround time to resolve support tickets? (Tickets resolve krne ki timing details.)' }
+    ];
+  }
+
+  if (normalized === 'blogs' || normalized === 'blogs-ai') {
+    return [
+      { label: 'Active Blogs Published', icon: '📝', prompt: 'List our recently published medical wellness and clinical care blog posts. (Published health blogs overview.)' },
+      { label: 'Publish New Post Guide', icon: '➕', prompt: 'Explain how to format and publish a new patient-facing wellness article. (Naya article publish krne ka tariqa.)' }
+    ];
+  }
+
+  if (normalized === 'reports' || normalized === 'reports-ai') {
+    return [
+      { label: 'Monthly Financial Reports', icon: '📊', prompt: 'Provide an overview of active clinical and operational diagnostic reports this month. (Financial and operations reports analysis.)' },
+      { label: 'Attendance & Roster Graphs', icon: '📈', prompt: 'How do I generate duty hour analytics and doctor logs for audits? (Duty records visual audit guide.)' }
+    ];
+  }
+
+  if (normalized === 'configure-hospital' || normalized === 'configure-hospital-ai') {
+    return [
+      { label: 'Edit Hospital Settings', icon: '⚙️', prompt: 'How do I update hospital contact numbers, emergency helplines, or tax configurations? (Hospital global settings edit processes.)' }
+    ];
+  }
+
+  if (normalized === 'support' || normalized === 'support-ai') {
+    return [
+      { label: 'Portal Account Support', icon: '🔑', prompt: 'How do I reset login credentials or help desk roles for team members? (Login accounts or technical support instructions.)' },
+      { label: 'System Hardware Diagnostics', icon: '🔌', prompt: 'Check connected database interfaces, API systems, or proxy sync states. (System integration health status.)' }
     ];
   }
 
   // Fallback for dashboard, general, or others based on user role
   if (userRole === 'patient') {
     return [
-      { label: 'My Appointments Schedule', icon: '📅', prompt: 'Show me my current scheduled appointments and times.' },
-      { label: 'My Bills & Payments', icon: '💳', prompt: 'Summarize my personal outstanding bills and recent payments.' },
-      { label: 'My Registered Profile', icon: '👤', prompt: 'Show my active patient registration file and diagnostic history.' },
-      { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
-      { label: 'Consult Specialty Doctor', icon: '🩺', prompt: 'Explain how I can consult an active on-duty specialist.' },
-      { label: 'All Active Doctors', icon: '👨‍⚕️', prompt: 'Who are the doctors currently available on duty and what are their specializations?' },
-      { label: 'Emergency Protocol Trait', icon: '🚨', prompt: 'What is the hospital\'s priority emergency dispatch protocol for clinical trauma?' }
+      { label: 'My Appointments Schedule', icon: '📅', prompt: 'Show me my current scheduled appointments and times. (Meri bookings aur time schedule check krwayen.)' },
+      { label: 'My Bills & Payments', icon: '💳', prompt: 'Summarize my personal outstanding bills and recent payments. (Mere active bills aur payments ki detailed check.)' },
+      { label: 'My Registered Profile', icon: '👤', prompt: 'Show my active patient registration file and diagnostic history. (Mera patient registration record check karein.)' },
+      { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies. (Sard cough aur skin allergy k treatment ki guideline.)' }
     ];
   }
 
   if (userRole === 'doctor') {
     return [
-      { label: 'My Assigned Appointments', icon: '📅', prompt: 'Show appointments scheduled with me today.' },
-      { label: 'My Patient Register', icon: '🩺', prompt: 'Provide a list of patients scheduled for clinical sessions under my care.' },
-      { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
-      { label: 'Consultation Notes', icon: '📝', prompt: 'What are the standard guidelines for logging a clinical prescription?' },
-      { label: 'Room Occupancy Check', icon: '🛌', prompt: 'What is the overall occupancy level of our wards and private rooms?' },
-      { label: 'Emergency Roster', icon: '⏰', prompt: 'Check my upcoming patient appointment charts.' },
-      { label: 'Emergency Protocol Trait', icon: '🚨', prompt: 'What is the hospital\'s priority emergency dispatch protocol for clinical trauma?' }
+      { label: 'My Assigned Appointments', icon: '📅', prompt: 'Show appointments scheduled with me today. (Aaj mere name par scheduled total appointments batayein.)' },
+      { label: 'My Patient Register', icon: '🩺', prompt: 'Provide a list of patients scheduled for clinical sessions under my care. (Mere checkup list ke patients ka data.)' },
+      { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies. (General cough aur seasonal cold medical guidelines.)' },
+      { label: 'Consultation Notes', icon: '📝', prompt: 'What are the standard guidelines for logging a clinical prescription? (Clinical prescription register krne ka process.)' }
     ];
   }
 
   if (userRole === 'staff') {
     return [
-      { label: 'Clinic Appointments', icon: '🗂️', prompt: 'Analyze pending hospital appointments in our dashboard context.' },
-      { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
-      { label: 'Billing Standing', icon: '📊', prompt: 'Review our total pending clinical bills versus collected amounts.' },
-      { label: 'Pharmacy Inventory', icon: '🧱', prompt: 'Generate a summary list of medication inventory items with low-stock count.' },
-      { label: 'All Active Doctors', icon: '👨‍⚕️', prompt: 'Who are the doctors currently available on duty and what are their specializations?' },
-      { label: 'Patient Condition Trends', icon: '🩺', prompt: 'Give me a breakdown of active patient registers and high-risk case reports.' },
-      { label: 'Room Occupancy Check', icon: '🛌', prompt: 'What is the overall occupancy level of our wards and private rooms?' },
-      { label: 'Nurse Shifts & Roster', icon: '⏰', prompt: 'Provide current nurse duty shift allocations and emergency coverage records.' },
-      { label: 'Drug Refill List', icon: '📦', prompt: 'Show pharmaceutical supplier contacts and our lowest stock antibiotics list.' },
-      { label: 'Emergency Protocol Trait', icon: '🚨', prompt: 'What is the hospital\'s priority emergency dispatch protocol for clinical trauma?' },
-      { label: 'Insurance Claim Setup', icon: '💳', prompt: 'What insurance providers do we accept and how is policy billing calculated?' },
-      { label: 'Discharge Daily List', icon: '📋', prompt: 'Show patients scheduled for discharge today and check if bills are settled.' }
+      { label: 'Clinic Appointments', icon: '🗂️', prompt: 'Analyze pending hospital appointments in our dashboard context. (Pending patient visits check karein.)' },
+      { label: 'Billing Standing', icon: '📊', prompt: 'Review our total pending clinical bills versus collected amounts. (Monthly billing collections summary.)' },
+      { label: 'Pharmacy Inventory', icon: '🧱', prompt: 'Generate a summary list of medication inventory items with low-stock count. (Pharmacy stock alerts list.)' },
+      { label: 'All Active Doctors', icon: '👨‍⚕️', prompt: 'Who are the doctors currently available on duty and what are their specializations? (Kaunse doctors on duty registered hain?)' }
     ];
   }
 
   return [
-    { label: 'Clinic Appointments', icon: '🗂️', prompt: 'Analyze pending hospital appointments in our dashboard context.' },
-    { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies.' },
-    { label: 'Billing Standing', icon: '📊', prompt: 'Review our total pending clinical bills versus collected amounts.' },
-    { label: 'Pharmacy Inventory', icon: '🧱', prompt: 'Generate a summary list of medication inventory items with low-stock count.' },
-    { label: 'All Active Doctors', icon: '👨‍⚕️', prompt: 'Who are the doctors currently available on duty and what are their specializations?' },
-    { label: 'Patient Condition Trends', icon: '🩺', prompt: 'Give me a breakdown of active patient registers and high-risk case reports.' },
-    { label: 'Room Occupancy Check', icon: '🛌', prompt: 'What is the overall occupancy level of our wards and private rooms?' },
-    { label: 'Clinic Revenue Sheet', icon: '💰', prompt: 'Summarize this month\'s financial fee collections and outstanding balance totals.' },
-    { label: 'Nurse Shifts & Roster', icon: '⏰', prompt: 'Provide current nurse duty shift allocations and emergency coverage records.' },
-    { label: 'Drug Refill List', icon: '📦', prompt: 'Show pharmaceutical supplier contacts and our lowest stock antibiotics list.' },
-    { label: 'Emergency Protocol Trait', icon: '🚨', prompt: 'What is the hospital\'s priority emergency dispatch protocol for clinical trauma?' },
-    { label: 'Insurance Claim Setup', icon: '💳', prompt: 'What insurance providers do we accept and how is policy billing calculated?' },
-    { label: 'Discharge Daily List', icon: '📋', prompt: 'Show patients scheduled for discharge today and check if bills are settled.' },
-    { label: 'System Configuration Info', icon: '⚙️', prompt: 'Describe system parameters, active modules, and helpdesk contact details.' },
-    { label: 'Support & Access Help', icon: '🔑', prompt: 'How do I resolve user password resets, tech issues, or modify portal permissions?' }
+    { label: 'Clinic Appointments', icon: '🗂️', prompt: 'Analyze pending hospital appointments in our dashboard context. (Pending appointments detail checks.)' },
+    { label: 'Allergy & Cough Guidance', icon: '💊', prompt: 'Outline general clinical drug guidance for a cough and skin allergies. (Cold/Cough clinical guidelines.)' },
+    { label: 'Billing Standing', icon: '📊', prompt: 'Review our total pending clinical bills versus collected amounts. (Billing status overview.)' },
+    { label: 'Pharmacy Inventory', icon: '🧱', prompt: 'Generate a summary list of medication inventory items with low-stock count. (Pharmacy stock levels check.)' },
+    { label: 'All Active Doctors', icon: '👨‍⚕️', prompt: 'Who are the doctors currently available on duty and what are their specializations? (Active specialists duty list.)' },
+    { label: 'Patient Condition Trends', icon: '🩺', prompt: 'Give me a breakdown of active patient registers and high-risk case reports. (Admitted patient conditions.)' }
   ];
 };
 
@@ -697,9 +657,9 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
 
   // Multi-model live attempt status records (for developer insight and verification)
   const [latestAttempts, setLatestAttempts] = useState<Attempt[]>([
-    { provider: 'Google Gemini', status: 'skipped', error: 'Not run yet' },
-    { provider: 'OpenAI', status: 'skipped', error: 'Not run yet' },
-    { provider: 'Anthropic Claude', status: 'skipped', error: 'Not run yet' }
+    { provider: 'GPT-5.5 (OpenAI)', status: 'skipped', error: 'Not run yet' },
+    { provider: 'Claude Opus 4.7 (Anthropic)', status: 'skipped', error: 'Not run yet' },
+    { provider: 'Gemini 3.1 Pro (Google)', status: 'skipped', error: 'Not run yet' }
   ]);
 
   const [activeSpeechId, setActiveSpeechId] = useState<string | null>(null);
@@ -1297,6 +1257,11 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
         timestamp: new Date()
       }
     ]);
+    setLatestAttempts([
+      { provider: 'GPT-5.5 (OpenAI)', status: 'skipped', error: 'Not run yet' },
+      { provider: 'Claude Opus 4.7 (Anthropic)', status: 'skipped', error: 'Not run yet' },
+      { provider: 'Gemini 3.1 Pro (Google)', status: 'skipped', error: 'Not run yet' }
+    ]);
   };
 
   // Helper to convert blob to base64
@@ -1589,10 +1554,10 @@ Please request support or review active API parameter credentials.`,
                 title="Select AI Model Engine Cascade Order"
                 id="engine-select-dropdown"
               >
-                <option value="auto">⚡ Auto (OpenAI ➔ Claude ➔ Google)</option>
-                <option value="openai">🟢 OpenAI GPT-4o First</option>
-                <option value="claude">🟠 Claude 3.5 Sonnet First</option>
-                <option value="gemini">🔵 Google Gemini 1.5 First</option>
+                <option value="auto">⚡ Auto (GPT-5.5 ➔ Claude Opus ➔ Gemini Pro)</option>
+                <option value="openai">🟢 GPT-5.5 First</option>
+                <option value="claude">🟠 Claude Opus 4.7 First</option>
+                <option value="gemini">🔵 Gemini 3.1 Pro First</option>
               </select>
             </div>
 
@@ -1617,6 +1582,90 @@ Please request support or review active API parameter credentials.`,
               <Trash2 className="h-3.5 w-3.5" />
               Clear
             </button>
+          </div>
+        </div>
+
+        {/* Live Cascading Execution Status Panel */}
+        <div className="bg-slate-50 border-b border-slate-100 px-4 py-2 sm:px-6 flex flex-col md:flex-row md:items-center justify-between gap-2 text-slate-700" id="ai-cascading-panel">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono">Routing Path:</span>
+            <div className="flex items-center gap-1.5 text-[10.5px] text-slate-600 font-bold font-mono" id="cascade-sequence-visualizer">
+              {selectedModel === 'openai' && (
+                <>
+                  <span className="text-teal-700 underline decoration-teal-400">GPT-5.5</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>Claude Opus</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>Gemini Pro</span>
+                </>
+              )}
+              {selectedModel === 'claude' && (
+                <>
+                  <span className="text-teal-700 underline decoration-teal-400">Claude Opus</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>GPT-5.5</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>Gemini Pro</span>
+                </>
+              )}
+              {selectedModel === 'gemini' && (
+                <>
+                  <span className="text-teal-700 underline decoration-teal-400">Gemini Pro</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>GPT-5.5</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>Claude Opus</span>
+                </>
+              )}
+              {(selectedModel === 'auto' || !['openai', 'claude', 'gemini'].includes(selectedModel)) && (
+                <>
+                  <span className="text-teal-700 underline decoration-teal-400">GPT-5.5 (Auto)</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>Claude Opus</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>Gemini Pro</span>
+                </>
+              )}
+              <span className="text-slate-400">➔</span>
+              <span className="text-slate-500 italic font-medium">Smart-Rules</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2" id="cascade-live-attempts-list">
+            {latestAttempts.map((att, idx) => {
+              const isSuccess = att.status === 'success';
+              const isFailed = att.status === 'failed';
+              const isSkipped = att.status === 'skipped';
+              
+              let badgeColor = 'bg-slate-100/70 text-slate-400 border-slate-200/50';
+              let icon = '⚪';
+              
+              if (isSuccess) {
+                badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200/55 shadow-xs';
+                icon = '🟢';
+              } else if (isFailed) {
+                badgeColor = 'bg-red-50 text-red-600 border-red-200/60 shadow-xs';
+                icon = '🔴';
+              } else if (isSkipped && att.error && att.error !== 'Not run yet') {
+                badgeColor = 'bg-amber-50/70 text-amber-600 border-amber-200/50';
+                icon = '🟡';
+              }
+
+              return (
+                <div 
+                  key={idx} 
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-[10px] font-bold font-mono transition-all duration-150 ${badgeColor}`}
+                  title={att.error ? `Diagnostic Detail: ${att.error}` : `AI Engine completed processing successfully.`}
+                >
+                  <span>{icon} {att.provider}</span>
+                  {att.error && att.error !== 'Not run yet' && (
+                    <span className="text-[9px] opacity-80 max-w-[130px] truncate" title={att.error}>
+                      ({att.error})
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -1235,17 +1235,6 @@ export default function DoctorsView({
                       Manage Doctors
                     </button>
                   )}
-                  {onNavigate && (
-                    <button
-                      onClick={() => onNavigate('doctors-ai')}
-                      type="button"
-                      className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer"
-                      id="trigger-doctors-ai-banner"
-                    >
-                      <Sparkles size={14} className="animate-pulse" />
-                      <span>Doctors AI</span>
-                    </button>
-                  )}
                   {!isReadOnly && (
                     <button
                       onClick={handleOpenAddForm}

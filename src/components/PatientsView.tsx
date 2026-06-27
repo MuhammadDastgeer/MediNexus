@@ -1426,18 +1426,6 @@ export default function PatientsView({
             </div>
             
             <div className="flex items-center gap-2 self-start sm:self-auto">
-              {onNavigate && (
-                <button
-                  onClick={() => onNavigate('patients-ai')}
-                  type="button"
-                  className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm hover:shadow-md transition-all cursor-pointer"
-                  id="trigger-patients-ai"
-                >
-                  <Sparkles size={14} className="animate-pulse" />
-                  <span>Patients AI</span>
-                </button>
-              )}
-
               {!isPatient && !isReadOnly && (
                 <button
                   onClick={startAdd}

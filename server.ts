@@ -1,12 +1,24 @@
-import express from 'express';
-import path from 'path';
+import dotenv from 'dotenv';
 import fs from 'fs';
+import path from 'path';
+
+// Load environment variables from .env file, auto-creating it if missing
+const envPath = path.join(process.cwd(), '.env');
+const examplePath = path.join(process.cwd(), '.env.example');
+if (!fs.existsSync(envPath) && fs.existsSync(examplePath)) {
+  try {
+    fs.copyFileSync(examplePath, envPath);
+    console.log('[ENV] Created .env file from .env.example successfully.');
+  } catch (err) {
+    console.error('[ENV] Failed to auto-create .env file:', err);
+  }
+}
+
+dotenv.config();
+
+import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import db from './db.js';
-import dotenv from 'dotenv';
-
-// Load environment variables from .env file
-dotenv.config();
 
 const app = express();
 const PORT = 3000;
