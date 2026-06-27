@@ -51,6 +51,7 @@ interface DoctorsViewProps {
   onNavigate?: (view: any) => void;
   isReadOnly?: boolean;
   loggedInUser?: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
+  onRefresh?: () => void;
 }
 
 export default function DoctorsView({ 
@@ -63,7 +64,8 @@ export default function DoctorsView({
   onDeleteDoctor,
   onNavigate,
   isReadOnly = false,
-  loggedInUser = null
+  loggedInUser = null,
+  onRefresh
 }: DoctorsViewProps) {
   const isPatient = loggedInUser?.role === 'patient';
   const canEditDoctor = (doc: Doctor) => {
@@ -79,6 +81,18 @@ export default function DoctorsView({
   const [isEditingId, setIsEditingId] = useState<string | null>(null);
   const [viewingDoctor, setViewingDoctor] = useState<Doctor | null>(null);
   const [detailActiveTab, setDetailActiveTab] = useState<'overview' | 'roster-settings'>('overview');
+
+  // Keep viewingDoctor state synchronized with parent doctors updates
+  React.useEffect(() => {
+    if (viewingDoctor) {
+      const updated = doctors.find((d) => d.id === viewingDoctor.id);
+      if (updated) {
+        setViewingDoctor(updated);
+      } else {
+        setViewingDoctor(null);
+      }
+    }
+  }, [doctors]);
   
   // Custom Alerts / Messages
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -446,11 +460,12 @@ export default function DoctorsView({
 
           <button 
             onClick={() => {
+              if (onRefresh) onRefresh();
               triggerToast('Doctor profile data refreshed.');
             }}
             className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-3xs"
           >
-            <RefreshCw size={13} className="text-white" />
+            <RefreshCw size={13} className="text-white animate-spin-slow" />
             <span>Refresh</span>
           </button>
         </div>
@@ -1235,6 +1250,16 @@ export default function DoctorsView({
                       Manage Doctors
                     </button>
                   )}
+                  {onRefresh && (
+                    <button
+                      onClick={onRefresh}
+                      className="bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      title="Refresh database records"
+                    >
+                      <RefreshCw size={13} className="text-slate-500 hover:text-slate-700" />
+                      <span>Refresh</span>
+                    </button>
+                  )}
                   {!isReadOnly && (
                     <button
                       onClick={handleOpenAddForm}
@@ -1680,6 +1705,17 @@ export default function DoctorsView({
                       </div>
                     )}
                   </div>
+
+                  {onRefresh && (
+                    <button
+                      onClick={onRefresh}
+                      className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-2 rounded-xl border border-slate-150 font-bold text-xs transition-colors cursor-pointer"
+                      title="Refresh database records"
+                    >
+                      <RefreshCw size={13} className="text-slate-500 hover:text-slate-700" />
+                      <span>Refresh</span>
+                    </button>
+                  )}
 
                   {!isReadOnly && (
                     <>

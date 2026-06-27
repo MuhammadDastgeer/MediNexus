@@ -333,13 +333,32 @@ CRITICAL MANDATORY INSTRUCTIONS & SCOPE RESTRICTIONS:
 };
 
 function detectAndParseAction(text: string, userQuery: string, currentTab: string): any {
-  // 1. Try to find an explicit [ACTION: { ... }] JSON tag (case-insensitive, optional brackets)
-  const actionMatch = text.match(/\[?ACTION:\s*({.*?})\s*\]?/is);
-  if (actionMatch) {
-    try {
-      return JSON.parse(actionMatch[1]);
-    } catch (e) {
-      console.warn("Found ACTION tag but failed to parse JSON:", e);
+  // 1. Try to find an explicit [ACTION: { ... }] JSON tag (case-insensitive, optional brackets) with robust brace balancing
+  const actionIdx = text.toUpperCase().indexOf('ACTION:');
+  if (actionIdx !== -1) {
+    const firstBraceIdx = text.indexOf('{', actionIdx);
+    if (firstBraceIdx !== -1) {
+      let braceCount = 0;
+      let endBraceIdx = -1;
+      for (let i = firstBraceIdx; i < text.length; i++) {
+        if (text[i] === '{') {
+          braceCount++;
+        } else if (text[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            endBraceIdx = i;
+            break;
+          }
+        }
+      }
+      if (endBraceIdx !== -1) {
+        const jsonStr = text.slice(firstBraceIdx, endBraceIdx + 1);
+        try {
+          return JSON.parse(jsonStr);
+        } catch (e) {
+          console.warn("Found ACTION tag but failed to parse JSON with brace balancing:", e);
+        }
+      }
     }
   }
 

@@ -1953,6 +1953,7 @@ export default function App() {
             onNavigate={setActiveView}
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
+            onRefresh={handleRefreshAll}
           />
         );
       case 'staff':

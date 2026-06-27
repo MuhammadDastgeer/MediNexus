@@ -1402,12 +1402,13 @@ export default function AppointmentsView({
 
               <button
                 onClick={() => {
+                  if (onRefresh) onRefresh();
                   showToast('Re-indexing followups records data updated.');
                 }}
                 className="p-2 border border-slate-250 bg-white hover:bg-slate-50 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5"
                 title="Refresh listings"
               >
-                <RefreshCw size={12} />
+                <RefreshCw size={12} className="animate-spin-slow" />
                 <span>Refresh</span>
               </button>
 

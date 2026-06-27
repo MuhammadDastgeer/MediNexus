@@ -48,6 +48,18 @@ export default function PatientsView({
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Synchronize viewingPatient state with parent patients updates
+  React.useEffect(() => {
+    if (viewingPatient) {
+      const updated = patients.find((p) => p.id === viewingPatient.id);
+      if (updated) {
+        setViewingPatient(updated);
+      } else {
+        setViewingPatient(null);
+      }
+    }
+  }, [patients]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {

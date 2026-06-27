@@ -578,6 +578,70 @@ export const getToolsForTab = (tab: string, userRole?: string): TabTool[] => {
   return [];
 };
 
+// Helper to extract and strip the ACTION block from text (including balanced nested objects)
+export const extractAndStripActionTag = (text: string): { cleaned: string; action: any } => {
+  let cleaned = text;
+  let action: any = null;
+
+  const actionIdx = cleaned.toUpperCase().indexOf('ACTION:');
+  if (actionIdx !== -1) {
+    // Find the first '{' after 'ACTION:'
+    const firstBraceIdx = cleaned.indexOf('{', actionIdx);
+    if (firstBraceIdx !== -1) {
+      let braceCount = 0;
+      let endBraceIdx = -1;
+      for (let i = firstBraceIdx; i < cleaned.length; i++) {
+        if (cleaned[i] === '{') {
+          braceCount++;
+        } else if (cleaned[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            endBraceIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (endBraceIdx !== -1) {
+        const jsonStr = cleaned.slice(firstBraceIdx, endBraceIdx + 1);
+        try {
+          action = JSON.parse(jsonStr);
+        } catch (e) {
+          console.error("Failed to parse extracted JSON with brace balancing:", jsonStr, e);
+        }
+
+        // Now find the surrounding [ACTION: ... ] tag block to remove it cleanly
+        let startBracketIdx = -1;
+        for (let i = actionIdx; i >= 0; i--) {
+          if (cleaned[i] === '[') {
+            startBracketIdx = i;
+            break;
+          }
+        }
+
+        let endBracketIdx = -1;
+        for (let i = endBraceIdx; i < cleaned.length; i++) {
+          if (cleaned[i] === ']') {
+            endBracketIdx = i;
+            break;
+          }
+        }
+
+        if (startBracketIdx !== -1 && endBracketIdx !== -1) {
+          cleaned = cleaned.slice(0, startBracketIdx) + cleaned.slice(endBracketIdx + 1);
+        } else {
+          cleaned = cleaned.replace(jsonStr, '');
+        }
+      }
+    }
+  }
+
+  // Fallback strip: remove any residual matching patterns for [ACTION: ...] if something was left
+  cleaned = cleaned.replace(/\[ACTION:\s*({.*?})\s*\]/gis, '');
+  
+  return { cleaned: cleaned.trim(), action };
+};
+
 export default function AIAssistantView({ 
   contextData, 
   backendApiEndpoint = '/api/ai-assistant/chat', 
@@ -680,11 +744,9 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
     window.speechSynthesis.cancel();
     
     // Clean text of markdown format and trigger actions
-    const cleanText = text
-      .replace(/\[NAVIGATE:\s*[a-zA-Z0-9_-]+\]/gi, '')
-      .replace(/\[ACTION:\s*({.*?})\s*\]/gis, '')
-      .replace(/[\*\_`\#\-\+]/g, ' ')
-      .trim();
+    let cleanText = text.replace(/\[NAVIGATE:\s*[a-zA-Z0-9_-]+\]/gi, '');
+    const extraction = extractAndStripActionTag(cleanText);
+    cleanText = extraction.cleaned.replace(/[\*\_`\#\-\+]/g, ' ').trim();
 
     if (!cleanText) return;
 
@@ -1464,18 +1526,10 @@ Feel free to try the **15 Quick Prompts** below or type your specialized query n
 
       let replyContent = resData.reply || "Unable to formulate response from downstream services.";
       
-      // Look for custom [ACTION: {...}] tag inside the reply text (emitted by LLMs)
-      let parsedActionFromTag = null;
-      const actionMatch = replyContent.match(/\[ACTION:\s*({.*?})\s*\]/s);
-      if (actionMatch) {
-        try {
-          parsedActionFromTag = JSON.parse(actionMatch[1]);
-        } catch (e) {
-          console.error("Failed to parse [ACTION] json inside reply tag:", e);
-        }
-        // Always strip the tag from display text so user doesn't see raw JSON blocks
-        replyContent = replyContent.replace(/\[ACTION:\s*({.*?})\s*\]/gs, '').trim();
-      }
+      // Look for custom [ACTION: {...}] tag inside the reply text (emitted by LLMs) with robust brace balancing
+      const extraction = extractAndStripActionTag(replyContent);
+      let parsedActionFromTag = extraction.action;
+      replyContent = extraction.cleaned;
 
       const finalAction = parsedActionFromTag || resData.action;
       if (finalAction && onExecuteAction) {
