@@ -1608,7 +1608,7 @@ Please request support or review active API parameter credentials.`,
                 title="Select AI Model Engine Cascade Order"
                 id="engine-select-dropdown"
               >
-                <option value="auto">⚡ Auto (GPT-5.5 ➔ Claude Opus ➔ Gemini Pro)</option>
+                <option value="auto">⚡ Auto (Gemini Pro ➔ GPT-5.5 ➔ Claude Opus)</option>
                 <option value="openai">🟢 GPT-5.5 First</option>
                 <option value="claude">🟠 Claude Opus 4.7 First</option>
                 <option value="gemini">🔵 Gemini 3.1 Pro First</option>
@@ -1673,11 +1673,11 @@ Please request support or review active API parameter credentials.`,
               )}
               {(selectedModel === 'auto' || !['openai', 'claude', 'gemini'].includes(selectedModel)) && (
                 <>
-                  <span className="text-teal-700 underline decoration-teal-400">GPT-5.5 (Auto)</span>
+                  <span className="text-teal-700 underline decoration-teal-400">Gemini Pro (Auto)</span>
+                  <span className="text-slate-400">➔</span>
+                  <span>GPT-5.5</span>
                   <span className="text-slate-400">➔</span>
                   <span>Claude Opus</span>
-                  <span className="text-slate-400">➔</span>
-                  <span>Gemini Pro</span>
                 </>
               )}
               <span className="text-slate-400">➔</span>

@@ -122,10 +122,10 @@ function parseImageData(dataUrl: string) {
 // Individual Provider Executions
 // ----------------------------------------------------
 
-async function tryGemini(keys: any, prompt: string, image: string, audio: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION) {
+async function tryGemini(keys: any, prompt: string, image: string, audio: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION, isFallback: boolean = false) {
   if (keys.gemini && keys.gemini !== 'MY_GEMINI_API_KEY' && keys.gemini.trim() !== '') {
-    const apiModel = MODEL_CONFIG.getApiGeminiModel();
-    const configName = MODEL_CONFIG.geminiModel;
+    const apiModel = isFallback ? 'gemini-3.1-flash-lite' : MODEL_CONFIG.getApiGeminiModel();
+    const configName = isFallback ? 'Gemini 3.1 Flash Lite' : MODEL_CONFIG.geminiModel;
     try {
       const model = new ChatGoogleGenerativeAI({
         model: apiModel,
@@ -178,6 +178,11 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
     } catch (err: any) {
       console.warn(`tryGemini (${configName}) LangChain Error details:`, err);
       attempts.push({ provider: `${configName} (Google)`, status: 'failed', error: err.message || 'Unknown network error' });
+      
+      if (!isFallback) {
+        console.log('[tryGemini] Attempting automatic fallback to Gemini 3.1 Flash Lite due to primary model error...');
+        return tryGemini(keys, prompt, image, audio, attempts, systemInstruction, true);
+      }
     }
   } else {
     attempts.push({ provider: `${MODEL_CONFIG.geminiModel} (Google)`, status: 'skipped', error: 'API key is not configured' });
@@ -1463,8 +1468,8 @@ CRITICAL DOCTOR CONSOLE SECURITY RULE:
   } else if (selectedModel === 'claude') {
     providerChain = ['claude', 'openai', 'gemini'];
   } else {
-    // Default fallback chain (Auto) - Prioritize OpenAI first, then Claude, then Google Gemini fallback
-    providerChain = ['openai', 'claude', 'gemini'];
+    // Default fallback chain (Auto) - Prioritize Gemini first (native AI Studio model), then OpenAI, then Claude
+    providerChain = ['gemini', 'openai', 'claude'];
   }
 
   // Iterate over provider sequence
