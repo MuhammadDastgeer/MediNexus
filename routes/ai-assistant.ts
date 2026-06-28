@@ -570,6 +570,66 @@ function detectAndParseAction(text: string, userQuery: string, currentTab: strin
   };
 }
 
+function isMedicalQuery(query: string): boolean {
+  const lowerQ = query.toLowerCase().trim();
+  const medicalKeywords = [
+    // English symptoms, medications, health topics
+    'pain', 'fever', 'cough', 'headache', 'heart', 'medicine', 'drug', 'clinical', 'report', 'rash', 
+    'treatment', 'asthma', 'sugar', 'bp', 'blood pressure', 'symptom', 'prescription', 'allergy', 
+    'guidance', 'flu', 'pneumonia', 'tb', 'infection', 'disease', 'cancer', 'diabetic', 'diabetes', 
+    'stomach', 'ache', 'throat', 'cold', 'vomit', 'nausea', 'diarrhea', 'injury', 'wound', 'bleeding', 
+    'fracture', 'bone', 'muscle', 'skin', 'eye', 'ear', 'nose', 'kidney', 'liver', 'lungs', 'brain', 
+    'mental', 'stress', 'anxiety', 'depression', 'dose', 'tablet', 'capsule', 'syrup', 'injection', 
+    'vaccine', 'surgery', 'operation', 'therapy', 'physio', 'medical', 'health', 'sick', 'ill', 
+    'diagnosis', 'prognosis', 'cholesterol', 'hypertension', 'stroke', 'cardiac', 'pulmonary', 
+    'hepatitis', 'ulcer', 'migraine', 'dizziness', 'fatigue', 'swelling', 'inflammation', 'sprain', 
+    'burn', 'allergen', 'weight', 'diet', 'calories', 'nutrition', 'exercise', 'sleep', 'hygiene',
+    'sore', 'paracetamol', 'panadol', 'disprin', 'calpol', 'brufen', 'aspirin', 'insulin', 'antibiotic', 
+    'antiseptic', 'pregnancy', 'pregnant', 'remedy', 'cure', 'viral', 'bacterial', 'germ', 'virus',
+    'sickness', 'illness', 'tabiyat', 'tabiat',
+    
+    // Urdu/Roman Urdu terms
+    'dard', 'bukhar', 'khanis', 'khansi', 'zukam', 'nazla', 'sar dard', 'pet', 'pait', 'dil', 
+    'guda', 'gurda', 'jigar', 'phepra', 'phephre', 'demagh', 'zehn', 'marz', 'beemari', 'bimari', 
+    'ilaj', 'ilaaj', 'dawa', 'dawaein', 'goli', 'sharbat', 'teeka', 'nuskha', 'parhaiz', 'khoon', 'blood', 
+    'hadi', 'patha', 'jild', 'aankh', 'kaan', 'naak', 'gala', 'kharash', 'ultians', 'ulti', 'ultee', 'matli', 
+    'thakan', 'soojan', 'zakham', 'chot', 'bimar', 'mareez', 'sehat', 'tandurusti', 'shifa', 
+    'garm', 'thanda'
+  ];
+
+  return medicalKeywords.some(keyword => lowerQ.includes(keyword));
+}
+
+function isGreetingOrPolite(query: string): boolean {
+  const lowerQ = query.toLowerCase().trim();
+  const greetings = [
+    'hello', 'hi', 'hey', 'salam', 'aoa', 'adaab', 'how are you', 'kya hal', 'kaise ho',
+    'ok', 'okay', 'thanks', 'thank you', 'shukriya'
+  ];
+  return greetings.some(g => lowerQ === g || lowerQ.startsWith(g + ' ') || lowerQ.endsWith(' ' + g));
+}
+
+function getTabsFromQuery(query: string): string[] {
+  const lowerQ = query.toLowerCase().trim();
+  const tabs: string[] = [];
+  if (lowerQ.includes('appointment')) tabs.push('appointments');
+  if (lowerQ.includes('bill') || lowerQ.includes('invoice') || lowerQ.includes('payment') || lowerQ.includes('fee')) tabs.push('billing');
+  if (lowerQ.includes('patient') || lowerQ.includes('register')) tabs.push('patients');
+  if (lowerQ.includes('doctor') || lowerQ.includes('specialist')) tabs.push('doctors');
+  if (lowerQ.includes('staff') || lowerQ.includes('nurse') || lowerQ.includes('cleaner') || lowerQ.includes('karkun')) tabs.push('staff');
+  if (lowerQ.includes('inventory') || lowerQ.includes('stock') || lowerQ.includes('pharmacy') || lowerQ.includes('mal-godaam')) tabs.push('inventory');
+  if (lowerQ.includes('ward') || lowerQ.includes('bed') || lowerQ.includes('room') || lowerQ.includes('occupancy') || lowerQ.includes('bistar')) tabs.push('ipd-wards');
+  if (lowerQ.includes('consultation') || lowerQ.includes('prescribe')) tabs.push('consultation');
+  if (lowerQ.includes('blog')) tabs.push('blogs');
+  if (lowerQ.includes('report') || lowerQ.includes('analytic')) tabs.push('reports');
+  if (lowerQ.includes('finance') || lowerQ.includes('ledger') || lowerQ.includes('revenue')) tabs.push('finance');
+  if (lowerQ.includes('department')) tabs.push('departments');
+  if (lowerQ.includes('enquiry') || lowerQ.includes('lead') || lowerQ.includes('ticket')) tabs.push('enquiries');
+  if (lowerQ.includes('tourism')) tabs.push('medical-tourism');
+  if (lowerQ.includes('configure') || lowerQ.includes('setting')) tabs.push('configure-hospital');
+  return tabs;
+}
+
 function checkRoleCapability(userRole: string, activeTabName: string, queryText: string, toolType?: string, toolTab?: string): { allowed: boolean, reason?: string, UrduReason?: string } {
   const role = userRole.toLowerCase().trim();
   if (role === 'admin' || !role) {
@@ -577,20 +637,7 @@ function checkRoleCapability(userRole: string, activeTabName: string, queryText:
   }
   
   // If the query is purely clinical / medical advice, we always allow it!
-  const isGeneralMedicalAdvice = 
-    queryText.toLowerCase().includes('pain') || queryText.toLowerCase().includes('dard') || 
-    queryText.toLowerCase().includes('fever') || queryText.toLowerCase().includes('cough') || 
-    queryText.toLowerCase().includes('headache') || queryText.toLowerCase().includes('heart') || 
-    queryText.toLowerCase().includes('medicine') || queryText.toLowerCase().includes('drug') || 
-    queryText.toLowerCase().includes('clinical') || queryText.toLowerCase().includes('report') || 
-    queryText.toLowerCase().includes('rash') || queryText.toLowerCase().includes('treatment') || 
-    queryText.toLowerCase().includes('asthma') || queryText.toLowerCase().includes('sugar') || 
-    queryText.toLowerCase().includes('bp') || queryText.toLowerCase().includes('blood pressure') ||
-    queryText.toLowerCase().includes('symptom') || queryText.toLowerCase().includes('prescription') ||
-    queryText.toLowerCase().includes('allergy') || queryText.toLowerCase().includes('guidance') ||
-    queryText.toLowerCase().includes('flu') || queryText.toLowerCase().includes('bukhar') ||
-    queryText.toLowerCase().includes('pneumonia') || queryText.toLowerCase().includes('tb') ||
-    queryText.toLowerCase().includes('infection');
+  const isGeneralMedicalAdvice = isMedicalQuery(queryText);
 
   // Detect target tab of the operation.
   // We check the toolTab first, otherwise fall back to activeTabName, or look at keywords in the queryText.
@@ -630,8 +677,8 @@ function checkRoleCapability(userRole: string, activeTabName: string, queryText:
     }
   }
 
-  // If there is no operation detected and it's general medical advice, always allow!
-  if (!opType && isGeneralMedicalAdvice) {
+  // If it's a medical query, always allow!
+  if (isGeneralMedicalAdvice) {
     return { allowed: true };
   }
 
@@ -928,152 +975,72 @@ function retrieveRelevantDocs(query: string, data: any, userRole: string = 'admi
          `\n==========================================================\n`;
 }
 
+function shouldBlockQuery(role: string, query: string, isGeneralAssistant: boolean): boolean {
+  const normalizedQuery = (query || '').trim();
+  if (normalizedQuery.length < 2) {
+    return false;
+  }
+
+  // 1. If it's a medical/clinical question, ALWAYS ALLOW! No block!
+  if (isMedicalQuery(normalizedQuery)) {
+    return false;
+  }
+
+  // 2. If it's a basic greeting or polite comment, ALWAYS ALLOW! No block!
+  if (isGreetingOrPolite(normalizedQuery)) {
+    return false;
+  }
+
+  // 3. If it's general assistant (not logged in console assistant):
+  // General Assistant is ONLY allowed to answer medical queries or greetings.
+  // Since it's not medical and not greeting, block it!
+  if (isGeneralAssistant) {
+    return true;
+  }
+
+  // 4. Console checks (Patient, Staff, Doctor, Admin)
+  const normalizedRole = (role || '').toLowerCase().trim();
+  if (normalizedRole === 'admin' || !normalizedRole) {
+    return false; // Admin has all tabs open, so no block
+  }
+
+  // Let's check which tabs are referenced by the query
+  const referencedTabs = getTabsFromQuery(normalizedQuery);
+  if (referencedTabs.length === 0) {
+    // It's a non-medical query that does not ask about any hospital tab/data (e.g. general knowledge, math, programming).
+    // The user instruction: "medical ka qestion ager ni ho or ager wo tab os consolo ma open ni ho per bol not founnd"
+    // Since it's not a medical query and no open tab matches, block it!
+    return true;
+  }
+
+  // Check if ALL referenced tabs are open/allowed for this role:
+  let allowedTabs: string[] = [];
+  if (normalizedRole === 'patient') {
+    allowedTabs = ['appointments', 'billing', 'patients', 'doctors'];
+  } else if (normalizedRole === 'staff') {
+    allowedTabs = ['appointments', 'consultation', 'billing', 'patients', 'blogs'];
+  } else if (normalizedRole === 'doctor') {
+    allowedTabs = ['appointments', 'consultation', 'doctors', 'patients', 'staff', 'blogs', 'ipd-wards'];
+  }
+
+  // If any referenced tab is not allowed for the role, block it!
+  const hasDisallowedTab = referencedTabs.some(tab => !allowedTabs.includes(tab));
+  if (hasDisallowedTab) {
+    return true;
+  }
+
+  // All referenced tabs are open and allowed in this console! Do not block!
+  return false;
+}
+
 function checkDisallowedTabQuery(role: string, query: string): { disallowed: boolean } {
-  const lowerQ = query.toLowerCase().trim();
-  if (role === 'admin' || !role) {
-    return { disallowed: false };
-  }
-
-  // Define data-query words that indicate they want database/system records
-  const isDataQuery = 
-    lowerQ.includes('list') || lowerQ.includes('show') || lowerQ.includes('count') || 
-    lowerQ.includes('how many') || lowerQ.includes('stock') || lowerQ.includes('quantity') || 
-    lowerQ.includes('price') || lowerQ.includes('roster') || lowerQ.includes('schedule') || 
-    lowerQ.includes('salary') || lowerQ.includes('payment') || lowerQ.includes('ledger') || 
-    lowerQ.includes('kitna') || lowerQ.includes('kitne') || lowerQ.includes('dikhao') || 
-    lowerQ.includes('total') || lowerQ.includes('details') || lowerQ.includes('record') ||
-    lowerQ.includes('register') || lowerQ.includes('database') || lowerQ.includes('search') ||
-    lowerQ.includes('view') || lowerQ.includes('dekh');
-
-  if (!isDataQuery) {
-    return { disallowed: false };
-  }
-
-  // 1. Patient console checks
-  if (role === 'patient') {
-    // Patient can only query appointments, billing, patients (own profile), doctors.
-    // Disallowed: inventory/pharmacy, staff, wards, departments, enquiries, medical-tourism, finance, reports, configure-hospital, support.
-    const hasInventory = lowerQ.includes('inventory') || lowerQ.includes('stock') || lowerQ.includes('pharmacy') || lowerQ.includes('medicine') || lowerQ.includes('dawaein') || lowerQ.includes('mal-godaam');
-    const hasStaff = lowerQ.includes('staff') || lowerQ.includes('nurse') || lowerQ.includes('cleaner') || lowerQ.includes('karkun');
-    const hasWards = lowerQ.includes('ward') || lowerQ.includes('bed') || lowerQ.includes('room') || lowerQ.includes('occupancy') || lowerQ.includes('bistar');
-    const hasDepartments = lowerQ.includes('department');
-    const hasEnquiries = lowerQ.includes('enquiry') || lowerQ.includes('lead') || lowerQ.includes('ticket');
-    const hasFinanceReports = lowerQ.includes('finance') || lowerQ.includes('ledger') || lowerQ.includes('transaction') || lowerQ.includes('report') || lowerQ.includes('analytic') || lowerQ.includes('configure') || lowerQ.includes('setting');
-    const hasOtherPatients = lowerQ.includes('all patients') || lowerQ.includes('other patients') || lowerQ.includes('dusre patients') || lowerQ.includes('dusra patient') || lowerQ.includes('all bills') || lowerQ.includes('other bills') || lowerQ.includes('dusre bills');
-
-    if (hasInventory || hasStaff || hasWards || hasDepartments || hasEnquiries || hasFinanceReports || hasOtherPatients) {
-      return { disallowed: true };
-    }
-  }
-
-  // 2. Staff console checks
-  if (role === 'staff') {
-    // Staff can only query appointments, consultation, billing, staff, patients, blogs.
-    // Disallowed: inventory/pharmacy, ipd-wards, doctors, departments, enquiries, medical-tourism, reports, finance, configure-hospital, support.
-    const hasInventory = lowerQ.includes('inventory') || lowerQ.includes('stock') || lowerQ.includes('pharmacy') || lowerQ.includes('medicine') || lowerQ.includes('dawaein') || lowerQ.includes('mal-godaam');
-    const hasWards = lowerQ.includes('ward') || lowerQ.includes('bed') || lowerQ.includes('room') || lowerQ.includes('occupancy') || lowerQ.includes('bistar');
-    const hasDoctors = lowerQ.includes('doctor') || lowerQ.includes('dr.') || lowerQ.includes('specialist') || lowerQ.includes('surgeon') || lowerQ.includes('physician');
-    const hasDepartments = lowerQ.includes('department');
-    const hasEnquiries = lowerQ.includes('enquiry') || lowerQ.includes('lead') || lowerQ.includes('ticket');
-    const hasFinanceReports = lowerQ.includes('finance') || lowerQ.includes('ledger') || lowerQ.includes('transaction') || lowerQ.includes('report') || lowerQ.includes('analytic') || lowerQ.includes('configure') || lowerQ.includes('setting');
-
-    if (hasInventory || hasWards || hasDoctors || hasDepartments || hasEnquiries || hasFinanceReports) {
-      return { disallowed: true };
-    }
-  }
-
-  // 3. Doctor console checks
-  if (role === 'doctor') {
-    // Doctor can only query appointments, consultation, doctors, patients, staff, blogs, ipd-wards, billing.
-    // Disallowed: inventory/pharmacy, departments, enquiries, medical-tourism, reports, finance, configure-hospital, support.
-    const hasInventory = lowerQ.includes('inventory') || lowerQ.includes('stock') || lowerQ.includes('pharmacy') || lowerQ.includes('medicine') || lowerQ.includes('dawaein') || lowerQ.includes('mal-godaam');
-    const hasDepartments = lowerQ.includes('department');
-    const hasEnquiries = lowerQ.includes('enquiry') || lowerQ.includes('lead') || lowerQ.includes('ticket');
-    const hasFinanceReports = lowerQ.includes('finance') || lowerQ.includes('ledger') || lowerQ.includes('transaction') || lowerQ.includes('report') || lowerQ.includes('analytic') || lowerQ.includes('configure') || lowerQ.includes('setting');
-
-    if (hasInventory || hasDepartments || hasEnquiries || hasFinanceReports) {
-      return { disallowed: true };
-    }
-  }
-
-  return { disallowed: false };
+  const blocked = shouldBlockQuery(role, query, false);
+  return { disallowed: blocked };
 }
 
 function checkGeneralAssistantQuery(query: string): { allowed: boolean } {
-  const lowerQ = query.toLowerCase().trim();
-
-  if (lowerQ.length < 2) {
-    return { allowed: true };
-  }
-
-  // Allow standard polite conversational starters / greetings so the bot can politely say Hello and guide them to ask a medical query.
-  const isGreeting = 
-    lowerQ === 'hello' || lowerQ === 'hi' || lowerQ === 'hey' || 
-    lowerQ.includes('salam') || lowerQ === 'aoa' || lowerQ === 'adaab' || 
-    lowerQ.includes('how are you') || lowerQ.includes('kya hal') || lowerQ.includes('kaise ho') ||
-    lowerQ === 'ok' || lowerQ === 'okay' || lowerQ === 'thanks' || lowerQ === 'thank you' || lowerQ === 'shukriya';
-
-  if (isGreeting) {
-    return { allowed: true };
-  }
-
-  // 1. Identify any queries about specific database fields/tables/records
-  const hasDataKeywords = 
-    lowerQ.includes('list') || lowerQ.includes('show') || lowerQ.includes('count') || 
-    lowerQ.includes('how many') || lowerQ.includes('roster') || lowerQ.includes('schedule') || 
-    lowerQ.includes('salary') || lowerQ.includes('payment') || lowerQ.includes('ledger') || 
-    lowerQ.includes('kitna') || lowerQ.includes('kitne') || lowerQ.includes('dikhao') || 
-    lowerQ.includes('total') || lowerQ.includes('details') || lowerQ.includes('record') ||
-    lowerQ.includes('register') || lowerQ.includes('database') || lowerQ.includes('search') ||
-    lowerQ.includes('view') || lowerQ.includes('dekh');
-
-  const hasHospitalEntities = 
-    lowerQ.includes('patient') || lowerQ.includes('appointment') || lowerQ.includes('bill') || 
-    lowerQ.includes('invoice') || lowerQ.includes('doctor') || lowerQ.includes('staff') || 
-    lowerQ.includes('ward') || lowerQ.includes('bed') || lowerQ.includes('room') || 
-    lowerQ.includes('department') || lowerQ.includes('enquiry') || lowerQ.includes('lead') || 
-    lowerQ.includes('ticket') || lowerQ.includes('finance') || lowerQ.includes('revenue') || 
-    lowerQ.includes('transaction') || lowerQ.includes('report') || lowerQ.includes('analytic') || 
-    lowerQ.includes('configure') || lowerQ.includes('setting') || lowerQ.includes('inventory') || 
-    lowerQ.includes('stock') || lowerQ.includes('quantity') || lowerQ.includes('nurse') || 
-    lowerQ.includes('cleaner') || lowerQ.includes('bistar') || lowerQ.includes('karkun');
-
-  if (hasDataKeywords || hasHospitalEntities) {
-    return { allowed: false };
-  }
-
-  // 2. Identify if it is a medical or clinical query
-  const medicalKeywords = [
-    // English symptoms, medications, health topics
-    'pain', 'fever', 'cough', 'headache', 'heart', 'medicine', 'drug', 'clinical', 'report', 'rash', 
-    'treatment', 'asthma', 'sugar', 'bp', 'blood pressure', 'symptom', 'prescription', 'allergy', 
-    'guidance', 'flu', 'pneumonia', 'tb', 'infection', 'disease', 'cancer', 'diabetic', 'diabetes', 
-    'stomach', 'ache', 'throat', 'cold', 'vomit', 'nausea', 'diarrhea', 'injury', 'wound', 'bleeding', 
-    'fracture', 'bone', 'muscle', 'skin', 'eye', 'ear', 'nose', 'kidney', 'liver', 'lungs', 'brain', 
-    'mental', 'stress', 'anxiety', 'depression', 'dose', 'tablet', 'capsule', 'syrup', 'injection', 
-    'vaccine', 'surgery', 'operation', 'therapy', 'physio', 'medical', 'health', 'sick', 'ill', 
-    'diagnosis', 'prognosis', 'cholesterol', 'hypertension', 'stroke', 'cardiac', 'pulmonary', 
-    'hepatitis', 'ulcer', 'migraine', 'dizziness', 'fatigue', 'swelling', 'inflammation', 'sprain', 
-    'burn', 'allergen', 'weight', 'diet', 'calories', 'nutrition', 'exercise', 'sleep', 'hygiene',
-    'sore', 'infection', 'physiotherapy', 'paracetamol', 'panadol', 'disprin', 'calpol', 'brufen',
-    'aspirin', 'insulin', 'antibiotic', 'antiseptic',
-    
-    // Urdu/Roman Urdu terms
-    'dard', 'bukhar', 'khanis', 'khansi', 'zukam', 'nazla', 'sar dard', 'pet', 'pait', 'dil', 
-    'guda', 'gurda', 'jigar', 'phepra', 'phephre', 'demagh', 'zehn', 'marz', 'beemari', 'bimari', 
-    'ilaj', 'dawa', 'dawaein', 'goli', 'sharbat', 'teeka', 'nuskha', 'parhaiz', 'khoon', 'blood', 
-    'hadi', 'patha', 'jild', 'aankh', 'kaan', 'naak', 'gala', 'kharash', 'ultians', 'ulti', 'matli', 
-    'thakan', 'soojan', 'zakham', 'chot', 'bimar', 'mareez', 'sehat', 'tandurusti', 'shifa', 
-    'garm', 'thanda'
-  ];
-
-  const isMedical = medicalKeywords.some(keyword => lowerQ.includes(keyword));
-
-  if (!isMedical) {
-    return { allowed: false };
-  }
-
-  return { allowed: true };
+  const blocked = shouldBlockQuery('', query, true);
+  return { allowed: !blocked };
 }
 
 async function processChatRequest(systemInstructionToUse: string, req: Request, res: Response, isGeneralAssistant: boolean = false) {
