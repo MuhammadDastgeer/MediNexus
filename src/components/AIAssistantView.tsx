@@ -661,7 +661,11 @@ export default function AIAssistantView({
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
+    const isQuickReplyDisabled = ['ai-assistant', 'patients-ai', 'doctors-ai', 'staff-ai', 'patients', 'doctors', 'staff', 'general', 'general-ai'].includes(activeTabLower);
     if (isTabSpecific) {
+      const promptsLine = isQuickReplyDisabled 
+        ? "Type your specialized query now to analyze or perform tasks!"
+        : "Feel free to try the **15 Quick Prompts** below or type your specialized query now!";
       setMessages([
         {
           id: 'welcome',
@@ -675,7 +679,7 @@ I am **restricted** and will only answer and handle questions or tasks related t
 
 💡 For general medical advice, symptoms, or other general helper features, please close this assistant and use the main **AI Assistant** tab.
 
-Feel free to try the **15 Quick Prompts** below or type your specialized query now!`,
+${promptsLine}`,
           timestamp: new Date()
         }
       ]);
@@ -2005,7 +2009,7 @@ Please request support or review active API parameter credentials.`,
         <div className="p-3 sm:p-5 border-t border-slate-100 bg-white shadow-inner flex flex-col gap-2.5 shrink-0 min-h-0" id="chat-input-controls-parent">
           
           {/* Quick Tab-Sensitive & Suggested Chips */}
-          {!isRecording && (
+          {!isRecording && !['ai-assistant', 'patients-ai', 'doctors-ai', 'staff-ai', 'patients', 'doctors', 'staff', 'general', 'general-ai'].includes(activeTabLower) && (
             <div className="mb-1 sm:mb-2" id="quick-chips-wrapper">
               <div className="flex items-center gap-1.5 mb-1.5 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase tracking-wider px-0.5 select-none">
                 <Sparkles className="h-3 w-3 text-teal-600 animate-pulse" />

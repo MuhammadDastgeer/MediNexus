@@ -30,6 +30,18 @@ const cleanKey = (key?: string) => {
   return cleaned;
 };
 
+// Map error strings to standard, clean user-friendly categories to avoid leaking raw exceptions
+const sanitizeAttemptError = (msg?: string): string => {
+  const lower = (msg || '').toLowerCase();
+  if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('key') || lower.includes('auth')) {
+    return 'Invalid Credentials';
+  }
+  if (lower.includes('429') || lower.includes('quota') || lower.includes('limit') || lower.includes('too many requests')) {
+    return 'Quota Exceeded';
+  }
+  return 'Service Unavailable';
+};
+
 // Retrieve key values at request time with auto-correcting routing to fix accidental key mix-ups
 const getKeys = () => {
   const rawGemini = cleanKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
@@ -176,8 +188,8 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
         throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.warn(`tryGemini (${configName}) LangChain Error details:`, err);
-      attempts.push({ provider: `${configName} (Google)`, status: 'failed', error: err.message || 'Unknown network error' });
+      console.log(`[AI Engine] Gemini (${configName}) request status: Unavailable (Handled)`);
+      attempts.push({ provider: `${configName} (Google)`, status: 'failed', error: sanitizeAttemptError(err.message) });
       
       if (!isFallback) {
         console.log('[tryGemini] Attempting automatic fallback to Gemini 3.1 Flash Lite due to primary model error...');
@@ -233,8 +245,8 @@ async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any
         throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.warn(`tryOpenAI (${configName}) LangChain Error details:`, err);
-      attempts.push({ provider: `${configName} (OpenAI)`, status: 'failed', error: err.message || 'Unknown network error' });
+      console.log(`[AI Engine] OpenAI (${configName}) request status: Unavailable (Handled)`);
+      attempts.push({ provider: `${configName} (OpenAI)`, status: 'failed', error: sanitizeAttemptError(err.message) });
     }
   } else {
     attempts.push({ provider: `${MODEL_CONFIG.openaiModel} (OpenAI)`, status: 'skipped', error: 'API key is not configured' });
@@ -285,8 +297,8 @@ async function tryAnthropic(keys: any, prompt: string, image: string, attempts: 
         throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.warn(`tryAnthropic (${configName}) LangChain Error details:`, err);
-      attempts.push({ provider: `${configName} (Anthropic)`, status: 'failed', error: err.message || 'Unknown network error' });
+      console.log(`[AI Engine] Anthropic (${configName}) request status: Unavailable (Handled)`);
+      attempts.push({ provider: `${configName} (Anthropic)`, status: 'failed', error: sanitizeAttemptError(err.message) });
     }
   } else {
     attempts.push({ provider: `${MODEL_CONFIG.claudeModel} (Anthropic)`, status: 'skipped', error: 'API key is not configured' });
