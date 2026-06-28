@@ -35,8 +35,8 @@ interface SidebarProps {
   setActiveView: (view: ActiveView) => void;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  loggedInUser: { role: 'patient' | 'doctor' | 'staff'; data: any } | null;
-  setLoggedInUser: (user: { role: 'patient' | 'doctor' | 'staff'; data: any } | null) => void;
+  loggedInUser: { role: 'patient' | 'doctor' | 'staff'; data: any; isAiUser?: boolean } | null;
+  setLoggedInUser: (user: { role: 'patient' | 'doctor' | 'staff'; data: any; isAiUser?: boolean } | null) => void;
   onUpdateStaff: (staff: Omit<Staff, 'id'> & { id?: string }) => Promise<void> | void;
   onUpdateDoctor?: (id: string, fields: any) => Promise<void> | void;
   onUpdatePatient?: (patient: any) => Promise<void> | void;
@@ -95,11 +95,15 @@ export default function Sidebar({
   let generalItems = allGeneralItems;
   let systemItems = allSystemItems;
 
-  const isStaff = loggedInUser?.role === 'staff';
-  const isDoctor = loggedInUser?.role === 'doctor';
-  const isPatient = loggedInUser?.role === 'patient';
+  const isStaff = loggedInUser?.role === 'staff' && !loggedInUser?.isAiUser;
+  const isDoctor = loggedInUser?.role === 'doctor' && !loggedInUser?.isAiUser;
+  const isPatient = loggedInUser?.role === 'patient' && !loggedInUser?.isAiUser;
 
-  if (isStaff) {
+  if (loggedInUser?.isAiUser) {
+    const aiUserAllowedTabs = ['landing', 'ai-assistant'];
+    generalItems = allGeneralItems.filter((item) => aiUserAllowedTabs.includes(item.id));
+    systemItems = [];
+  } else if (isStaff) {
     // Staff displays: Dashboard, Appointments, Consultations, Billing, Staff, Patients, Blogs, Public Website
     const staffAllowedLocalTabs = ['landing', 'dashboard', 'ai-assistant', 'appointments', 'consultation', 'billing', 'staff', 'patients', 'blogs'];
     generalItems = allGeneralItems.filter((item) => staffAllowedLocalTabs.includes(item.id));
@@ -119,11 +123,13 @@ export default function Sidebar({
   // Display fields for sidebar profile widget
   const displayName = loggedInUser?.data?.name || "Admin";
   const displayRole = loggedInUser 
-    ? (loggedInUser.role === 'patient' 
-        ? "Patient Console" 
-        : loggedInUser.role === 'doctor' 
-          ? "Doctor Console" 
-          : "Staff Console") 
+    ? (loggedInUser.isAiUser 
+        ? "AI Assistant Portal" 
+        : (loggedInUser.role === 'patient' 
+            ? "Patient Console" 
+            : loggedInUser.role === 'doctor' 
+              ? "Doctor Console" 
+              : "Staff Console")) 
     : "Admin Console";
   const displayInitial = displayName.slice(0, 2).toUpperCase();
 

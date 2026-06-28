@@ -477,19 +477,19 @@ export default function AppointmentsView({
   };
 
   // Quick select dynamic matching patient folder lookup
-  const handleSelectExistingPatient = (name: string, email: string, phone: string, gender: 'Male' | 'Female' | 'Other', ageVal: number) => {
-    setPatientName(name);
-    setPatientEmail(email);
+  const handleSelectExistingPatient = (name: string, email: string | undefined, phone: string, gender: 'Male' | 'Female' | 'Other' | undefined, ageVal: number) => {
+    setPatientName(name || '');
+    setPatientEmail(email || '');
     setPatientPassword('••••••••');
-    setPatientPhone(phone);
-    setPatientWhatsapp(phone);
-    setPatientGender(gender);
-    setAge(ageVal);
+    setPatientPhone(phone || '');
+    setPatientWhatsapp(phone || '');
+    setPatientGender(gender || 'Male');
+    setAge(ageVal || 30);
     setIsExistingPatientSelected(true);
     setIsEnteringNewPatient(false);
     // Move directory straight to doctor specialization select
     setActiveStep(2);
-    showToast(`Patient folder linked successfully. Preloaded details for ${name}.`);
+    showToast(`Patient folder linked successfully. Preloaded details for ${name || 'Patient'}.`);
   };
 
   // Wizard Save/Submit

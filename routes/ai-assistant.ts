@@ -14,7 +14,20 @@ const router = Router();
 // Robust key-cleaning helper to strip accidental quotes and trim spacing
 const cleanKey = (key?: string) => {
   if (!key) return '';
-  return key.replace(/^["']|["']$/g, '').trim();
+  const cleaned = key.replace(/^["']|["']$/g, '').trim();
+  if (
+    cleaned.includes('*') || 
+    cleaned.toLowerCase().includes('placeholder') || 
+    cleaned.toLowerCase().includes('your_') || 
+    cleaned.toLowerCase().includes('your-') ||
+    cleaned.toLowerCase().includes('insert_here') ||
+    cleaned === 'undefined' ||
+    cleaned === 'null' ||
+    cleaned === ''
+  ) {
+    return '';
+  }
+  return cleaned;
 };
 
 // Retrieve key values at request time with auto-correcting routing to fix accidental key mix-ups
@@ -163,7 +176,7 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
         throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.error(`tryGemini (${configName}) LangChain Error details:`, err);
+      console.warn(`tryGemini (${configName}) LangChain Error details:`, err);
       attempts.push({ provider: `${configName} (Google)`, status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
@@ -215,7 +228,7 @@ async function tryOpenAI(keys: any, prompt: string, image: string, attempts: any
         throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.error(`tryOpenAI (${configName}) LangChain Error details:`, err);
+      console.warn(`tryOpenAI (${configName}) LangChain Error details:`, err);
       attempts.push({ provider: `${configName} (OpenAI)`, status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
@@ -267,7 +280,7 @@ async function tryAnthropic(keys: any, prompt: string, image: string, attempts: 
         throw new Error(`Empty response returned from ${configName} via LangChain.`);
       }
     } catch (err: any) {
-      console.error(`tryAnthropic (${configName}) LangChain Error details:`, err);
+      console.warn(`tryAnthropic (${configName}) LangChain Error details:`, err);
       attempts.push({ provider: `${configName} (Anthropic)`, status: 'failed', error: err.message || 'Unknown network error' });
     }
   } else {
@@ -764,17 +777,24 @@ function checkRoleCapability(userRole: string, activeTabName: string, queryText:
   return { allowed: true };
 }
 
-function retrieveRelevantDocs(query: string, data: any): string {
+function retrieveRelevantDocs(query: string, data: any, userRole: string = 'admin', userName: string = ''): string {
   if (!data || typeof data !== 'object') return '';
 
   const matchedDocs: string[] = [];
   const lowerQuery = query.toLowerCase().trim();
+  const role = userRole.toLowerCase().trim();
+  const patientNameLower = userName.toLowerCase().trim();
 
   if (!lowerQuery || lowerQuery.length < 2) return '';
 
-  // 1. Search patients
+  // 1. Search patients (Allowed for: admin, patient, staff, doctor)
+  // For patient: must ONLY search/match their own profile!
   if (Array.isArray(data.allPatients)) {
-    const matchedPatients = data.allPatients.filter((p: any) => 
+    let listToSearch = data.allPatients;
+    if (role === 'patient') {
+      listToSearch = listToSearch.filter((p: any) => p.name && p.name.toLowerCase().trim() === patientNameLower);
+    }
+    const matchedPatients = listToSearch.filter((p: any) => 
       (p.name && p.name.toLowerCase().includes(lowerQuery)) ||
       (p.id && p.id.toLowerCase().includes(lowerQuery)) ||
       (p.bloodGroup && p.bloodGroup.toLowerCase().includes(lowerQuery)) ||
@@ -787,9 +807,14 @@ function retrieveRelevantDocs(query: string, data: any): string {
     }
   }
 
-  // 2. Search appointments
+  // 2. Search appointments (Allowed for: admin, patient, staff, doctor)
+  // For patient: must ONLY search/match their own appointments!
   if (Array.isArray(data.allAppointments)) {
-    const matchedAppointments = data.allAppointments.filter((a: any) =>
+    let listToSearch = data.allAppointments;
+    if (role === 'patient') {
+      listToSearch = listToSearch.filter((a: any) => a.patient && a.patient.toLowerCase().trim() === patientNameLower);
+    }
+    const matchedAppointments = listToSearch.filter((a: any) =>
       (a.patient && a.patient.toLowerCase().includes(lowerQuery)) ||
       (a.doctor && a.doctor.toLowerCase().includes(lowerQuery)) ||
       (a.specialization && a.specialization.toLowerCase().includes(lowerQuery)) ||
@@ -802,9 +827,14 @@ function retrieveRelevantDocs(query: string, data: any): string {
     }
   }
 
-  // 3. Search Bills
+  // 3. Search Bills (Allowed for: admin, patient, staff, doctor)
+  // For patient: must ONLY search/match their own bills!
   if (Array.isArray(data.allBills)) {
-    const matchedBills = data.allBills.filter((b: any) =>
+    let listToSearch = data.allBills;
+    if (role === 'patient') {
+      listToSearch = listToSearch.filter((b: any) => b.patient && b.patient.toLowerCase().trim() === patientNameLower);
+    }
+    const matchedBills = listToSearch.filter((b: any) =>
       (b.patient && b.patient.toLowerCase().includes(lowerQuery)) ||
       (b.id && b.id.toLowerCase().includes(lowerQuery)) ||
       (b.status && b.status.toLowerCase().includes(lowerQuery))
@@ -816,8 +846,8 @@ function retrieveRelevantDocs(query: string, data: any): string {
     }
   }
 
-  // 4. Search Inventory
-  if (Array.isArray(data.allInventory)) {
+  // 4. Search Inventory (Allowed for: admin ONLY)
+  if (role === 'admin' && Array.isArray(data.allInventory)) {
     const matchedInventory = data.allInventory.filter((i: any) =>
       (i.name && i.name.toLowerCase().includes(lowerQuery)) ||
       (i.category && i.category.toLowerCase().includes(lowerQuery)) ||
@@ -831,8 +861,8 @@ function retrieveRelevantDocs(query: string, data: any): string {
     }
   }
 
-  // 5. Search Doctors
-  if (Array.isArray(data.allDoctors)) {
+  // 5. Search Doctors (Allowed for: admin, patient, doctor)
+  if ((role === 'admin' || role === 'patient' || role === 'doctor') && Array.isArray(data.allDoctors)) {
     const matchedDoctors = data.allDoctors.filter((d: any) =>
       (d.name && d.name.toLowerCase().includes(lowerQuery)) ||
       (d.specialization && d.specialization.toLowerCase().includes(lowerQuery)) ||
@@ -845,8 +875,8 @@ function retrieveRelevantDocs(query: string, data: any): string {
     }
   }
 
-  // 6. Search Staff
-  if (Array.isArray(data.allStaff)) {
+  // 6. Search Staff (Allowed for: admin, doctor, staff)
+  if ((role === 'admin' || role === 'doctor' || role === 'staff') && Array.isArray(data.allStaff)) {
     const matchedStaff = data.allStaff.filter((s: any) =>
       (s.name && s.name.toLowerCase().includes(lowerQuery)) ||
       (s.role && s.role.toLowerCase().includes(lowerQuery)) ||
@@ -860,8 +890,8 @@ function retrieveRelevantDocs(query: string, data: any): string {
     }
   }
 
-  // 7. Search Wards
-  if (Array.isArray(data.allWards)) {
+  // 7. Search Wards (Allowed for: admin, doctor)
+  if ((role === 'admin' || role === 'doctor') && Array.isArray(data.allWards)) {
     const matchedWards = data.allWards.filter((w: any) =>
       (w.name && w.name.toLowerCase().includes(lowerQuery)) ||
       (w.type && w.type.toLowerCase().includes(lowerQuery)) ||
@@ -874,8 +904,8 @@ function retrieveRelevantDocs(query: string, data: any): string {
     }
   }
 
-  // 8. Search Enquiries
-  if (Array.isArray(data.allEnquiries)) {
+  // 8. Search Enquiries (Allowed for: admin ONLY)
+  if (role === 'admin' && Array.isArray(data.allEnquiries)) {
     const matchedEnqs = data.allEnquiries.filter((e: any) =>
       (e.name && e.name.toLowerCase().includes(lowerQuery)) ||
       (e.subject && e.subject.toLowerCase().includes(lowerQuery)) ||
@@ -898,6 +928,77 @@ function retrieveRelevantDocs(query: string, data: any): string {
          `\n==========================================================\n`;
 }
 
+function checkDisallowedTabQuery(role: string, query: string): { disallowed: boolean } {
+  const lowerQ = query.toLowerCase().trim();
+  if (role === 'admin' || !role) {
+    return { disallowed: false };
+  }
+
+  // Define data-query words that indicate they want database/system records
+  const isDataQuery = 
+    lowerQ.includes('list') || lowerQ.includes('show') || lowerQ.includes('count') || 
+    lowerQ.includes('how many') || lowerQ.includes('stock') || lowerQ.includes('quantity') || 
+    lowerQ.includes('price') || lowerQ.includes('roster') || lowerQ.includes('schedule') || 
+    lowerQ.includes('salary') || lowerQ.includes('payment') || lowerQ.includes('ledger') || 
+    lowerQ.includes('kitna') || lowerQ.includes('kitne') || lowerQ.includes('dikhao') || 
+    lowerQ.includes('total') || lowerQ.includes('details') || lowerQ.includes('record') ||
+    lowerQ.includes('register') || lowerQ.includes('database') || lowerQ.includes('search') ||
+    lowerQ.includes('view') || lowerQ.includes('dekh');
+
+  if (!isDataQuery) {
+    return { disallowed: false };
+  }
+
+  // 1. Patient console checks
+  if (role === 'patient') {
+    // Patient can only query appointments, billing, patients (own profile), doctors.
+    // Disallowed: inventory/pharmacy, staff, wards, departments, enquiries, medical-tourism, finance, reports, configure-hospital, support.
+    const hasInventory = lowerQ.includes('inventory') || lowerQ.includes('stock') || lowerQ.includes('pharmacy') || lowerQ.includes('medicine') || lowerQ.includes('dawaein') || lowerQ.includes('mal-godaam');
+    const hasStaff = lowerQ.includes('staff') || lowerQ.includes('nurse') || lowerQ.includes('cleaner') || lowerQ.includes('karkun');
+    const hasWards = lowerQ.includes('ward') || lowerQ.includes('bed') || lowerQ.includes('room') || lowerQ.includes('occupancy') || lowerQ.includes('bistar');
+    const hasDepartments = lowerQ.includes('department');
+    const hasEnquiries = lowerQ.includes('enquiry') || lowerQ.includes('lead') || lowerQ.includes('ticket');
+    const hasFinanceReports = lowerQ.includes('finance') || lowerQ.includes('ledger') || lowerQ.includes('transaction') || lowerQ.includes('report') || lowerQ.includes('analytic') || lowerQ.includes('configure') || lowerQ.includes('setting');
+    const hasOtherPatients = lowerQ.includes('all patients') || lowerQ.includes('other patients') || lowerQ.includes('dusre patients') || lowerQ.includes('dusra patient') || lowerQ.includes('all bills') || lowerQ.includes('other bills') || lowerQ.includes('dusre bills');
+
+    if (hasInventory || hasStaff || hasWards || hasDepartments || hasEnquiries || hasFinanceReports || hasOtherPatients) {
+      return { disallowed: true };
+    }
+  }
+
+  // 2. Staff console checks
+  if (role === 'staff') {
+    // Staff can only query appointments, consultation, billing, staff, patients, blogs.
+    // Disallowed: inventory/pharmacy, ipd-wards, doctors, departments, enquiries, medical-tourism, reports, finance, configure-hospital, support.
+    const hasInventory = lowerQ.includes('inventory') || lowerQ.includes('stock') || lowerQ.includes('pharmacy') || lowerQ.includes('medicine') || lowerQ.includes('dawaein') || lowerQ.includes('mal-godaam');
+    const hasWards = lowerQ.includes('ward') || lowerQ.includes('bed') || lowerQ.includes('room') || lowerQ.includes('occupancy') || lowerQ.includes('bistar');
+    const hasDoctors = lowerQ.includes('doctor') || lowerQ.includes('dr.') || lowerQ.includes('specialist') || lowerQ.includes('surgeon') || lowerQ.includes('physician');
+    const hasDepartments = lowerQ.includes('department');
+    const hasEnquiries = lowerQ.includes('enquiry') || lowerQ.includes('lead') || lowerQ.includes('ticket');
+    const hasFinanceReports = lowerQ.includes('finance') || lowerQ.includes('ledger') || lowerQ.includes('transaction') || lowerQ.includes('report') || lowerQ.includes('analytic') || lowerQ.includes('configure') || lowerQ.includes('setting');
+
+    if (hasInventory || hasWards || hasDoctors || hasDepartments || hasEnquiries || hasFinanceReports) {
+      return { disallowed: true };
+    }
+  }
+
+  // 3. Doctor console checks
+  if (role === 'doctor') {
+    // Doctor can only query appointments, consultation, doctors, patients, staff, blogs, ipd-wards, billing.
+    // Disallowed: inventory/pharmacy, departments, enquiries, medical-tourism, reports, finance, configure-hospital, support.
+    const hasInventory = lowerQ.includes('inventory') || lowerQ.includes('stock') || lowerQ.includes('pharmacy') || lowerQ.includes('medicine') || lowerQ.includes('dawaein') || lowerQ.includes('mal-godaam');
+    const hasDepartments = lowerQ.includes('department');
+    const hasEnquiries = lowerQ.includes('enquiry') || lowerQ.includes('lead') || lowerQ.includes('ticket');
+    const hasFinanceReports = lowerQ.includes('finance') || lowerQ.includes('ledger') || lowerQ.includes('transaction') || lowerQ.includes('report') || lowerQ.includes('analytic') || lowerQ.includes('configure') || lowerQ.includes('setting');
+
+    if (hasInventory || hasDepartments || hasEnquiries || hasFinanceReports) {
+      return { disallowed: true };
+    }
+  }
+
+  return { disallowed: false };
+}
+
 async function processChatRequest(systemInstructionToUse: string, req: Request, res: Response) {
   try {
     const rawBody = req.body || {};
@@ -907,6 +1008,102 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
 
     const keys = getKeys();
     const attempts: Array<{ provider: string; status: 'success' | 'failed' | 'skipped'; error?: string; modelUsed?: string }> = [];
+
+    const userRole = (context.userRole || '').toLowerCase().trim();
+    const userName = (context.userName || '').trim();
+
+    // SENSITIVE DATA AND TAB SANITIZATION FOR CONSOLES (Patient, Staff, Doctor)
+    if (context.data && typeof context.data === 'object') {
+      if (userRole === 'patient') {
+        const patientNameLower = userName.toLowerCase().trim();
+        
+        // 1. Only allow patient's own profile inside patientsSummary/allPatients
+        if (Array.isArray(context.data.allPatients)) {
+          context.data.allPatients = context.data.allPatients.filter((p: any) =>
+            p.name && p.name.toLowerCase().trim() === patientNameLower
+          );
+        }
+        if (Array.isArray(context.data.patientsSummary)) {
+          context.data.patientsSummary = context.data.patientsSummary.filter((p: any) =>
+            p.name && p.name.toLowerCase().trim() === patientNameLower
+          );
+        }
+
+        // 2. Only allow patient's own appointments inside appointmentsSummary/allAppointments
+        if (Array.isArray(context.data.allAppointments)) {
+          context.data.allAppointments = context.data.allAppointments.filter((a: any) =>
+            a.patient && a.patient.toLowerCase().trim() === patientNameLower
+          );
+        }
+        if (Array.isArray(context.data.appointmentsSummary)) {
+          context.data.appointmentsSummary = context.data.appointmentsSummary.filter((a: any) =>
+            a.patient && a.patient.toLowerCase().trim() === patientNameLower
+          );
+        }
+
+        // 3. Only allow patient's own bills inside billsSummary/allBills
+        if (Array.isArray(context.data.allBills)) {
+          context.data.allBills = context.data.allBills.filter((b: any) =>
+            b.patient && b.patient.toLowerCase().trim() === patientNameLower
+          );
+        }
+        if (Array.isArray(context.data.billsSummary)) {
+          context.data.billsSummary = context.data.billsSummary.filter((b: any) =>
+            b.patient && b.patient.toLowerCase().trim() === patientNameLower
+          );
+        }
+
+        // 4. Delete all disallowed tab data for Patient completely
+        delete context.data.allInventory;
+        delete context.data.inventorySummary;
+        delete context.data.allStaff;
+        delete context.data.staffSummary;
+        delete context.data.allWards;
+        delete context.data.wardsSummary;
+        delete context.data.allDepartments;
+        delete context.data.departmentsSummary;
+        delete context.data.allEnquiries;
+        delete context.data.enquiriesSummary;
+        delete context.data.allFinance;
+        delete context.data.financeSummary;
+        delete context.data.allTransactions;
+        delete context.data.transactionsSummary;
+        delete context.data.allMedicalTourism;
+        delete context.data.medicalTourismSummary;
+      } else if (userRole === 'staff') {
+        // Delete all disallowed tab data for Staff completely (Staff can see appointments, consultations, billing, staff, patients, blogs)
+        delete context.data.allInventory;
+        delete context.data.inventorySummary;
+        delete context.data.allWards;
+        delete context.data.wardsSummary;
+        delete context.data.allDoctors;
+        delete context.data.doctorsSummary;
+        delete context.data.allDepartments;
+        delete context.data.departmentsSummary;
+        delete context.data.allEnquiries;
+        delete context.data.enquiriesSummary;
+        delete context.data.allFinance;
+        delete context.data.financeSummary;
+        delete context.data.allTransactions;
+        delete context.data.transactionsSummary;
+        delete context.data.allMedicalTourism;
+        delete context.data.medicalTourismSummary;
+      } else if (userRole === 'doctor') {
+        // Delete all disallowed tab data for Doctor completely (Doctor can see appointments, consultations, doctors, patients, staff, blogs, ipd-wards, billing)
+        delete context.data.allInventory;
+        delete context.data.inventorySummary;
+        delete context.data.allDepartments;
+        delete context.data.departmentsSummary;
+        delete context.data.allEnquiries;
+        delete context.data.enquiriesSummary;
+        delete context.data.allFinance;
+        delete context.data.financeSummary;
+        delete context.data.allTransactions;
+        delete context.data.transactionsSummary;
+        delete context.data.allMedicalTourism;
+        delete context.data.medicalTourismSummary;
+      }
+    }
 
     // Compose the screen and user context string to append for the AI to read
     const contextIntro = `
@@ -924,12 +1121,20 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
     const lastMessageImage = lastMessage && typeof lastMessage.image === 'string' ? lastMessage.image : '';
     const lastMessageAudio = lastMessage && typeof lastMessage.audio === 'string' ? lastMessage.audio : '';
 
+    // Programmatic role-based tab data query blocking
+    const disallowedCheck = checkDisallowedTabQuery(userRole, lastMessageText);
+    if (disallowedCheck.disallowed) {
+      return res.json({
+        reply: `**Not Found**`,
+        attempts: [{ provider: 'Role-Based Console Access Guard', status: 'success', modelUsed: 'Static-Access-Rules' }]
+      });
+    }
+
   // TOOL DETECTION
   const toolMatch = lastMessageText.match(/\[Contextual Tool selected:\s*(.*?)\s*\(Operation:\s*(.*?)\)\]/i);
   const guideMatch = lastMessageText.match(/Tool Instruction Guide:\s*(.*?)(?:\n\n|$)/is);
 
   // ROLE-BASED CONSOLE TAB RESTRICTION SECURITY CHECKS
-  const userRole = (context.userRole || '').toLowerCase().trim();
   const activeTabName = (context.activeTab || '').toLowerCase().trim();
   
   let checkToolType = undefined;
@@ -941,7 +1146,7 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
   if (!roleCheck.allowed) {
     const responseText = `${roleCheck.reason}
     
-(${roleCheck.UrduReason})`;
+    (${roleCheck.UrduReason})`;
     return res.json({
       reply: responseText,
       attempts: [{ provider: `${context.userRole || 'User'} Console Guardrails`, status: 'success', modelUsed: 'Static-Filter-Rules' }]
@@ -953,6 +1158,7 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
   let toolType = '';
   let toolPrompt = '';
   let userProvidedDetails = '';
+
   
   if (toolMatch) {
     toolLabel = toolMatch[1];
@@ -1141,11 +1347,47 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
   // Dynamic RAG context retrieval
   // ----------------------------------------------------
   if (lastMessageText && typeof lastMessageText === 'string') {
-    const ragData = retrieveRelevantDocs(lastMessageText, context.data);
+    const ragData = retrieveRelevantDocs(lastMessageText, context.data, userRole, userName);
     if (ragData) {
       finalPrompt = `${ragData}\n\n${finalPrompt}`;
     }
   }
+
+  // Construct dynamic system instructions based on role console constraints
+  let roleSystemPrompt = '';
+  if (userRole === 'patient') {
+    roleSystemPrompt = `
+
+CRITICAL PATIENT CONSOLE SECURITY RULE:
+- You are answering queries in the Patient Console.
+- You can answer general medical or clinical questions (e.g., treatment, advice, medicines for symptoms).
+- For hospital data, you ONLY have access to the logged-in patient's own records (Appointments, Bills, and Patient Profile for "${userName}").
+- You are STRICTLY FORBIDDEN from accessing, discussing, or revealing any other patients' data, staff records, ward/bed occupancies, pharmacy/medicine stock inventories, hospital finances, enquiries, departments, or other disallowed tabs.
+- If the user asks about other patients' records, or asks for data belonging to any disallowed tabs (like inventory, staff, wards, finance, configure-hospital, enquiries, departments), you MUST reply with exactly: "Not Found" or "not found" (or "Data Not Found" / "Record Not Found" in Urdu/Roman Urdu if they asked in Urdu). Do not hallucinate or try to guess this data.
+`;
+  } else if (userRole === 'staff') {
+    roleSystemPrompt = `
+
+CRITICAL STAFF CONSOLE SECURITY RULE:
+- You are answering queries in the Staff Console.
+- You can answer general medical or clinical questions.
+- For hospital data, you ONLY have access to the data of tabs open/available to Staff: Appointments, Consultations, Billing, Staff records, Patients profiles, and Blogs.
+- You DO NOT have access to, and are STRICTLY FORBIDDEN from discussing or revealing data of disallowed tabs: Inventory (Pharmacy stock/items), IPD Wards (Beds/occupancy), Doctors list/specializations, Departments load, Enquiries/leads, Medical Tourism, Finance/revenue statistics, Configure Hospital settings, or Reports.
+- If the user asks for data belonging to any of these disallowed tabs (e.g., inventory stock, ward beds, doctor details, finance revenue), you MUST reply with exactly: "Not Found" or "not found" (or "Data Not Found" / "Record Not Found" in Urdu/Roman Urdu if they asked in Urdu). Do not hallucinate or try to guess this data.
+`;
+  } else if (userRole === 'doctor') {
+    roleSystemPrompt = `
+
+CRITICAL DOCTOR CONSOLE SECURITY RULE:
+- You are answering queries in the Doctor Console.
+- You can answer general medical or clinical questions.
+- For hospital data, you ONLY have access to the data of tabs open/available to Doctors: Appointments, Consultations, Doctors list, Patients profiles, Staff directory, Blogs, and IPD Wards.
+- You DO NOT have access to, and are STRICTLY FORBIDDEN from discussing or revealing data of disallowed tabs: Inventory (Pharmacy stock/items), Departments load, Enquiries/leads, Medical Tourism, Finance/revenue statistics, Configure Hospital settings, or Reports.
+- If the user asks for data belonging to any of these disallowed tabs (e.g., inventory stock, enquiries, finance revenue, hospital configuration), you MUST reply with exactly: "Not Found" or "not found" (or "Data Not Found" / "Record Not Found" in Urdu/Roman Urdu if they asked in Urdu). Do not hallucinate or try to guess this data.
+`;
+  }
+
+  const finalSystemInstruction = systemInstructionToUse + roleSystemPrompt;
 
   // Build sequential priority list based on user dropdown selection
   let providerChain: string[] = [];
@@ -1165,11 +1407,11 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
   for (const provider of providerChain) {
     let reply: string | null = null;
     if (provider === 'gemini') {
-      reply = await tryGemini(keys, finalPrompt, lastMessageImage, lastMessageAudio, attempts, systemInstructionToUse);
+      reply = await tryGemini(keys, finalPrompt, lastMessageImage, lastMessageAudio, attempts, finalSystemInstruction);
     } else if (provider === 'openai') {
-      reply = await tryOpenAI(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
+      reply = await tryOpenAI(keys, finalPrompt, lastMessageImage, attempts, finalSystemInstruction);
     } else if (provider === 'claude') {
-      reply = await tryAnthropic(keys, finalPrompt, lastMessageImage, attempts, systemInstructionToUse);
+      reply = await tryAnthropic(keys, finalPrompt, lastMessageImage, attempts, finalSystemInstruction);
     }
 
     if (reply) {
@@ -1436,6 +1678,177 @@ Once the API Key is supplied, Google Gemini will listen to your audio query and 
 // Default Global Chat POST Route
 router.post('/chat', async (req: Request, res: Response) => {
   return processChatRequest(SYSTEM_INSTRUCTION, req, res);
+});
+
+// Separate login endpoint for the AI Assistant custom users
+router.post('/login', (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const emailNormalized = email.trim().toLowerCase();
+
+    // 1. Try checking custom AI Assistant users first (the separate db)
+    const customUser = db.prepare('SELECT * FROM ai_users WHERE email = ?').get(emailNormalized) as any;
+    if (customUser) {
+      if (customUser.password === password) {
+        return res.json({
+          success: true,
+          role: 'patient',
+          isAiUser: true,
+          data: {
+            id: customUser.id,
+            name: customUser.name,
+            email: customUser.email,
+            phone: customUser.phone,
+            age: customUser.age,
+            gender: customUser.gender,
+            dob: customUser.dob,
+            bloodGroup: customUser.bloodGroup,
+            address: customUser.address,
+            registeredAt: customUser.registeredAt
+          }
+        });
+      } else {
+        return res.status(401).json({ error: 'Incorrect password.' });
+      }
+    }
+
+    // 2. Try checking clinical Patients table
+    const patientUser = db.prepare('SELECT * FROM patients WHERE LOWER(email) = ?').get(emailNormalized) as any;
+    if (patientUser) {
+      if (patientUser.password === password) {
+        return res.json({
+          success: true,
+          role: 'patient',
+          data: patientUser
+        });
+      } else {
+        return res.status(401).json({ error: 'Incorrect password.' });
+      }
+    }
+
+    // 3. Try checking Doctors table
+    const doctorUser = db.prepare('SELECT * FROM doctors WHERE LOWER(email) = ?').get(emailNormalized) as any;
+    if (doctorUser) {
+      if (doctorUser.password === password) {
+        return res.json({
+          success: true,
+          role: 'doctor',
+          data: doctorUser
+        });
+      } else {
+        return res.status(401).json({ error: 'Incorrect password.' });
+      }
+    }
+
+    // 4. Try checking Staff table
+    const staffUser = db.prepare('SELECT * FROM staff WHERE LOWER(email) = ?').get(emailNormalized) as any;
+    if (staffUser) {
+      if (staffUser.password === password) {
+        return res.json({
+          success: true,
+          role: 'staff',
+          data: staffUser
+        });
+      } else {
+        return res.status(401).json({ error: 'Incorrect password.' });
+      }
+    }
+
+    return res.status(404).json({ error: 'No user account found with this email address.' });
+  } catch (err: any) {
+    console.error('Error in custom ai-assistant login:', err);
+    return res.status(500).json({ error: err.message || 'Server login error' });
+  }
+});
+
+// Separate signup endpoint for the AI Assistant custom users
+router.post('/signup', (req: Request, res: Response) => {
+  try {
+    const { name, email, password, phone, age, gender, dob, bloodGroup, address, alsoRegisterAsPatient } = req.body;
+
+    if (!name || !email || !password || !phone) {
+      return res.status(400).json({ error: 'Name, email, password, and phone number are required.' });
+    }
+
+    const emailNormalized = email.trim().toLowerCase();
+
+    // Check if user already exists in ai_users
+    const existing = db.prepare('SELECT * FROM ai_users WHERE email = ?').get(emailNormalized);
+    if (existing) {
+      return res.status(400).json({ error: 'Email is already registered. Please login.' });
+    }
+
+    // Insert new user
+    const id = `ai-usr-${Date.now()}`;
+    const registeredAt = new Date().toISOString();
+    const ageVal = Number(age) || 25;
+
+    db.prepare(`
+      INSERT INTO ai_users (id, name, email, password, phone, age, gender, dob, bloodGroup, address, registeredAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      name.trim(),
+      emailNormalized,
+      password,
+      phone.trim(),
+      ageVal,
+      gender || 'Male',
+      dob || null,
+      bloodGroup || null,
+      address || null,
+      registeredAt
+    );
+
+    // If check button was clicked, we ALSO register as patient in clinical patients database
+    if (alsoRegisterAsPatient) {
+      db.prepare(`
+        INSERT OR REPLACE INTO patients (
+          id, name, age, gender, phone, registeredAt, status, 
+          wardId, roomId, bedNumber, dob, bloodGroup, address, email, password
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id,
+        name.trim(),
+        ageVal,
+        gender || 'Male',
+        phone.trim(),
+        registeredAt,
+        'Active',
+        null,
+        null,
+        null,
+        dob || null,
+        bloodGroup || null,
+        address || null,
+        emailNormalized,
+        password
+      );
+    }
+
+    const user = {
+      id,
+      name: name.trim(),
+      email: emailNormalized,
+      phone: phone.trim(),
+      age: ageVal,
+      gender: gender || 'Male',
+      dob,
+      bloodGroup,
+      address,
+      registeredAt
+    };
+
+    return res.json({ success: true, user });
+  } catch (err: any) {
+    console.error('Error in custom ai-assistant signup:', err);
+    return res.status(500).json({ error: err.message || 'Server signup error' });
+  }
 });
 
 // Category-Specific Independent API Routers for each section

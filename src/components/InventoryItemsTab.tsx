@@ -1026,7 +1026,7 @@ export default function InventoryItemsTab({
                   <label className="block text-[9px] font-extrabold text-[#007f6e] mb-1">Pur. Cost (₹)</label>
                   <input
                     type="number"
-                    value={editingItem.purchasePrice !== undefined ? editingItem.purchasePrice : editingItem.price || 0}
+                    value={editingItem.purchasePrice !== undefined && editingItem.purchasePrice !== null ? editingItem.purchasePrice : editingItem.price || 0}
                     onChange={(e) => setEditingItem({ ...editingItem, purchasePrice: parseFloat(e.target.value) || 0, price: parseFloat(e.target.value) || 0 })}
                     className="w-full text-xs px-2 py-1.5 border border-slate-250 bg-white rounded-lg focus:outline-none font-mono outline-none"
                   />

@@ -27,7 +27,7 @@ import AIAssistantView from './components/AIAssistantView';
 
 export default function App() {
   const rosterSyncedInSession = useRef(false);
-  const [loggedInUser, setLoggedInUser] = useState<{ role: 'patient' | 'doctor' | 'staff'; data: any } | null>(null);
+  const [loggedInUser, setLoggedInUser] = useState<{ role: 'patient' | 'doctor' | 'staff'; data: any; isAiUser?: boolean } | null>(null);
   const [activeView, setActiveViewState] = useState<ActiveView>('landing');
   const [initialAiMessage, setInitialAiMessage] = useState<any>(null);
 
@@ -38,10 +38,10 @@ export default function App() {
     setActiveView(view as any);
   };
 
-  const isStaff = loggedInUser?.role === 'staff';
-  const isDoctor = loggedInUser?.role === 'doctor';
-  const isPatient = loggedInUser?.role === 'patient';
-  const prefix = isStaff ? 'staff' : (isDoctor ? 'doctor' : (isPatient ? 'patient' : 'admin'));
+  const isStaff = loggedInUser?.role === 'staff' && !loggedInUser?.isAiUser;
+  const isDoctor = loggedInUser?.role === 'doctor' && !loggedInUser?.isAiUser;
+  const isPatient = loggedInUser?.role === 'patient' && !loggedInUser?.isAiUser;
+  const prefix = loggedInUser?.isAiUser ? 'ai' : (isStaff ? 'staff' : (isDoctor ? 'doctor' : (isPatient ? 'patient' : 'admin')));
 
   const viewToPathMap: Record<ActiveView, string> = {
     'landing': '/',
@@ -94,6 +94,19 @@ export default function App() {
 
   const getViewFromPath = (pathname: string): ActiveView => {
     const cleanPath = pathname.toLowerCase().replace(/^\/+/g, '').replace(/\/+$/g, '');
+    if (loggedInUser?.isAiUser) {
+      if (cleanPath === '' || cleanPath === 'landing' || cleanPath === 'home') {
+        return 'ai-assistant';
+      }
+      if (cleanPath.includes('ai-assistant') || cleanPath.includes('ai-helper') || cleanPath.includes('assistant')) {
+        return 'ai-assistant';
+      }
+      return 'ai-assistant';
+    }
+
+    if (cleanPath === 'login' || cleanPath === 'signup' || cleanPath === 'patient/login' || cleanPath === 'doctor/login' || cleanPath === 'login/staff') {
+      return 'landing';
+    }
     if (cleanPath === '' || cleanPath === 'home' || cleanPath === 'about' || cleanPath === 'contact' || cleanPath === 'doctor' || cleanPath === 'doctors' || cleanPath === 'blog' || cleanPath === 'blogs') {
       return (loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor' || loggedInUser?.role === 'patient') ? 'dashboard' : 'landing';
     }
@@ -117,7 +130,9 @@ export default function App() {
     if (cleanPath.endsWith('/support/ai') || cleanPath.endsWith('support/ai') || (cleanPath.includes('support') && cleanPath.endsWith('/ai'))) return 'support-ai';
 
     if (cleanPath.includes('dashboard') || cleanPath.includes('desboard')) return 'dashboard';
-    if (cleanPath.includes('ai-assistant') || cleanPath.includes('ai-helper') || cleanPath.includes('assistant')) return 'ai-assistant';
+    if (cleanPath.includes('ai-assistant') || cleanPath.includes('ai-helper') || cleanPath.includes('assistant')) {
+      return 'ai-assistant';
+    }
     if (cleanPath.includes('appointment')) return 'appointments';
     if (cleanPath.includes('consultation')) return 'consultation';
     if (cleanPath.includes('billing') || cleanPath.includes('bill')) return 'billing';
@@ -139,8 +154,9 @@ export default function App() {
   };
 
   const setActiveView = (view: ActiveView) => {
-    setActiveViewState(view);
-    const targetPath = viewToPathMap[view] || `/${prefix}/${view}`;
+    let targetView = view;
+    setActiveViewState(targetView);
+    const targetPath = viewToPathMap[targetView] || `/${prefix}/${targetView}`;
     try {
       if (getSafePathname() !== targetPath) {
         window.history.pushState(null, '', targetPath);
@@ -153,7 +169,8 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       try {
-        const matchedView = getViewFromPath(getSafePathname());
+        const cleanPath = getSafePathname().toLowerCase().replace(/^\/+/g, '').replace(/\/+$/g, '');
+        let matchedView = getViewFromPath(getSafePathname());
         setActiveViewState(matchedView);
       } catch (e) {
         console.warn("Could not read current path during popstate:", e);
@@ -166,9 +183,10 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read current path for initial view:", e);
     }
+    
     setActiveViewState(initialView);
 
-    const targetPath = viewToPathMap[initialView] || `/${prefix}/${initialView}`;
+    const targetPath = initialView === 'landing' ? getSafePathname() : (viewToPathMap[initialView] || `/${prefix}/${initialView}`);
     try {
       if (getSafePathname() !== targetPath) {
         window.history.replaceState(null, '', targetPath);
@@ -2109,6 +2127,8 @@ export default function App() {
         onAddEnquiry={handleAddEnquiry}
         loggedInUser={loggedInUser}
         setLoggedInUser={setLoggedInUser}
+        onNavigate={setActiveView}
+        onSignupPatient={handleAddPatient}
       />
     );
   }

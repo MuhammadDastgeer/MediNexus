@@ -27,7 +27,7 @@ export const MODEL_CONFIG = {
   getApiGeminiModel(): string {
     const model = (process.env.GEMINI_MODEL_NAME || 'Gemini 3.1 Pro').trim();
     if (model === 'Gemini 3.1 Pro' || model === 'gemini-3.1-pro') {
-      return 'gemini-1.5-flash';
+      return 'gemini-3.5-flash';
     }
     return model;
   }

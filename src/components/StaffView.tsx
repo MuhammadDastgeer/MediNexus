@@ -103,7 +103,7 @@ export default function StaffView({
     setPhone(staff.phone || '');
     setJoinDate(staff.joinDate || '12/06/2026');
     setDob(staff.dob || '');
-    setWorkingDays(staff.workingDays !== undefined ? staff.workingDays : '26');
+    setWorkingDays(staff.workingDays !== undefined && staff.workingDays !== null ? staff.workingDays : '26');
     setAddress(staff.address || '');
     setRole(staff.role || 'Nurse');
 
@@ -123,7 +123,7 @@ export default function StaffView({
     setDepartment(matchedParentDept || (departments.length > 0 ? departments[0].name : ''));
     setSubDepartment(matchedSubDept);
 
-    setMonthlySalary(staff.monthlySalary !== undefined ? staff.monthlySalary : '0');
+    setMonthlySalary(staff.monthlySalary !== undefined && staff.monthlySalary !== null ? staff.monthlySalary : '0');
     setBankName(staff.bankName || '');
     setBankAccountNo(staff.bankAccountNo || '');
     setPanNo(staff.panNo || '');

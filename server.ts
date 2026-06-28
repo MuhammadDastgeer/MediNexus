@@ -28,6 +28,20 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Execute Schema Initialization
 db.exec(`
+  CREATE TABLE IF NOT EXISTS ai_users (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    email TEXT UNIQUE,
+    password TEXT,
+    phone TEXT,
+    age INTEGER,
+    gender TEXT,
+    dob TEXT,
+    bloodGroup TEXT,
+    address TEXT,
+    registeredAt TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS patients (
     id TEXT PRIMARY KEY,
     name TEXT,
