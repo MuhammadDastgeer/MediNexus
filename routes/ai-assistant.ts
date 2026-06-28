@@ -999,7 +999,84 @@ function checkDisallowedTabQuery(role: string, query: string): { disallowed: boo
   return { disallowed: false };
 }
 
-async function processChatRequest(systemInstructionToUse: string, req: Request, res: Response) {
+function checkGeneralAssistantQuery(query: string): { allowed: boolean } {
+  const lowerQ = query.toLowerCase().trim();
+
+  if (lowerQ.length < 2) {
+    return { allowed: true };
+  }
+
+  // Allow standard polite conversational starters / greetings so the bot can politely say Hello and guide them to ask a medical query.
+  const isGreeting = 
+    lowerQ === 'hello' || lowerQ === 'hi' || lowerQ === 'hey' || 
+    lowerQ.includes('salam') || lowerQ === 'aoa' || lowerQ === 'adaab' || 
+    lowerQ.includes('how are you') || lowerQ.includes('kya hal') || lowerQ.includes('kaise ho') ||
+    lowerQ === 'ok' || lowerQ === 'okay' || lowerQ === 'thanks' || lowerQ === 'thank you' || lowerQ === 'shukriya';
+
+  if (isGreeting) {
+    return { allowed: true };
+  }
+
+  // 1. Identify any queries about specific database fields/tables/records
+  const hasDataKeywords = 
+    lowerQ.includes('list') || lowerQ.includes('show') || lowerQ.includes('count') || 
+    lowerQ.includes('how many') || lowerQ.includes('roster') || lowerQ.includes('schedule') || 
+    lowerQ.includes('salary') || lowerQ.includes('payment') || lowerQ.includes('ledger') || 
+    lowerQ.includes('kitna') || lowerQ.includes('kitne') || lowerQ.includes('dikhao') || 
+    lowerQ.includes('total') || lowerQ.includes('details') || lowerQ.includes('record') ||
+    lowerQ.includes('register') || lowerQ.includes('database') || lowerQ.includes('search') ||
+    lowerQ.includes('view') || lowerQ.includes('dekh');
+
+  const hasHospitalEntities = 
+    lowerQ.includes('patient') || lowerQ.includes('appointment') || lowerQ.includes('bill') || 
+    lowerQ.includes('invoice') || lowerQ.includes('doctor') || lowerQ.includes('staff') || 
+    lowerQ.includes('ward') || lowerQ.includes('bed') || lowerQ.includes('room') || 
+    lowerQ.includes('department') || lowerQ.includes('enquiry') || lowerQ.includes('lead') || 
+    lowerQ.includes('ticket') || lowerQ.includes('finance') || lowerQ.includes('revenue') || 
+    lowerQ.includes('transaction') || lowerQ.includes('report') || lowerQ.includes('analytic') || 
+    lowerQ.includes('configure') || lowerQ.includes('setting') || lowerQ.includes('inventory') || 
+    lowerQ.includes('stock') || lowerQ.includes('quantity') || lowerQ.includes('nurse') || 
+    lowerQ.includes('cleaner') || lowerQ.includes('bistar') || lowerQ.includes('karkun');
+
+  if (hasDataKeywords || hasHospitalEntities) {
+    return { allowed: false };
+  }
+
+  // 2. Identify if it is a medical or clinical query
+  const medicalKeywords = [
+    // English symptoms, medications, health topics
+    'pain', 'fever', 'cough', 'headache', 'heart', 'medicine', 'drug', 'clinical', 'report', 'rash', 
+    'treatment', 'asthma', 'sugar', 'bp', 'blood pressure', 'symptom', 'prescription', 'allergy', 
+    'guidance', 'flu', 'pneumonia', 'tb', 'infection', 'disease', 'cancer', 'diabetic', 'diabetes', 
+    'stomach', 'ache', 'throat', 'cold', 'vomit', 'nausea', 'diarrhea', 'injury', 'wound', 'bleeding', 
+    'fracture', 'bone', 'muscle', 'skin', 'eye', 'ear', 'nose', 'kidney', 'liver', 'lungs', 'brain', 
+    'mental', 'stress', 'anxiety', 'depression', 'dose', 'tablet', 'capsule', 'syrup', 'injection', 
+    'vaccine', 'surgery', 'operation', 'therapy', 'physio', 'medical', 'health', 'sick', 'ill', 
+    'diagnosis', 'prognosis', 'cholesterol', 'hypertension', 'stroke', 'cardiac', 'pulmonary', 
+    'hepatitis', 'ulcer', 'migraine', 'dizziness', 'fatigue', 'swelling', 'inflammation', 'sprain', 
+    'burn', 'allergen', 'weight', 'diet', 'calories', 'nutrition', 'exercise', 'sleep', 'hygiene',
+    'sore', 'infection', 'physiotherapy', 'paracetamol', 'panadol', 'disprin', 'calpol', 'brufen',
+    'aspirin', 'insulin', 'antibiotic', 'antiseptic',
+    
+    // Urdu/Roman Urdu terms
+    'dard', 'bukhar', 'khanis', 'khansi', 'zukam', 'nazla', 'sar dard', 'pet', 'pait', 'dil', 
+    'guda', 'gurda', 'jigar', 'phepra', 'phephre', 'demagh', 'zehn', 'marz', 'beemari', 'bimari', 
+    'ilaj', 'dawa', 'dawaein', 'goli', 'sharbat', 'teeka', 'nuskha', 'parhaiz', 'khoon', 'blood', 
+    'hadi', 'patha', 'jild', 'aankh', 'kaan', 'naak', 'gala', 'kharash', 'ultians', 'ulti', 'matli', 
+    'thakan', 'soojan', 'zakham', 'chot', 'bimar', 'mareez', 'sehat', 'tandurusti', 'shifa', 
+    'garm', 'thanda'
+  ];
+
+  const isMedical = medicalKeywords.some(keyword => lowerQ.includes(keyword));
+
+  if (!isMedical) {
+    return { allowed: false };
+  }
+
+  return { allowed: true };
+}
+
+async function processChatRequest(systemInstructionToUse: string, req: Request, res: Response, isGeneralAssistant: boolean = false) {
   try {
     const rawBody = req.body || {};
     const messages = Array.isArray(rawBody.messages) ? rawBody.messages : [];
@@ -1128,6 +1205,17 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
         reply: `**Not Found**`,
         attempts: [{ provider: 'Role-Based Console Access Guard', status: 'success', modelUsed: 'Static-Access-Rules' }]
       });
+    }
+
+    // Programmatic general assistant medical-only constraint
+    if (isGeneralAssistant) {
+      const generalCheck = checkGeneralAssistantQuery(lastMessageText);
+      if (!generalCheck.allowed) {
+        return res.json({
+          reply: `**Not Found**`,
+          attempts: [{ provider: 'General AI Assistant Guard', status: 'success', modelUsed: 'Static-Access-Rules' }]
+        });
+      }
     }
 
   // TOOL DETECTION
@@ -1355,7 +1443,16 @@ Please parse these details, simulate or execute the "${toolType.toUpperCase()}" 
 
   // Construct dynamic system instructions based on role console constraints
   let roleSystemPrompt = '';
-  if (userRole === 'patient') {
+  if (isGeneralAssistant) {
+    roleSystemPrompt = `
+
+CRITICAL GENERAL ASSISTANT RULE:
+- You are answering queries in the General AI Assistant.
+- You are STRICTLY RESTRICTED to ONLY answer clinical, wellness, and medical questions (e.g., medical advice, healthy lifestyle, disease symptoms, treatments, drug information).
+- You are STRICTLY FORBIDDEN from discussing, listing, searching, or revealing any hospital records, data, appointments, patient lists, billing records, staff details, ward bed occupancy, or pharmacy/medicine stock inventories.
+- If the user asks about ANY data, database records, hospital statistics, lists, registers, or any other non-medical query (like general knowledge, history, programming, math, pop culture, capital of a country, etc.), you MUST reply with exactly: "**Not Found**" or "not found" (or "Data Not Found" / "Record Not Found" in Urdu/Roman Urdu if asked in Urdu). Do not explain or apologize. Just say: "**Not Found**".
+`;
+  } else if (userRole === 'patient') {
     roleSystemPrompt = `
 
 CRITICAL PATIENT CONSOLE SECURITY RULE:
@@ -1677,7 +1774,7 @@ Once the API Key is supplied, Google Gemini will listen to your audio query and 
 
 // Default Global Chat POST Route
 router.post('/chat', async (req: Request, res: Response) => {
-  return processChatRequest(SYSTEM_INSTRUCTION, req, res);
+  return processChatRequest(SYSTEM_INSTRUCTION, req, res, true);
 });
 
 // Separate login endpoint for the AI Assistant custom users
