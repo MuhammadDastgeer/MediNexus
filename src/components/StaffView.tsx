@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { Staff, Department, SubDepartment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
+import BulkImportModal from './BulkImportModal';
+import { Upload } from 'lucide-react';
 
 interface StaffViewProps {
   staffList: Staff[];
@@ -30,6 +32,7 @@ export default function StaffView({
   isReadOnly = false,
 }: StaffViewProps) {
   const [activeTab, setActiveTab] = useState<'members' | 'overview'>('members');
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [showForm, setShowForm] = useState<'add' | 'edit' | false>(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [viewingStaff, setViewingStaff] = useState<Staff | null>(null);
@@ -1218,6 +1221,15 @@ export default function StaffView({
             <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
               {!isReadOnly && (
                 <button
+                  onClick={() => setShowBulkImport(true)}
+                  className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-97"
+                >
+                  <Upload size={14} className="text-emerald-600 animate-pulse" />
+                  <span>Import Bulk Data</span>
+                </button>
+              )}
+              {!isReadOnly && (
+                <button
                   onClick={startAdd}
                   className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-97 cursor-pointer"
                 >
@@ -1592,6 +1604,14 @@ export default function StaffView({
             </div>
           </div>
         </div>
+      )}
+
+      {showBulkImport && (
+        <BulkImportModal
+          entityType="staff"
+          onClose={() => setShowBulkImport(false)}
+          onRefresh={onRefresh}
+        />
       )}
 
     </div>

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Patient, Doctor, Bill, Appointment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
+import BulkImportModal from './BulkImportModal';
 
 interface PatientsViewProps {
   patients: Patient[];
@@ -41,6 +42,7 @@ export default function PatientsView({
   const patientProfileName = isPatient ? loggedInUser?.data?.name : null;
 
   const [activeTab, setActiveTab] = useState<'members' | 'overview'>('members');
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [showForm, setShowForm] = useState<'add' | 'edit' | false>(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
@@ -1438,6 +1440,16 @@ export default function PatientsView({
             </div>
             
             <div className="flex items-center gap-2 self-start sm:self-auto">
+              {!isPatient && !isReadOnly && (!loggedInUser || loggedInUser.role === 'staff') && (
+                <button
+                  onClick={() => setShowBulkImport(true)}
+                  className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-xs transition-all cursor-pointer active:scale-95"
+                >
+                  <Upload size={14} className="text-emerald-600 animate-pulse" />
+                  <span>Import Bulk Data</span>
+                </button>
+              )}
+
               {!isPatient && !isReadOnly && (
                 <button
                   onClick={startAdd}
@@ -2042,6 +2054,14 @@ export default function PatientsView({
             </form>
           </div>
         </div>
+      )}
+
+      {showBulkImport && (
+        <BulkImportModal
+          entityType="patients"
+          onClose={() => setShowBulkImport(false)}
+          onRefresh={onRefresh}
+        />
       )}
 
     </div>

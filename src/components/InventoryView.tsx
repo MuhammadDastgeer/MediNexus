@@ -320,6 +320,7 @@ export default function InventoryView({
             showAddModal={showAddModal}
             onCloseAddModal={() => setShowAddModal(false)}
             suppliers={suppliers}
+            onRefresh={onRefresh}
           />
         )}
 

@@ -39,6 +39,8 @@ import {
 } from 'lucide-react';
 import { Doctor, Department, SubDepartment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
+import BulkImportModal from './BulkImportModal';
+import { Upload } from 'lucide-react';
 
 interface DoctorsViewProps {
   doctors: Doctor[];
@@ -76,6 +78,7 @@ export default function DoctorsView({
     return false;
   };
   const [activeTab, setActiveTab] = useState<'roster' | 'overview'>('overview');
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isEditingId, setIsEditingId] = useState<string | null>(null);
@@ -1282,6 +1285,15 @@ export default function DoctorsView({
                       <span>Refresh</span>
                     </button>
                   )}
+                  {!isReadOnly && (!loggedInUser || loggedInUser.role === 'staff') && (
+                    <button
+                      onClick={() => setShowBulkImport(true)}
+                      className="border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Upload size={14} className="text-emerald-600 animate-pulse" />
+                      <span>Import Bulk Data</span>
+                    </button>
+                  )}
                   {!isReadOnly && (
                     <button
                       onClick={handleOpenAddForm}
@@ -2091,6 +2103,14 @@ export default function DoctorsView({
 
           </div>
         </div>
+      )}
+
+      {showBulkImport && (
+        <BulkImportModal
+          entityType="doctors"
+          onClose={() => setShowBulkImport(false)}
+          onRefresh={onRefresh || (() => {})}
+        />
       )}
 
     </div>

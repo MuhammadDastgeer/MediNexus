@@ -34,6 +34,8 @@ import {
 } from 'lucide-react';
 import { Appointment, Doctor, Patient } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
+import BulkImportModal from './BulkImportModal';
+import { Upload } from 'lucide-react';
 
 interface AppointmentsViewProps {
   appointments: Appointment[];
@@ -109,6 +111,7 @@ export default function AppointmentsView({
   };
   // Mode toggle between 'appointments' and 'followups'
   const [activeMode, setActiveMode] = useState<'appointments' | 'followups'>('appointments');
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   // Multi-step Wizard state
   const [showModal, setShowModal] = useState(false);
@@ -814,6 +817,15 @@ export default function AppointmentsView({
 
         {/* Global Action Booker & AI Assistant Trigger */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {(!isReadOnly || loggedInUser?.role === 'staff') && !isPatient && (
+            <button
+              onClick={() => setShowBulkImport(true)}
+              className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
+            >
+              <Upload size={14} className="text-emerald-600 animate-pulse" />
+              <span>Import Bulk Data</span>
+            </button>
+          )}
           {(!isReadOnly || loggedInUser?.role === 'staff') && !isPatient && (
             <button
               onClick={handleOpenNewWizard}
@@ -2762,6 +2774,14 @@ export default function AppointmentsView({
 
           </div>
         </div>
+      )}
+
+      {showBulkImport && (
+        <BulkImportModal
+          entityType="appointments"
+          onClose={() => setShowBulkImport(false)}
+          onRefresh={onRefresh || (() => {})}
+        />
       )}
 
     </div>
