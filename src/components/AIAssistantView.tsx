@@ -116,7 +116,7 @@ interface Chip {
   prompt: string;
 }
 
-const getChipsForTab = (tab: string, userRole?: string): Chip[] => {
+const getChipsForTabRaw = (tab: string, userRole?: string): Chip[] => {
   const normalized = tab ? tab.toLowerCase() : '';
 
   if (normalized === 'staff' || normalized === 'staff-ai') {
@@ -300,6 +300,25 @@ const getChipsForTab = (tab: string, userRole?: string): Chip[] => {
   ];
 };
 
+const getChipType = (chip: Chip): 'add' | 'edit' | 'delete' | 'view' => {
+  const text = (chip.label + ' ' + chip.prompt).toLowerCase();
+  if (text.includes('delete') || text.includes('remove') || text.includes('cancel') || text.includes('archive') || text.includes('deactivate') || text.includes('void')) {
+    return 'delete';
+  }
+  if (text.includes('add ') || text.includes('create') || text.includes('register') || text.includes('book') || text.includes('allot') || text.includes('generate') || text.includes('publish') || text.includes('submit')) {
+    return 'add';
+  }
+  if (text.includes('edit') || text.includes('update') || text.includes('change') || text.includes('modify') || text.includes('reschedule') || text.includes('transfer') || text.includes('adjust')) {
+    return 'edit';
+  }
+  return 'view';
+};
+
+const getChipsForTab = (tab: string, userRole?: string): Chip[] => {
+  const chips = getChipsForTabRaw(tab, userRole);
+  return chips.filter(chip => isActionAllowed(userRole || '', getChipType(chip), tab));
+};
+
 const PlayAudioButton: React.FC<{ url: string }> = ({ url }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -398,6 +417,73 @@ const isQueryRelatedToTab = (query: string, tab: string): boolean => {
   return true;
 };
 
+export const isActionAllowed = (role: string, type: string, tabName: string): boolean => {
+  const r = (role || '').toLowerCase().trim();
+  const t = (tabName || '').toLowerCase().trim();
+  const op = (type || '').toLowerCase().trim();
+  
+  if (r === 'admin' || !r) return true;
+  
+  if (r === 'patient') {
+    const allowedTabs = ['appointments', 'billing', 'patients', 'doctors', 'ai-assistant', 'general', 'general-ai'];
+    if (t && !allowedTabs.some(allowed => t.includes(allowed) || allowed.includes(t))) return false;
+    
+    if (t.includes('appointment')) {
+      if (op === 'delete' || op === 'edit') return false;
+    }
+    if (t.includes('bill') || t.includes('finance')) {
+      if (op === 'add' || op === 'edit' || op === 'delete') return false;
+    }
+    if (t.includes('patient')) {
+      if (op === 'add' || op === 'edit' || op === 'delete') return false;
+    }
+    if (t.includes('doctor')) {
+      if (op === 'add' || op === 'edit' || op === 'delete') return false;
+    }
+    return op === 'view' || op === 'add' || op === 'edit';
+  }
+  
+  if (r === 'doctor') {
+    const allowedTabs = ['appointments', 'consultation', 'doctors', 'patients', 'staff', 'blogs', 'ipd-wards', 'ai-assistant', 'general', 'general-ai'];
+    if (t && !allowedTabs.some(allowed => t.includes(allowed) || allowed.includes(t))) return false;
+    
+    if (t.includes('appointment')) {
+      if (op === 'delete') return false;
+    }
+    if (t.includes('doctor')) {
+      if (op === 'add' || op === 'delete') return false;
+    }
+    if (t.includes('patient')) {
+      if (op === 'add' || op === 'delete') return false;
+    }
+    if (t.includes('staff')) {
+      if (op === 'add' || op === 'edit' || op === 'delete') return false;
+    }
+    if (t.includes('blog')) {
+      if (op === 'delete') return false;
+    }
+    return op === 'view' || op === 'add' || op === 'edit';
+  }
+  
+  if (r === 'staff') {
+    const allowedTabs = ['appointments', 'consultation', 'billing', 'patients', 'blogs', 'inventory', 'staff', 'ai-assistant', 'general', 'general-ai'];
+    if (t && !allowedTabs.some(allowed => t.includes(allowed) || allowed.includes(t))) return false;
+    
+    if (t.includes('consultation')) {
+      if (op === 'add' || op === 'edit') return false;
+    }
+    if (t.includes('patient')) {
+      if (op === 'delete') return false;
+    }
+    if (t.includes('staff')) {
+      if (op === 'add' || op === 'edit' || op === 'delete') return false;
+    }
+    return op === 'view' || op === 'add' || op === 'edit';
+  }
+  
+  return true;
+};
+
 export interface TabTool {
   label: string;
   type: 'add' | 'edit' | 'delete' | 'view';
@@ -405,7 +491,7 @@ export interface TabTool {
   icon: string;
 }
 
-export const getToolsForTab = (tab: string, userRole?: string): TabTool[] => {
+const getToolsForTabRaw = (tab: string, userRole?: string): TabTool[] => {
   const normalized = tab ? tab.toLowerCase().trim() : '';
 
   if (normalized === 'staff' || normalized === 'staff-ai') {
@@ -574,8 +660,12 @@ export const getToolsForTab = (tab: string, userRole?: string): TabTool[] => {
       { label: 'Configure Hospital Settings', type: 'edit', icon: '✏️', prompt: 'Update/Edit hospital info: Change the institute address, emergency hotline, or default fee currency.' }
     ];
   }
-
   return [];
+};
+
+export const getToolsForTab = (tab: string, userRole?: string): TabTool[] => {
+  const tools = getToolsForTabRaw(tab, userRole);
+  return tools.filter(tool => isActionAllowed(userRole || '', tool.type, tab));
 };
 
 // Helper to extract and strip the ACTION block from text (including balanced nested objects)
@@ -661,7 +751,8 @@ export default function AIAssistantView({
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
-    const isQuickReplyDisabled = ['ai-assistant', 'patients-ai', 'doctors-ai', 'staff-ai', 'patients', 'doctors', 'staff', 'general', 'general-ai'].includes(activeTabLower);
+    const isConsoleTabAi = ['patients-ai', 'doctors-ai', 'staff-ai', 'patients', 'doctors', 'staff'].includes(activeTabLower);
+    const isQuickReplyDisabled = !isConsoleTabAi && ['ai-assistant', 'general', 'general-ai'].includes(activeTabLower);
     if (isTabSpecific) {
       const promptsLine = isQuickReplyDisabled 
         ? "Type your specialized query now to analyze or perform tasks!"
@@ -2009,7 +2100,7 @@ Please request support or review active API parameter credentials.`,
         <div className="p-3 sm:p-5 border-t border-slate-100 bg-white shadow-inner flex flex-col gap-2.5 shrink-0 min-h-0" id="chat-input-controls-parent">
           
           {/* Quick Tab-Sensitive & Suggested Chips */}
-          {!isRecording && !['ai-assistant', 'patients-ai', 'doctors-ai', 'staff-ai', 'patients', 'doctors', 'staff', 'general', 'general-ai'].includes(activeTabLower) && (
+          {!isRecording && (['patients-ai', 'doctors-ai', 'staff-ai', 'patients', 'doctors', 'staff'].includes(activeTabLower) || !['ai-assistant', 'general', 'general-ai'].includes(activeTabLower)) && (
             <div className="mb-1 sm:mb-2" id="quick-chips-wrapper">
               <div className="flex items-center gap-1.5 mb-1.5 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase tracking-wider px-0.5 select-none">
                 <Sparkles className="h-3 w-3 text-teal-600 animate-pulse" />

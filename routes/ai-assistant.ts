@@ -136,25 +136,34 @@ function parseImageData(dataUrl: string) {
 
 async function tryGemini(keys: any, prompt: string, image: string, audio: string, attempts: any[], systemInstruction: string = SYSTEM_INSTRUCTION, isFallback: boolean = false) {
   if (keys.gemini && keys.gemini !== 'MY_GEMINI_API_KEY' && keys.gemini.trim() !== '') {
-    const apiModel = isFallback ? 'gemini-3.1-flash-lite' : MODEL_CONFIG.getApiGeminiModel();
+    let apiModel = isFallback ? 'gemini-3.1-flash-lite' : MODEL_CONFIG.getApiGeminiModel();
+    // Safety check to ensure we map to supported @google/genai model names
+    if (apiModel.includes('gemini-1.5') || apiModel.includes('gemini-2.0') || apiModel === 'gemini-3.5-flash' || apiModel === 'gemini-3.1-pro-preview') {
+      // Normal map
+    } else {
+      apiModel = 'gemini-3.5-flash';
+    }
     const configName = isFallback ? 'Gemini 3.1 Flash Lite' : MODEL_CONFIG.geminiModel;
     try {
-      const model = new ChatGoogleGenerativeAI({
-        model: apiModel,
+      const ai = new GoogleGenAI({
         apiKey: keys.gemini,
-        temperature: 0.2,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
       });
 
-      let contentPayload: any = prompt;
+      let contents: any = prompt;
       if (image || audio) {
-        contentPayload = [{ type: 'text', text: prompt }];
+        const parts: any[] = [{ text: prompt }];
         if (image) {
           const parsed = parseImageData(image);
           if (parsed) {
-            contentPayload.push({
-              type: 'image_url',
-              image_url: {
-                url: `data:${parsed.mimeType};base64,${parsed.base64Data}`
+            parts.push({
+              inlineData: {
+                mimeType: parsed.mimeType,
+                data: parsed.base64Data
               }
             });
           }
@@ -162,33 +171,34 @@ async function tryGemini(keys: any, prompt: string, image: string, audio: string
         if (audio) {
           const parsedAudio = parseImageData(audio);
           if (parsedAudio) {
-            contentPayload.push({
-              type: 'image_url',
-              image_url: {
-                url: `data:${parsedAudio.mimeType};base64,${parsedAudio.base64Data}`
+            parts.push({
+              inlineData: {
+                mimeType: parsedAudio.mimeType,
+                data: parsedAudio.base64Data
               }
             });
           }
         }
+        contents = parts;
       }
 
-      const response = await model.invoke([
-        ["system", systemInstruction],
-        ["human", contentPayload]
-      ]);
+      const response = await ai.models.generateContent({
+        model: apiModel,
+        contents: contents,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.2,
+        }
+      });
 
-      if (response && response.content) {
-        const replyText = typeof response.content === 'string' 
-          ? response.content 
-          : JSON.stringify(response.content);
-
+      if (response && response.text) {
         attempts.push({ provider: `${configName} (Google)`, status: 'success', modelUsed: configName });
-        return replyText;
+        return response.text;
       } else {
-        throw new Error(`Empty response returned from ${configName} via LangChain.`);
+        throw new Error(`Empty response returned from ${configName} via native @google/genai.`);
       }
     } catch (err: any) {
-      console.log(`[AI Engine] Gemini (${configName}) request status: Unavailable (Handled)`);
+      console.log(`[AI Engine] Gemini (${configName}) request status: Unavailable (Handled)`, err.message);
       attempts.push({ provider: `${configName} (Google)`, status: 'failed', error: sanitizeAttemptError(err.message) });
       
       if (!isFallback) {
@@ -808,7 +818,7 @@ function checkRoleCapability(userRole: string, activeTabName: string, queryText:
   }
 
   if (role === 'staff') {
-    const allowedTabs = ['appointments', 'consultation', 'billing', 'patients', 'blogs'];
+    const allowedTabs = ['appointments', 'consultation', 'billing', 'patients', 'blogs', 'inventory', 'staff'];
     if (targetTab && !allowedTabs.includes(targetTab)) {
       return {
         allowed: false,
@@ -1035,7 +1045,7 @@ function shouldBlockQuery(role: string, query: string, isGeneralAssistant: boole
   if (normalizedRole === 'patient') {
     allowedTabs = ['appointments', 'billing', 'patients', 'doctors'];
   } else if (normalizedRole === 'staff') {
-    allowedTabs = ['appointments', 'consultation', 'billing', 'patients', 'blogs'];
+    allowedTabs = ['appointments', 'consultation', 'billing', 'patients', 'blogs', 'inventory', 'staff'];
   } else if (normalizedRole === 'doctor') {
     allowedTabs = ['appointments', 'consultation', 'doctors', 'patients', 'staff', 'blogs', 'ipd-wards'];
   }
@@ -1196,8 +1206,20 @@ async function processChatRequest(systemInstructionToUse: string, req: Request, 
       const generalCheck = checkGeneralAssistantQuery(lastMessageText);
       if (!generalCheck.allowed) {
         return res.json({
-          reply: `**Not Found**`,
-          attempts: [{ provider: 'General AI Assistant Guard', status: 'success', modelUsed: 'Static-Access-Rules' }]
+          reply: `I am strictly restricted to answering medical and clinical questions only. Please ask a health or medical-related question.
+
+(Main sirf medical aur clinical sawalat ke jawab de sakta hoon. Barah-e-maherbani sehat se mutalik sawal pouchein.)`,
+          attempts: [{ provider: 'Strict Console Medical Guard', status: 'success', modelUsed: 'Static-Access-Rules' }]
+        });
+      }
+
+      if (isGreetingOrPolite(lastMessageText)) {
+        const greetingReply = `Hello ${userName || 'there'}! I am your Clinical AI Assistant. How can I help you with your health or medical questions today?
+
+(Assalam-o-Alaikum ${userName || ''}! Main aapka Clinical AI Assistant hoon. Aaj main aapki sehat ya medical ke mutalik kya madad kar sakta hoon?)`;
+        return res.json({
+          reply: greetingReply,
+          attempts: [{ provider: 'Quick Console Greeting', status: 'success', modelUsed: 'Static-Access-Rules' }]
         });
       }
     }
@@ -1439,32 +1461,68 @@ CRITICAL GENERAL ASSISTANT RULE:
   } else if (userRole === 'patient') {
     roleSystemPrompt = `
 
-CRITICAL PATIENT CONSOLE SECURITY RULE:
+CRITICAL PATIENT CONSOLE SECURITY & PERMISSION RULES:
 - You are answering queries in the Patient Console.
 - You can answer general medical or clinical questions (e.g., treatment, advice, medicines for symptoms).
 - For hospital data, you ONLY have access to the logged-in patient's own records (Appointments, Bills, and Patient Profile for "${userName}").
 - You are STRICTLY FORBIDDEN from accessing, discussing, or revealing any other patients' data, staff records, ward/bed occupancies, pharmacy/medicine stock inventories, hospital finances, enquiries, departments, or other disallowed tabs.
 - If the user asks about other patients' records, or asks for data belonging to any disallowed tabs (like inventory, staff, wards, finance, configure-hospital, enquiries, departments), you MUST reply with exactly: "Not Found" or "not found" (or "Data Not Found" / "Record Not Found" in Urdu/Roman Urdu if they asked in Urdu). Do not hallucinate or try to guess this data.
+
+DATABASE ACTION PERMISSIONS FOR PATIENT ROLE:
+- Allowed Actions (Permitted):
+  * Book Appointment Slot (type: add) under your own patient name.
+  * Edit My Profile (type: edit) for your own profile details.
+- Disallowed Actions (Restricted):
+  * You CANNOT add/edit/delete staff profiles, doctor profiles, invoices/billing, inventory/stock, departments, or other patients.
+  * You CANNOT delete/cancel appointments.
+- If the user tries to command or request any disallowed action, you MUST immediately refuse with a polite message: "I do not have permission to perform this action in the Patient Console." (or Urdu equivalent: "Patient console me is action ki ijazat nahi hai.") and NEVER output any "[ACTION: ...]" JSON tags for disallowed actions.
 `;
   } else if (userRole === 'staff') {
     roleSystemPrompt = `
 
-CRITICAL STAFF CONSOLE SECURITY RULE:
+CRITICAL STAFF CONSOLE SECURITY & PERMISSION RULES:
 - You are answering queries in the Staff Console.
 - You can answer general medical or clinical questions.
-- For hospital data, you ONLY have access to the data of tabs open/available to Staff: Appointments, Consultations, Billing, Staff records, Patients profiles, and Blogs.
-- You DO NOT have access to, and are STRICTLY FORBIDDEN from discussing or revealing data of disallowed tabs: Inventory (Pharmacy stock/items), IPD Wards (Beds/occupancy), Doctors list/specializations, Departments load, Enquiries/leads, Medical Tourism, Finance/revenue statistics, Configure Hospital settings, or Reports.
-- If the user asks for data belonging to any of these disallowed tabs (e.g., inventory stock, ward beds, doctor details, finance revenue), you MUST reply with exactly: "Not Found" or "not found" (or "Data Not Found" / "Record Not Found" in Urdu/Roman Urdu if they asked in Urdu). Do not hallucinate or try to guess this data.
+- For hospital data, you ONLY have access to the data of tabs open/available to Staff: Appointments, Consultations, Billing, Staff directory, Patients profiles, Inventory/Pharmacy stock, and Blogs.
+- You DO NOT have access to, and are STRICTLY FORBIDDEN from discussing or revealing data of disallowed tabs: IPD Wards (Beds/occupancy), Doctors details, Departments load, Enquiries/leads, Medical Tourism, Finance/revenue statistics, Configure Hospital settings, or Reports.
+- If the user asks for data belonging to any of these disallowed tabs (e.g., ward beds, doctor details, finance revenue), you MUST reply with exactly: "Not Found" or "not found" (or "Data Not Found" / "Record Not Found" in Urdu/Roman Urdu if they asked in Urdu). Do not hallucinate or try to guess this data.
+
+DATABASE ACTION PERMISSIONS FOR STAFF ROLE:
+- Allowed Actions (Permitted):
+  * Register New Patient (type: add) and Edit Patient Profile (type: edit).
+  * Book Appointment Slot (type: add) and Reschedule Appointment Slot (type: edit).
+  * Generate New Invoice (type: add) and Edit Invoice Details (type: edit).
+  * Add Stock Item (type: add) and Edit Stock Details (type: edit).
+- Disallowed Actions (Restricted):
+  * You CANNOT delete or archive patient profiles (delete patients).
+  * You CANNOT cancel or delete appointment slots (delete appointments).
+  * You CANNOT cancel, void, or delete billing invoices (delete billing).
+  * You CANNOT delete or remove expired stock (delete inventory).
+  * You CANNOT add, edit, or delete staff members or doctor profiles.
+  * You CANNOT write clinical prescriptions or log clinical consultations.
+- If the user tries to command or request any disallowed action, you MUST immediately refuse with a polite message: "I do not have permission to perform this action in the Staff Console." (or Urdu equivalent: "Staff console me is action ki ijazat nahi hai.") and NEVER output any "[ACTION: ...]" JSON tags for disallowed actions.
 `;
   } else if (userRole === 'doctor') {
     roleSystemPrompt = `
 
-CRITICAL DOCTOR CONSOLE SECURITY RULE:
+CRITICAL DOCTOR CONSOLE SECURITY & PERMISSION RULES:
 - You are answering queries in the Doctor Console.
 - You can answer general medical or clinical questions.
 - For hospital data, you ONLY have access to the data of tabs open/available to Doctors: Appointments, Consultations, Doctors list, Patients profiles, Staff directory, Blogs, and IPD Wards.
 - You DO NOT have access to, and are STRICTLY FORBIDDEN from discussing or revealing data of disallowed tabs: Inventory (Pharmacy stock/items), Departments load, Enquiries/leads, Medical Tourism, Finance/revenue statistics, Configure Hospital settings, or Reports.
 - If the user asks for data belonging to any of these disallowed tabs (e.g., inventory stock, enquiries, finance revenue, hospital configuration), you MUST reply with exactly: "Not Found" or "not found" (or "Data Not Found" / "Record Not Found" in Urdu/Roman Urdu if they asked in Urdu). Do not hallucinate or try to guess this data.
+
+DATABASE ACTION PERMISSIONS FOR DOCTOR ROLE:
+- Allowed Actions (Permitted):
+  * Log Clinical Consultation (type: add) and Modify Prescription Notes (type: edit).
+  * Update Doctor Details (type: edit) for your own profile.
+  * Reschedule/Update Appointment status or notes (type: edit).
+- Disallowed Actions (Restricted):
+  * You CANNOT register new patient profiles or delete patient files (add/delete patients).
+  * You CANNOT cancel or delete appointment slots (delete appointments).
+  * You CANNOT add or delete doctor profiles.
+  * You CANNOT add, edit, or delete staff profiles, billing/invoices, inventory/stock, or departments.
+- If the user tries to command or request any disallowed action, you MUST immediately refuse with a polite message: "I do not have permission to perform this action in the Doctor Console." (or Urdu equivalent: "Doctor console me is action ki ijazat nahi hai.") and NEVER output any "[ACTION: ...]" JSON tags for disallowed actions.
 `;
   }
 

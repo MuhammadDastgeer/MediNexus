@@ -1912,7 +1912,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'appointments':
@@ -1929,7 +1929,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'billing':
@@ -1943,7 +1943,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             isReadOnly={(loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor') ? false : isReadOnly}
             loggedInUser={loggedInUser}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'inventory':
@@ -1955,7 +1955,7 @@ export default function App() {
             onDeleteInventoryItem={handleDeleteInventoryItem}
             onRestock={handleRestock}
             onRefresh={handleRefreshAll}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'doctors':
@@ -1968,7 +1968,7 @@ export default function App() {
             onToggleStatus={handleToggleDoctorStatus}
             onUpdateDoctor={handleUpdateDoctor}
             onDeleteDoctor={handleDeleteDoctor}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
             onRefresh={handleRefreshAll}
@@ -1983,7 +1983,7 @@ export default function App() {
             onAddStaff={handleAddStaff}
             onDeleteStaff={handleDeleteStaff}
             onRefresh={handleRefreshAll}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
             isReadOnly={loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor'}
           />
         );
@@ -1998,7 +1998,7 @@ export default function App() {
             onAddSubDepartment={handleAddSubDepartment}
             onDeleteSubDepartment={handleDeleteSubDepartment}
             onRefresh={handleRefreshAll}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'consultation':
@@ -2016,7 +2016,7 @@ export default function App() {
             onOpenBooking={() => setActiveView('appointments')}
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'ipd-wards':
@@ -2029,7 +2029,7 @@ export default function App() {
             onAddWard={handleAddWard}
             onDeleteWard={handleDeleteWard}
             onUpdatePatient={handleUpdatePatient}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'enquiries':
@@ -2040,7 +2040,7 @@ export default function App() {
             onSaveEnquiry={handleSaveEnquiry}
             onDeleteEnquiry={handleDeleteEnquiry}
             onRefresh={handleRefreshAll}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'medical-tourism':
@@ -2050,7 +2050,7 @@ export default function App() {
             onSaveEnquiry={handleSaveTourismEnquiry}
             onDeleteEnquiry={handleDeleteTourismEnquiry}
             onRefresh={handleRefreshAll}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'blogs':
@@ -2062,7 +2062,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             isReadOnly={loggedInUser?.role === 'patient'}
             loggedInUser={loggedInUser}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'finance':
@@ -2079,7 +2079,7 @@ export default function App() {
           <ConfigureHospitalView
             settings={hospitalSettings}
             onSaveSettings={handleSaveSettings}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'reports':
@@ -2094,7 +2094,7 @@ export default function App() {
             subDepartments={subDepartments}
             inventory={inventory}
             onRefresh={handleRefreshAll}
-            onNavigate={setActiveView}
+            onNavigate={isReadOnly ? undefined : setActiveView}
           />
         );
       case 'support':
