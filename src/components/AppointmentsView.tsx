@@ -814,18 +814,6 @@ export default function AppointmentsView({
 
         {/* Global Action Booker & AI Assistant Trigger */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {onNavigate && (
-            <button
-              onClick={() => onNavigate('appointments-ai')}
-              type="button"
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
-              id="trigger-appointments-ai"
-            >
-              <Sparkles size={14} className="animate-pulse" />
-              <span>Appointments AI</span>
-            </button>
-          )}
-
           {(!isReadOnly || loggedInUser?.role === 'staff') && !isPatient && (
             <button
               onClick={handleOpenNewWizard}

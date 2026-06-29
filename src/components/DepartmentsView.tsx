@@ -246,18 +246,6 @@ export default function DepartmentsView({
           </p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap" id="departments-header-actions">
-          {onNavigate && (
-            <button
-              onClick={() => onNavigate('departments-ai')}
-              type="button"
-              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition duration-150 cursor-pointer"
-              id="trigger-departments-ai"
-            >
-              <Sparkles size={14} className="animate-pulse" />
-              <span>Departments AI</span>
-            </button>
-          )}
-
           <button 
             type="button"
             onClick={handleRefreshClick}

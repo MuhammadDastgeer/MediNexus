@@ -46,11 +46,7 @@ export default function Header({
   const initials = loggedInUser?.data?.name ? getInitials(loggedInUser.data.name) : "AD";
 
   // Check if current tab qualifies for specialized AI button (No dashboard, landing, ai-assistant, or sub-AI page itself)
-  const showAIButton = activeView && 
-    activeView !== 'landing' && 
-    activeView !== 'dashboard' && 
-    activeView !== 'ai-assistant' && 
-    !activeView.endsWith('-ai');
+  const showAIButton = false;
 
   const getAIButtonLabel = (view: string) => {
     const labels: Record<string, string> = {

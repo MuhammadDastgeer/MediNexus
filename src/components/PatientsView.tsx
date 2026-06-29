@@ -882,16 +882,6 @@ export default function PatientsView({
             <BarChart2 size={15} />
             <span>Overview & Stats</span>
           </button>
-
-          {onNavigate && (
-            <button
-              onClick={() => onNavigate('patients-ai')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl text-xs font-bold text-teal-700 hover:bg-teal-50 hover:text-teal-900 border border-transparent hover:border-teal-100/30 transition-all cursor-pointer active:scale-95"
-            >
-              <Sparkles size={15} className="text-teal-600 animate-pulse" />
-              <span>AI Assistant</span>
-            </button>
-          )}
         </div>
       )}
 

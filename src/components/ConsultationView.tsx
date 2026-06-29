@@ -272,17 +272,6 @@ export default function ConsultationView({
           <p className="text-xs text-slate-400 mt-0.5">Manage and consult patients across all departments</p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap animate-fade-in">
-          {onNavigate && (
-            <button
-              onClick={() => onNavigate('consultation-ai')}
-              type="button"
-              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-extrabold shadow-sm hover:shadow-md transition-all cursor-pointer"
-              id="trigger-consultation-ai"
-            >
-              <Sparkles size={14} className="animate-pulse" />
-              <span>Consultation AI</span>
-            </button>
-          )}
           <div className="bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs px-3 py-1.5 rounded-lg font-semibold shadow-xs" id="consult-date-badge">
             Today: {TODAY.getDate()} {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][TODAY.getMonth()]} {TODAY.getFullYear()}
           </div>

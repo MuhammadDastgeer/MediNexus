@@ -30,7 +30,8 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  Menu
 } from 'lucide-react';
 import { Doctor, Patient, Staff, Bill, Appointment } from '../types';
 
@@ -104,6 +105,7 @@ export default function LandingPageView({
 
   // Password override dictionary in memory so they can reset and log in immediately
   const [passwordOverrides, setPasswordOverrides] = useState<Record<string, string>>({});
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Inquiry/Contact Form state
   const [contactName, setContactName] = useState('');
@@ -322,6 +324,7 @@ export default function LandingPageView({
 
   const changeTab = (tab: 'home' | 'about' | 'doctor' | 'blog' | 'contact') => {
     setActiveTab(tab);
+    setMobileMenuOpen(false);
     try {
       window.history.pushState(null, '', `/${tab === 'home' ? '' : tab}`);
     } catch (e) {
@@ -630,24 +633,24 @@ export default function LandingPageView({
       </div>
 
       {/* 2. STICKY GLASSMORPHIC NAVBAR */}
-      <nav className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-100 z-40 px-6 py-4 flex items-center justify-between shadow-xs" id="landing-navbar">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => changeTab('home')}>
-          <div className="p-2.5 bg-emerald-600 rounded-xl text-white shadow-lg shadow-emerald-600/10 transition-transform group-hover:scale-105 duration-300">
-            <HeartPulse className="w-6 h-6 animate-pulse" />
+      <nav className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-150 z-40 px-4 sm:px-6 py-3.5 flex items-center justify-between shadow-xs" id="landing-navbar">
+        <div className="flex items-center gap-2 sm:gap-3 cursor-pointer group shrink-0" onClick={() => changeTab('home')}>
+          <div className="p-2 sm:p-2.5 bg-emerald-600 rounded-xl text-white shadow-lg shadow-emerald-600/10 transition-transform group-hover:scale-105 duration-300 shrink-0">
+            <HeartPulse className="w-5 h-5 sm:w-6 h-6 animate-pulse" />
           </div>
-          <div>
-            <span className="text-lg font-extrabold text-slate-900 tracking-tight block leading-tight">{instName}</span>
-            <span className="text-[9px] text-slate-400 font-mono tracking-wider uppercase">Accredited Clinical Complex</span>
+          <div className="min-w-0">
+            <span className="text-sm sm:text-lg font-extrabold text-slate-900 tracking-tight block leading-tight truncate max-w-[150px] sm:max-w-none">{instName}</span>
+            <span className="text-[8px] sm:text-[9px] text-slate-400 font-mono tracking-wider uppercase block truncate">Accredited Clinical Complex</span>
           </div>
         </div>
 
-        {/* Dynamic Navigation Tabs */}
-        <div className="hidden md:flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/40" id="nav-tabs-wrapper">
+        {/* Dynamic Navigation Tabs - Desktop (XL screens and up) */}
+        <div className="hidden xl:flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/40" id="nav-tabs-wrapper">
           {(['home', 'about', 'doctor', 'blog', 'contact'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => changeTab(tab)}
-              className={`px-4.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-4.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === tab
                   ? 'bg-white text-slate-950 shadow-xs border border-slate-200/50'
                   : 'text-slate-600 hover:bg-white/40 hover:text-slate-900'
@@ -673,8 +676,8 @@ export default function LandingPageView({
           </button>
         </div>
 
-        {/* Action Widgets */}
-        <div className="flex items-center gap-2" id="nav-actions">
+        {/* Action Widgets - Desktop (XL screens and up) */}
+        <div className="hidden xl:flex items-center gap-2" id="nav-actions">
           {loggedInUser ? (
             <div className="flex items-center gap-2">
               <div className="bg-emerald-50/80 border border-emerald-100/60 px-3.5 py-1.5 rounded-xl flex items-center gap-2 shadow-xs">
@@ -723,7 +726,7 @@ export default function LandingPageView({
 
           <button
             onClick={onNavigateToAdmin}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold shadow-sm transition-all ml-1 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold shadow-sm transition-all ml-1 active:scale-95 cursor-pointer"
             id="to-admin-dashboard-btn"
           >
             <LayoutDashboard className="w-4 h-4 text-emerald-400" />
@@ -738,7 +741,144 @@ export default function LandingPageView({
             </span>
           </button>
         </div>
+
+        {/* Hamburger Menu Toggle Button - Mobile/Tablet (Visible below XL) */}
+        <div className="flex xl:hidden items-center gap-2">
+          {/* Quick AI Assistant button on mobile too for direct access! */}
+          <button
+            onClick={() => {
+              if (loggedInUser) {
+                onNavigate('ai-assistant');
+              } else {
+                openLoginModal('patient', true);
+              }
+            }}
+            className="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs active:scale-95 cursor-pointer shrink-0"
+            title="AI Assistant"
+          >
+            <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
+          </button>
+
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 cursor-pointer border border-slate-200/50 shrink-0"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </nav>
+
+      {/* Mobile Sliding / Collapsible Menu Drawer */}
+      {mobileMenuOpen && (
+        <div className="xl:hidden bg-white/95 backdrop-blur-md border-b border-slate-250/70 shadow-lg py-4 px-4 sm:px-6 space-y-4 animate-fade-in z-30 sticky top-[71px]" id="mobile-nav-drawer">
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400 block mb-1">Navigation</span>
+            <div className="grid grid-cols-2 gap-2">
+              {(['home', 'about', 'doctor', 'blog', 'contact'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => changeTab(tab)}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left flex items-center justify-between cursor-pointer ${
+                    activeTab === tab
+                      ? 'bg-emerald-50 text-[#007f6e] border border-emerald-100'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-750'
+                  } capitalize`}
+                >
+                  <span className="truncate">{tab === 'doctor' ? 'Clinical Specialists' : tab === 'blog' ? 'Health Blogs' : tab === 'contact' ? 'Support Desk' : tab}</span>
+                  <ChevronRight className="w-3.5 h-3.5 opacity-60 shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-3 space-y-2.5">
+            <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400 block">User Session & Portals</span>
+            
+            {loggedInUser ? (
+              <div className="space-y-2.5">
+                <div className="bg-emerald-50 border border-emerald-100/80 px-4 py-3 rounded-xl flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                  <div className="min-w-0">
+                    <span className="text-[9px] text-emerald-800 font-bold uppercase block tracking-wider leading-none mb-1">{loggedInUser.role} Profile</span>
+                    <span className="text-xs font-black text-slate-900 capitalize block truncate">{loggedInUser.data?.name}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onNavigateToAdmin();
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition-all"
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Go to Console</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setLoggedInUser(null);
+                    }}
+                    className="px-4 py-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs transition-all border border-rose-100 shrink-0"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openLoginModal('patient', true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse shrink-0" />
+                  <span>AI Assistant Login</span>
+                </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openLoginModal('patient', false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-850 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                  >
+                    <LogIn className="w-4 h-4 text-slate-600 shrink-0" />
+                    <span className="truncate">Clinical Login</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openSignupModal();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#007f6e] border border-emerald-150 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 text-[#007f6e] shrink-0" />
+                    <span className="truncate">Sign Up</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onNavigateToAdmin();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition-all"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Access Admin Console</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Tab Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-10" id="landing-main-content">
