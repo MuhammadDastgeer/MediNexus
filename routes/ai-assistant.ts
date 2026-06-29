@@ -1974,6 +1974,7 @@ router.post('/signup', (req: Request, res: Response) => {
       id,
       name: name.trim(),
       email: emailNormalized,
+      password: password,
       phone: phone.trim(),
       age: ageVal,
       gender: gender || 'Male',

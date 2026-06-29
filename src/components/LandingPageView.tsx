@@ -87,7 +87,7 @@ export default function LandingPageView({
   const [signupDob, setSignupDob] = useState('');
   const [signupBloodGroup, setSignupBloodGroup] = useState('');
   const [signupAddress, setSignupAddress] = useState('');
-  const [alsoRegisterAsPatient, setAlsoRegisterAsPatient] = useState(false);
+  const [alsoRegisterAsPatient, setAlsoRegisterAsPatient] = useState(true);
   const [signupError, setSignupError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState('');
 
@@ -163,7 +163,7 @@ export default function LandingPageView({
     setShowSignupModal(true);
     setShowLoginModal(false);
     setIsAiLoginMode(true);
-    setAlsoRegisterAsPatient(false);
+    setAlsoRegisterAsPatient(true);
     setSignupError('');
     setSignupSuccess('');
     try {
@@ -457,7 +457,7 @@ export default function LandingPageView({
               gender: result.user.gender,
               phone: result.user.phone,
               email: result.user.email,
-              password: result.user.password,
+              password: signupPassword,
               dob: result.user.dob,
               bloodGroup: result.user.bloodGroup,
               address: result.user.address,
