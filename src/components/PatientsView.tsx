@@ -3,7 +3,8 @@ import {
   User, Plus, Search, Calendar, RefreshCw, BarChart2, Users, 
   CheckSquare, Activity, ShieldCheck, CreditCard, Clock, MapPin, 
   ArrowLeft, Eye, Edit, Trash2, X, Check, EyeOff, Landmark,
-  FolderPlus, Heart, FileText, UserPlus, FileDown, Camera, Phone, Sparkles, CheckCircle
+  FolderPlus, Heart, FileText, UserPlus, FileDown, Camera, Phone, Sparkles, CheckCircle,
+  Upload
 } from 'lucide-react';
 import { Patient, Doctor, Bill, Appointment } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
@@ -1440,7 +1441,7 @@ export default function PatientsView({
             </div>
             
             <div className="flex items-center gap-2 self-start sm:self-auto">
-              {!isPatient && !isReadOnly && (!loggedInUser || loggedInUser.role === 'staff') && (
+              {!loggedInUser && (
                 <button
                   onClick={() => setShowBulkImport(true)}
                   className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-xs transition-all cursor-pointer active:scale-95"

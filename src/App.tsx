@@ -1956,6 +1956,7 @@ export default function App() {
             onRestock={handleRestock}
             onRefresh={handleRefreshAll}
             onNavigate={isReadOnly ? undefined : setActiveView}
+            loggedInUser={loggedInUser}
           />
         );
       case 'doctors':
@@ -1985,6 +1986,7 @@ export default function App() {
             onRefresh={handleRefreshAll}
             onNavigate={isReadOnly ? undefined : setActiveView}
             isReadOnly={loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor'}
+            loggedInUser={loggedInUser}
           />
         );
       case 'departments':

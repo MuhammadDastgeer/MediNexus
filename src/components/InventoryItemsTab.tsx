@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, FileText, Plus, Pencil, Trash2, Eye, X, BookOpen, AlertTriangle, Upload, CheckCircle2, CheckCircle } from 'lucide-react';
 import { InventoryItem, Supplier } from '../types';
 import { downloadCSV, downloadExcel, downloadWord, downloadPDFFile } from '../utils/exportHelper';
+import BulkImportModal from './BulkImportModal';
 
 interface InventoryItemsTabProps {
   inventory: InventoryItem[];
@@ -11,6 +12,8 @@ interface InventoryItemsTabProps {
   showAddModal: boolean;
   onCloseAddModal: () => void;
   suppliers?: Supplier[];
+  loggedInUser?: any;
+  onRefresh?: () => void;
 }
 
 export default function InventoryItemsTab({
@@ -21,6 +24,8 @@ export default function InventoryItemsTab({
   showAddModal,
   onCloseAddModal,
   suppliers = [],
+  loggedInUser = null,
+  onRefresh,
 }: InventoryItemsTabProps) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -271,13 +276,15 @@ export default function InventoryItemsTab({
           <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-1 rounded font-mono">
             {filteredItems.length} matching items
           </span>
-          <button
-            onClick={() => setShowBulkImportModal(true)}
-            className="flex items-center gap-1.5 border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-          >
-            <Upload size={13} />
-            <span>AI Bulk Import</span>
-          </button>
+          {!loggedInUser && (
+            <button
+              onClick={() => setShowBulkImportModal(true)}
+              className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            >
+              <Upload size={13} className="text-emerald-600 animate-pulse" />
+              <span>Import Bulk Data</span>
+            </button>
+          )}
           <div className="relative">
             <button
               onClick={() => setShowExportDropdown(!showExportDropdown)}
@@ -633,283 +640,13 @@ export default function InventoryItemsTab({
       )}
 
 
-      {/* AI Bulk Import Items Modal - Same-to-same as Image 5 */}
+      {/* Real Bulk Import Modal */}
       {showBulkImportModal && (
-        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in select-none">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden border border-slate-100 animate-slide-up my-8">
-            {/* Header */}
-            <div className="bg-purple-700 text-white p-4.5 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold flex items-center gap-1.5">
-                  <Upload size={16} />
-                  AI Bulk Import Items
-                </h3>
-                <p className="text-[10px] text-purple-100/90">Upload Excel, PDF, or Word — AI maps columns automatically</p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => {
-                  setShowBulkImportModal(false);
-                  setBulkFile(null);
-                  setIsBulkLoading(false);
-                  setBulkLoadSuccess(false);
-                }}
-                className="text-white hover:bg-white/10 p-1.5 rounded-full hover:scale-105 transition-all cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-5 max-h-[82vh] overflow-y-auto">
-              
-              {/* Drag and Drop Container */}
-              <div 
-                onClick={() => {
-                  if (!isBulkLoading && !bulkLoadSuccess) {
-                    setIsBulkLoading(true);
-                    setTimeout(() => {
-                      setIsBulkLoading(false);
-                      setBulkLoadSuccess(true);
-                      setBulkFile(new File(["clinical-list"], "inventory-export.xlsx", {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
-                    }, 1800);
-                  }
-                }}
-                className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
-                  bulkLoadSuccess 
-                    ? 'border-emerald-300 bg-emerald-55/40 text-emerald-800' 
-                    : 'border-purple-300 hover:border-purple-500 bg-purple-50/20 hover:bg-purple-50/50 text-purple-800 cursor-pointer'
-                }`}
-              >
-                {isBulkLoading ? (
-                  <div className="space-y-3 py-4">
-                    <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-xs font-bold text-purple-700">Gemini Clinical Engine reading document columns...</p>
-                    <p className="text-[10px] text-slate-400">Extracting medicines, generic formulas, pack units and prices...</p>
-                  </div>
-                ) : bulkLoadSuccess ? (
-                  <div className="space-y-3 py-2">
-                    <CheckCircle2 size={36} className="text-emerald-600 mx-auto animate-bounce-short" />
-                    <div>
-                      <p className="text-xs font-bold text-emerald-700">AI Column Mapping Complete!</p>
-                      <p className="text-[11px] text-slate-600 mt-1">Successfully recognized <strong>4 clinical items</strong> from "inventory-export.xlsx".</p>
-                    </div>
-                    {/* Render extracted table preview */}
-                    <div className="max-h-36 overflow-y-auto border border-emerald-100 rounded-xl bg-white text-left text-[10px] p-2 mt-3 font-mono">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-slate-100 text-slate-400">
-                            <th className="pr-2">Name</th>
-                            <th className="pr-2">Generic</th>
-                            <th className="pr-2">Price</th>
-                            <th>Category</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50 text-slate-700">
-                          <tr>
-                            <td className="pr-2 font-bold font-sans">Atorvastatin 10mg</td>
-                            <td className="pr-2">Atorvastatin Calcium</td>
-                            <td className="pr-2">₹145.00</td>
-                            <td>Medicine</td>
-                          </tr>
-                          <tr>
-                            <td className="pr-2 font-bold font-sans">Metformin 500mg ER</td>
-                            <td className="pr-2">Metformin HCl</td>
-                            <td className="pr-2">₹98.00</td>
-                            <td>Medicine</td>
-                          </tr>
-                          <tr>
-                            <td className="pr-2 font-bold font-sans">Salbutamol Inhaler</td>
-                            <td className="pr-2">Albuterol</td>
-                            <td className="pr-2">₹320.00</td>
-                            <td>Consumables</td>
-                          </tr>
-                          <tr>
-                            <td className="pr-2 font-bold font-sans">Surgical Gloves Sterile</td>
-                            <td className="pr-2">-</td>
-                            <td className="pr-2">₹65.00</td>
-                            <td>Surgical Items</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 mx-auto shadow-inner">
-                      <Upload size={20} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold">Drop your file here or <span className="text-purple-600 underline cursor-pointer">click to browse</span></p>
-                      <p className="text-[10px] text-slate-400 mt-1">Supported formats: Excel (.xlsx, .xls), CSV (.csv), PDF (.pdf), Word (.docx)</p>
-                    </div>
-                    {/* Badge Pill Types */}
-                    <div className="flex items-center justify-center gap-1.5 pt-2 select-none">
-                      <span className="text-[9px] font-extrabold bg-[#e8f5e9] text-[#2e7d32] px-2 py-0.5 rounded-full">.xlsx</span>
-                      <span className="text-[9px] font-extrabold bg-[#e3f2fd] text-[#1565c0] px-2 py-0.5 rounded-full">.csv</span>
-                      <span className="text-[9px] font-extrabold bg-[#ffebee] text-[#c62828] px-2 py-0.5 rounded-full">.pdf</span>
-                      <span className="text-[9px] font-extrabold bg-[#f3e5f5] text-[#6a1b9a] px-2 py-0.5 rounded-full">.docx</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Sample Template Information Row */}
-              <div className="bg-indigo-50/50 rounded-2xl p-4.5 border border-indigo-100/40 flex items-center justify-between text-xs gap-3">
-                <div className="space-y-1">
-                  <p className="font-bold text-indigo-900 flex items-center gap-1">
-                    <FileText size={14} className="text-indigo-600" />
-                    Download Sample Clean Template
-                  </p>
-                  <p className="text-[10px] text-indigo-600/80">Contains 8 standard clinical items with pricing, category tags & guides</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => alert('Clean sample template has been downloaded in CSV format!')}
-                  className="bg-indigo-650 hover:bg-indigo-700 text-white text-[11px] font-bold px-3 py-2 rounded-xl border border-indigo-100 hover:scale-[1.02] shadow-sm transition-all cursor-pointer"
-                >
-                  Download Template ∨
-                </button>
-              </div>
-
-              {/* Tips Grid */}
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-extrabold text-[#7c3aed] uppercase tracking-wider">AI Column Mapping Guide</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[10px] text-slate-600">
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <p className="font-extrabold text-slate-800 mb-1">📊 Excel & CSV Format</p>
-                    <p className="leading-relaxed">Headers are automatically mapped: AI bridges equivalent labels like 'particulars', 'medicineName', and 'drugs' straight to standard names.</p>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <p className="font-extrabold text-slate-800 mb-1">📄 PDF Scanning</p>
-                    <p className="leading-relaxed">Ideal for printed price spreadsheets or supplier sheets. The system uses built-in computer vision algorithms to re-form tabulate rows cleanly.</p>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <p className="font-extrabold text-slate-800 mb-1">📝 Word Documents</p>
-                    <p className="leading-relaxed">Any copy-paste formatted lists or text layouts are converted into records automatically during the backend parsing iteration.</p>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <p className="font-extrabold text-slate-800 mb-1">⚡ Dynamic Autocompletes</p>
-                    <p className="leading-relaxed">If Category (Medicine/Equipment) or Unit (strip/box) is left blank, AI reads names and automatically matches corresponding categories.</p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Footer containing action buttons */}
-            <div className="bg-slate-50 px-6 py-4 flex items-center justify-between border-t border-slate-100 text-[10px] text-slate-400 italic">
-              <span>Max 150 rows supported · Protected by Gemini-1.5 Pro</span>
-              <div className="flex items-center gap-2 not-italic">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBulkImportModal(false);
-                    setBulkFile(null);
-                    setIsBulkLoading(false);
-                    setBulkLoadSuccess(false);
-                  }}
-                  className="px-4 py-2 text-xs font-bold text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl transition-all cursor-pointer bg-white"
-                >
-                  Cancel
-                </button>
-                {bulkLoadSuccess && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Execute additions of the 4 mock items
-                      onAddInventoryItem({
-                        name: "Atorvastatin 10mg",
-                        category: "Medicine",
-                        unit: "strip",
-                        hsnCode: "300490",
-                        price: 120,
-                        mrp: 145,
-                        stock: 0,
-                        minStock: 5,
-                        status: "Active",
-                        genericName: "Atorvastatin Calcium",
-                        brandName: "Lipitor",
-                        subCategory: "Statins",
-                        preferredSupplier: "",
-                        purchasePrice: 120,
-                        sellingPrice: 140,
-                        barcode: "8901011882211",
-                        description: "Used to lower cholesterol levels in clinic patients"
-                      });
-                      onAddInventoryItem({
-                        name: "Metformin 500mg ER",
-                        category: "Medicine",
-                        unit: "strip",
-                        hsnCode: "300420",
-                        price: 75,
-                        mrp: 98,
-                        stock: 0,
-                        minStock: 5,
-                        status: "Active",
-                        genericName: "Metformin HCl",
-                        brandName: "Glucophage",
-                        subCategory: "Antidiabetic",
-                        preferredSupplier: "",
-                        purchasePrice: 75,
-                        sellingPrice: 90,
-                        barcode: "8901011833445",
-                        description: "Extended release formula for Type 2 Diabetes treatment"
-                      });
-                      onAddInventoryItem({
-                        name: "Salbutamol Inhaler 100mcg",
-                        category: "Consumables",
-                        unit: "pcs",
-                        hsnCode: "300450",
-                        price: 260,
-                        mrp: 320,
-                        stock: 0,
-                        minStock: 5,
-                        status: "Active",
-                        genericName: "Albuterol",
-                        brandName: "Asthalin",
-                        subCategory: "Bronchodilator",
-                        preferredSupplier: "",
-                        purchasePrice: 260,
-                        sellingPrice: 300,
-                        barcode: "8901011855667",
-                        description: "Bronchodilator reliever for respiratory patients"
-                      });
-                      onAddInventoryItem({
-                        name: "Surgical Gloves Sterile (7.5)",
-                        category: "Surgical Items",
-                        unit: "box",
-                        hsnCode: "401511",
-                        price: 45,
-                        mrp: 65,
-                        stock: 0,
-                        minStock: 5,
-                        status: "Active",
-                        genericName: "Latex Sterile Gloves",
-                        brandName: "Medigrip",
-                        subCategory: "Surgical Consumables",
-                        preferredSupplier: "",
-                        purchasePrice: 45,
-                        sellingPrice: 60,
-                        barcode: "8901011866778",
-                        description: "Standard latex examination gloves size 7.5 sterile"
-                      });
-                      
-                      alert('Successfully imported 4 clinical item specs into database!');
-                      setShowBulkImportModal(false);
-                      setBulkFile(null);
-                      setBulkLoadSuccess(false);
-                    }}
-                    className="px-5 py-2 text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl transition-all shadow-md cursor-pointer"
-                  >
-                    Confirm Import
-                  </button>
-                )}
-              </div>
-            </div>
-
-          </div>
-        </div>
+        <BulkImportModal
+          entityType="inventory"
+          onClose={() => setShowBulkImportModal(false)}
+          onRefresh={onRefresh || (() => {})}
+        />
       )}
 
       {/* Edit Form Modal */}

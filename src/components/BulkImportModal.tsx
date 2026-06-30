@@ -264,19 +264,64 @@ Ibuprofen 400mg,Medicine,250,20,15,Tablet,HSN789,25,20,12,Active,Ibuprofen,Actip
 
       setHeaders(rows[0]);
 
-      // Map rows to objects based on headers
-      const items = rawDataRows.map(dataRow => {
+      // Map and validate rows based on headers
+      const validItems: any[] = [];
+      let skippedCount = 0;
+
+      rawDataRows.forEach(dataRow => {
+        // Skip empty rows
+        if (dataRow.length === 0 || (dataRow.length === 1 && dataRow[0].trim() === '')) {
+          return;
+        }
+
         const itemObj: Record<string, string> = {};
         csvHeaders.forEach((header, index) => {
           if (index < dataRow.length) {
-            itemObj[header] = dataRow[index];
+            itemObj[header] = dataRow[index] ? dataRow[index].trim() : '';
+          } else {
+            itemObj[header] = '';
           }
         });
-        return currentSchema.mapper(itemObj);
+
+        // Validate that all required fields are present and have non-empty values
+        let hasAllRequired = true;
+        for (const req of currentSchema.required) {
+          const val = itemObj[req.toLowerCase().trim()];
+          if (!val || val.trim() === '') {
+            hasAllRequired = false;
+            break;
+          }
+        }
+
+        if (hasAllRequired) {
+          validItems.push(currentSchema.mapper(itemObj));
+        } else {
+          skippedCount++;
+        }
       });
 
-      setParsedData(items);
-      setStatus({ type: 'idle', message: `Parsed ${items.length} records successfully. Ready to import.` });
+      if (validItems.length === 0) {
+        setStatus({
+          type: 'error',
+          message: `No valid records found. All ${skippedCount} rows were skipped due to missing required fields: ${currentSchema.required.join(', ')}`
+        });
+        setParsedData([]);
+        return;
+      }
+
+      setParsedData(validItems);
+
+      if (skippedCount > 0) {
+        setStatus({
+          type: 'idle',
+          message: `Parsed ${validItems.length} valid records successfully. Skipped ${skippedCount} rows because they were missing required information (${currentSchema.required.join(', ')}). Ready to import.`
+        });
+      } else {
+        setStatus({
+          type: 'idle',
+          message: `Parsed all ${validItems.length} records successfully. Ready to import.`
+        });
+      }
     } catch (err: any) {
       setStatus({ type: 'error', message: `Failed to parse file: ${err.message}` });
     }

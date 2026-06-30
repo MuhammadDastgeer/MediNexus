@@ -817,7 +817,7 @@ export default function AppointmentsView({
 
         {/* Global Action Booker & AI Assistant Trigger */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {(!isReadOnly || loggedInUser?.role === 'staff') && !isPatient && (
+          {!loggedInUser && (
             <button
               onClick={() => setShowBulkImport(true)}
               className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"

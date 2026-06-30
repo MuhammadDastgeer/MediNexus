@@ -19,6 +19,7 @@ interface StaffViewProps {
   onRefresh: () => void;
   onNavigate?: (view: any) => void;
   isReadOnly?: boolean;
+  loggedInUser?: any;
 }
 
 export default function StaffView({ 
@@ -30,6 +31,7 @@ export default function StaffView({
   onRefresh, 
   onNavigate,
   isReadOnly = false,
+  loggedInUser = null,
 }: StaffViewProps) {
   const [activeTab, setActiveTab] = useState<'members' | 'overview'>('members');
   const [showBulkImport, setShowBulkImport] = useState(false);
@@ -1219,7 +1221,7 @@ export default function StaffView({
             </div>
             
             <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-              {!isReadOnly && (
+              {!loggedInUser && (
                 <button
                   onClick={() => setShowBulkImport(true)}
                   className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-97"

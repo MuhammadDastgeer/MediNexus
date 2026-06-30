@@ -18,6 +18,7 @@ interface InventoryViewProps {
   onRestock: (id: string, amount: number) => void;
   onRefresh: () => void;
   onNavigate?: (view: any) => void;
+  loggedInUser?: any;
 }
 
 export default function InventoryView({
@@ -28,6 +29,7 @@ export default function InventoryView({
   onRestock,
   onRefresh,
   onNavigate,
+  loggedInUser = null,
 }: InventoryViewProps) {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -232,17 +234,6 @@ export default function InventoryView({
           <p className="text-xs text-slate-400 mt-0.5">Control items, stock warnings, trade vendors, purchases orders & department transfers.</p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {onNavigate && (
-            <button
-              onClick={() => onNavigate('inventory-ai')}
-              type="button"
-              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-3.5 py-2 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
-              id="trigger-inventory-ai"
-            >
-              <Sparkles size={14} className="animate-pulse" />
-              <span>Inventory AI</span>
-            </button>
-          )}
           <button
             onClick={() => {
               setActiveTab('items');
@@ -321,6 +312,7 @@ export default function InventoryView({
             onCloseAddModal={() => setShowAddModal(false)}
             suppliers={suppliers}
             onRefresh={onRefresh}
+            loggedInUser={loggedInUser}
           />
         )}
 

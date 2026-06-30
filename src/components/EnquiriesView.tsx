@@ -134,18 +134,6 @@ export default function EnquiriesView({
           <p className="text-xs text-slate-400 mt-0.5">Review general hospital and consulting submission inquiries.</p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          {onNavigate && (
-            <button
-              onClick={() => onNavigate('enquiries-ai')}
-              type="button"
-              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-[#007f6e] hover:from-emerald-700 hover:to-[#006657] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer"
-              id="trigger-enquiries-ai"
-            >
-              <Sparkles size={14} className="animate-pulse" />
-              <span>Enquiries AI</span>
-            </button>
-          )}
-
           <button
             onClick={handleOpenAdd}
             className="flex items-center gap-1.5 bg-[#007f6e] hover:bg-[#006657] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all"

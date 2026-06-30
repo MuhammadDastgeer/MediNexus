@@ -763,16 +763,6 @@ export default function DoctorsView({
                 <Stethoscope size={14} />
                 <span>Doctors</span>
               </button>
-              {onNavigate && (
-                <button
-                  onClick={() => onNavigate('doctors-ai')}
-                  className="flex items-center gap-2 px-4.5 py-2 text-xs font-bold rounded-xl text-teal-700 hover:bg-teal-50 hover:text-teal-900 transition-all cursor-pointer active:scale-95 border border-transparent hover:border-teal-100/30"
-                  id="tab-ai-assistant-btn"
-                >
-                  <Sparkles size={14} className="text-teal-600 animate-pulse" />
-                  <span>AI Assistant</span>
-                </button>
-              )}
             </div>
           ) : (
             <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit gap-1" id="doctors-tabs-container-patient-wrapper">
@@ -780,16 +770,6 @@ export default function DoctorsView({
                 <Activity size={14} className="text-teal-600 animate-pulse" />
                 <span>Hospital Doctors Registry Console</span>
               </div>
-              {onNavigate && (
-                <button
-                  onClick={() => onNavigate('doctors-ai')}
-                  className="flex items-center gap-2 px-4.5 py-2 text-xs font-bold rounded-xl text-teal-700 hover:bg-teal-50 hover:text-teal-900 transition-all cursor-pointer active:scale-95 border border-transparent hover:border-teal-100/30"
-                  id="tab-ai-assistant-btn-patient"
-                >
-                  <Sparkles size={14} className="text-teal-600 animate-pulse" />
-                  <span>AI Assistant</span>
-                </button>
-              )}
             </div>
           )}
 
@@ -1285,7 +1265,7 @@ export default function DoctorsView({
                       <span>Refresh</span>
                     </button>
                   )}
-                  {!isReadOnly && (!loggedInUser || loggedInUser.role === 'staff') && (
+                  {!loggedInUser && (
                     <button
                       onClick={() => setShowBulkImport(true)}
                       className="border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
