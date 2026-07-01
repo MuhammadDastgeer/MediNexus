@@ -10,6 +10,7 @@ export type ActiveView =
   | 'staff'
   | 'doctors'
   | 'patients'
+  | 'signup-patient'
   | 'departments'
   | 'enquiries'
   | 'medical-tourism'
@@ -51,6 +52,9 @@ export interface Patient {
   address?: string;
   email?: string;
   password?: string;
+  treatmentStatus?: 'Active' | 'Discharged' | 'Pending';
+  hospitalId?: string | null;
+  hospitalName?: string | null;
 }
 
 export interface Appointment {

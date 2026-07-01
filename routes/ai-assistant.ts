@@ -1908,7 +1908,7 @@ router.post('/login', (req: Request, res: Response) => {
 // Separate signup endpoint for the AI Assistant custom users
 router.post('/signup', (req: Request, res: Response) => {
   try {
-    const { name, email, password, phone, age, gender, dob, bloodGroup, address, alsoRegisterAsPatient } = req.body;
+    const { name, email, password, phone, age, gender, dob, bloodGroup, address, alsoRegisterAsPatient, hospitalId, hospitalName } = req.body;
 
     if (!name || !email || !password || !phone) {
       return res.status(400).json({ error: 'Name, email, password, and phone number are required.' });
@@ -1928,8 +1928,8 @@ router.post('/signup', (req: Request, res: Response) => {
     const ageVal = Number(age) || 25;
 
     db.prepare(`
-      INSERT INTO ai_users (id, name, email, password, phone, age, gender, dob, bloodGroup, address, registeredAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO ai_users (id, name, email, password, phone, age, gender, dob, bloodGroup, address, registeredAt, hospitalId, hospitalName)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       name.trim(),
@@ -1941,7 +1941,9 @@ router.post('/signup', (req: Request, res: Response) => {
       dob || null,
       bloodGroup || null,
       address || null,
-      registeredAt
+      registeredAt,
+      hospitalId || null,
+      hospitalName || null
     );
 
     // If check button was clicked, we ALSO register as patient in clinical patients database
@@ -1949,8 +1951,8 @@ router.post('/signup', (req: Request, res: Response) => {
       db.prepare(`
         INSERT OR REPLACE INTO patients (
           id, name, age, gender, phone, registeredAt, status, 
-          wardId, roomId, bedNumber, dob, bloodGroup, address, email, password
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          wardId, roomId, bedNumber, dob, bloodGroup, address, email, password, hospitalId, hospitalName
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id,
         name.trim(),
@@ -1966,7 +1968,9 @@ router.post('/signup', (req: Request, res: Response) => {
         bloodGroup || null,
         address || null,
         emailNormalized,
-        password
+        password,
+        hospitalId || null,
+        hospitalName || null
       );
     }
 
@@ -1981,7 +1985,9 @@ router.post('/signup', (req: Request, res: Response) => {
       dob,
       bloodGroup,
       address,
-      registeredAt
+      registeredAt,
+      hospitalId,
+      hospitalName
     };
 
     return res.json({ success: true, user });

@@ -45,8 +45,8 @@ interface LandingPageViewProps {
   hospitalSettings: Record<string, string>;
   onNavigateToAdmin: () => void;
   onAddEnquiry: (name: string, phone: string, query: string) => void;
-  loggedInUser: { role: 'patient' | 'doctor' | 'staff'; data: any; isAiUser?: boolean } | null;
-  setLoggedInUser: (user: { role: 'patient' | 'doctor' | 'staff'; data: any; isAiUser?: boolean } | null) => void;
+  loggedInUser: { role: 'patient' | 'doctor' | 'staff' | 'admin'; data: any; isAiUser?: boolean } | null;
+  setLoggedInUser: (user: { role: 'patient' | 'doctor' | 'staff' | 'admin'; data: any; isAiUser?: boolean } | null) => void;
   onNavigate: (view: any) => void;
   onSignupPatient: (patientInput: any) => Promise<void>;
 }
@@ -72,13 +72,15 @@ export default function LandingPageView({
   // Login modal state
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isAiLoginMode, setIsAiLoginMode] = useState(false);
-  const [loginRole, setLoginRole] = useState<'patient' | 'doctor' | 'staff'>('patient');
+  const [loginRole, setLoginRole] = useState<'patient' | 'doctor' | 'staff' | 'admin'>('patient');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
   // Signup states
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [signupType, setSignupType] = useState<'patient' | 'admin'>('patient');
+  const [signupHospitalName, setSignupHospitalName] = useState('');
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -94,6 +96,32 @@ export default function LandingPageView({
 
   // New states for show/hide password toggle
   const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
+
+  // States for selecting a registered hospital
+  const [hospitalsList, setHospitalsList] = useState<{ id: string; hospitalName: string; name: string }[]>([]);
+  const [selectedHospitalId, setSelectedHospitalId] = useState('');
+  const [selectedHospitalName, setSelectedHospitalName] = useState('');
+
+  // Load registered hospitals
+  useEffect(() => {
+    const fetchHospitals = async () => {
+      try {
+        const res = await fetch('/api/hospitals');
+        if (res.ok) {
+          const data = await res.json();
+          setHospitalsList(data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load registered hospitals:', err);
+      }
+    };
+    if (showSignupModal) {
+      fetchHospitals();
+    }
+  }, [showSignupModal]);
 
   // New states for Forgot Password screen (without email verification)
   const [isForgotMode, setIsForgotMode] = useState(false);
@@ -131,7 +159,7 @@ export default function LandingPageView({
   };
 
   // Open the Login modal and sync the route path with the selected credential role
-  const openLoginModal = (role: 'patient' | 'doctor' | 'staff' = 'patient', isAiLogin: boolean = false) => {
+  const openLoginModal = (role: 'patient' | 'doctor' | 'staff' | 'admin' = 'patient', isAiLogin: boolean = false) => {
     setLoginRole(role);
     setIsAiLoginMode(isAiLogin);
     setLoginError('');
@@ -161,15 +189,24 @@ export default function LandingPageView({
   };
 
   // Open the Signup modal and sync the route path
-  const openSignupModal = () => {
+  const openSignupModal = (type: 'patient' | 'admin' | 'ai' = 'patient') => {
     setShowSignupModal(true);
     setShowLoginModal(false);
-    setIsAiLoginMode(true);
-    setAlsoRegisterAsPatient(true);
+    if (type === 'ai') {
+      setIsAiLoginMode(true);
+      setSignupType('patient');
+    } else {
+      setIsAiLoginMode(false);
+      setSignupType(type);
+    }
     setSignupError('');
     setSignupSuccess('');
     try {
-      window.history.pushState(null, '', '/signup');
+      if (type === 'admin') {
+        window.history.pushState(null, '', '/admin/signup');
+      } else {
+        window.history.pushState(null, '', '/signup');
+      }
     } catch (e) {
       console.warn("history.pushState is restricted:", e);
     }
@@ -186,7 +223,7 @@ export default function LandingPageView({
   };
 
   // Safe tab selection/routing updates for login roles inside modal
-  const handleRoleChange = (role: 'patient' | 'doctor' | 'staff') => {
+  const handleRoleChange = (role: 'patient' | 'doctor' | 'staff' | 'admin') => {
     setLoginRole(role);
     setLoginError('');
     setIsForgotMode(false);
@@ -204,6 +241,8 @@ export default function LandingPageView({
         window.history.pushState(null, '', '/doctor/login');
       } else if (role === 'staff') {
         window.history.pushState(null, '', '/login/staff');
+      } else if (role === 'admin') {
+        window.history.pushState(null, '', '/admin/login');
       }
     } catch (e) {
       console.warn("history.pushState is restricted:", e);
@@ -229,7 +268,7 @@ export default function LandingPageView({
     }
   };
 
-  // Sync URL routing pathname and query mapping (including deep linking /patient/login, /doctor/login, /login/staff)
+  // Sync URL routing pathname and query mapping (including deep linking /patient/login, /doctor/login, /login/staff, /admin/signup)
   useEffect(() => {
     const handleUrlRouting = () => {
       try {
@@ -257,8 +296,16 @@ export default function LandingPageView({
           setLoginRole('staff');
           setShowLoginModal(true);
           setShowSignupModal(false);
+        } else if (path === 'admin/signup' || path === 'admin-signup') {
+          setActiveTab('home');
+          setIsAiLoginMode(false);
+          setSignupType('admin');
+          setShowSignupModal(true);
+          setShowLoginModal(false);
         } else if (path === 'signup') {
           setActiveTab('home');
+          setIsAiLoginMode(false);
+          setSignupType('patient');
           setShowSignupModal(true);
           setShowLoginModal(false);
         } else if (path === 'about') {
@@ -280,7 +327,7 @@ export default function LandingPageView({
         } else {
           setActiveTab('home');
           // Do not force showLoginModal off if we are already in login/signup paths, but if they navigated to home manually, close it.
-          if (path !== 'patient/login' && path !== 'doctor/login' && path !== 'login/staff' && path !== 'login' && path !== 'signup') {
+          if (path !== 'patient/login' && path !== 'doctor/login' && path !== 'login/staff' && path !== 'login' && path !== 'signup' && path !== 'admin/signup' && path !== 'admin-signup') {
             setShowLoginModal(false);
             setShowSignupModal(false);
           }
@@ -414,6 +461,26 @@ export default function LandingPageView({
       } else {
         setLoginError('No matching staff ledger coordinate found.');
       }
+    } else if (loginRole === 'admin') {
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: inputEmailNormalized, password: loginPassword })
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+          setLoggedInUser({ role: 'admin', data: result.admin });
+          setLoginEmail('');
+          setLoginPassword('');
+          closeLoginModal();
+          onNavigate('dashboard');
+        } else {
+          setLoginError(result.error || 'Invalid Admin credentials.');
+        }
+      } catch (err) {
+        setLoginError('Server error during admin login.');
+      }
     }
   };
 
@@ -422,8 +489,55 @@ export default function LandingPageView({
     setSignupError('');
     setSignupSuccess('');
 
+    if (signupType === 'admin') {
+      if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim() || !signupConfirmPassword.trim() || !signupHospitalName.trim() || !signupPhone.trim()) {
+        setSignupError('Please fill in Name, Email, Password, Confirm Password, Hospital Name, and Phone Number.');
+        return;
+      }
+
+      if (signupPassword !== signupConfirmPassword) {
+        setSignupError('Passwords do not match.');
+        return;
+      }
+
+      const emailNormalized = signupEmail.trim().toLowerCase();
+      try {
+        const response = await fetch('/api/admin/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: signupName.trim(),
+            email: emailNormalized,
+            password: signupPassword,
+            hospitalName: signupHospitalName.trim(),
+            phone: signupPhone.trim()
+          })
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+          setSignupSuccess('Hospital Admin Account created successfully! Auto-logging in...');
+          setLoggedInUser({ role: 'admin', data: result.admin });
+          
+          setTimeout(() => {
+            setShowSignupModal(false);
+            onNavigate('dashboard');
+          }, 1500);
+        } else {
+          setSignupError(result.error || 'Admin registration failed.');
+        }
+      } catch (err) {
+        setSignupError('Server error occurred during admin signup.');
+      }
+      return;
+    }
+
     if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim() || !signupPhone.trim()) {
       setSignupError('Please fill in Name, Email, Password, and Phone Number.');
+      return;
+    }
+
+    if (!selectedHospitalId) {
+      setSignupError('Please select a registered hospital from the dropdown list.');
       return;
     }
 
@@ -444,7 +558,9 @@ export default function LandingPageView({
             dob: signupDob || null,
             bloodGroup: signupBloodGroup || null,
             address: signupAddress.trim() || null,
-            alsoRegisterAsPatient: alsoRegisterAsPatient
+            alsoRegisterAsPatient: alsoRegisterAsPatient,
+            hospitalId: selectedHospitalId,
+            hospitalName: selectedHospitalName
           })
         });
         const result = await response.json();
@@ -464,7 +580,9 @@ export default function LandingPageView({
               dob: result.user.dob,
               bloodGroup: result.user.bloodGroup,
               address: result.user.address,
-              status: 'Active'
+              status: 'Active',
+              hospitalId: selectedHospitalId,
+              hospitalName: selectedHospitalName
             });
           }
 
@@ -504,7 +622,9 @@ export default function LandingPageView({
       bloodGroup: signupBloodGroup || undefined,
       address: signupAddress.trim() || undefined,
       status: 'New',
-      registeredAt: new Date().toISOString()
+      registeredAt: new Date().toISOString(),
+      hospitalId: selectedHospitalId,
+      hospitalName: selectedHospitalName
     };
 
     try {
@@ -725,7 +845,13 @@ export default function LandingPageView({
           )}
 
           <button
-            onClick={onNavigateToAdmin}
+            onClick={() => {
+              if (loggedInUser) {
+                onNavigateToAdmin();
+              } else {
+                openLoginModal('admin');
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold shadow-sm transition-all ml-1 active:scale-95 cursor-pointer"
             id="to-admin-dashboard-btn"
           >
@@ -736,7 +862,9 @@ export default function LandingPageView({
                     ? "Patient Console"
                     : loggedInUser.role === 'doctor'
                       ? "Doctor Console"
-                      : "Staff Console")
+                      : loggedInUser.role === 'admin'
+                        ? "Admin Console"
+                        : "Staff Console")
                 : "Admin Console"}
             </span>
           </button>
@@ -867,7 +995,7 @@ export default function LandingPageView({
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    onNavigateToAdmin();
+                    openLoginModal('admin');
                   }}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition-all"
                 >
@@ -1833,10 +1961,10 @@ export default function LandingPageView({
               )}
             </div>
 
-            {/* 3 Tabs (Patient, Doctor, Staff) */}
+            {/* 4 Tabs (Patient, Doctor, Staff, Admin) */}
             {!isAiLoginMode && (
               <div className="flex border-b border-slate-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest relative bg-slate-50/70">
-                {(['patient', 'doctor', 'staff'] as const).map((role) => (
+                {(['patient', 'doctor', 'staff', 'admin'] as const).map((role) => (
                   <button
                     key={role}
                     onClick={() => handleRoleChange(role)}
@@ -2077,22 +2205,44 @@ export default function LandingPageView({
             {/* Header logo & visual */}
             <div className="bg-slate-900 text-white p-6 space-y-1.5 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                <Sparkles className="w-32 h-32" />
+                {isAiLoginMode ? (
+                  <Sparkles className="w-32 h-32" />
+                ) : signupType === 'admin' ? (
+                  <LayoutDashboard className="w-32 h-32" />
+                ) : (
+                  <Shield className="w-32 h-32" />
+                )}
               </div>
 
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+                {isAiLoginMode ? (
+                  <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+                ) : signupType === 'admin' ? (
+                  <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <Shield className="w-4 h-4 text-emerald-400" />
+                )}
                 <span className="text-[10px] font-bold font-mono tracking-widest uppercase text-emerald-400">
-                  {isAiLoginMode ? 'AI Assistant Portal registration' : 'Instant Patient Registration'}
+                  {isAiLoginMode 
+                    ? 'AI Assistant Portal registration' 
+                    : signupType === 'admin' 
+                      ? 'Hospital Administration Setup' 
+                      : 'Instant Patient Registration'}
                 </span>
               </div>
               <h3 className="text-lg font-black tracking-tight">
-                {isAiLoginMode ? 'Create AI Assistant Account' : 'Create Patient Account'}
+                {isAiLoginMode 
+                  ? 'Create AI Assistant Account' 
+                  : signupType === 'admin' 
+                    ? 'Register Hospital & Setup Admin' 
+                    : 'Create Patient Account'}
               </h3>
               <p className="text-[10px] text-slate-400 leading-relaxed font-semibold">
                 {isAiLoginMode 
                   ? 'Sign up to gain full credentials to the 24/7 clinical AI Assistant. Your account database is secured and private.'
-                  : 'Sign up to book clinical specialists, monitor medicine tracker regimes, and access the 24/7 AI Medical Assistant.'}
+                  : signupType === 'admin'
+                    ? 'Setup your clinical workspace. Manage doctors, patient appointments, billing, IPD/OPD wards, and pharmacy inventory.'
+                    : 'Sign up to book clinical specialists, monitor medicine tracker regimes, and access the 24/7 AI Medical Assistant.'}
               </p>
             </div>
 
@@ -2111,144 +2261,340 @@ export default function LandingPageView({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Full Name *</label>
-                  <input
-                    type="text"
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
-                    placeholder="Daisy Miller"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">E-mail Address *</label>
-                  <input
-                    type="email"
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
-                    placeholder="daisy@gmail.com"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    required
-                  />
-                </div>
+              <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl" id="signup-type-toggle">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAiLoginMode(false);
+                    setSignupType('patient');
+                    try {
+                      window.history.pushState(null, '', '/signup');
+                    } catch (e) {}
+                  }}
+                  className={`flex-1 py-1.5 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer ${
+                    !isAiLoginMode && signupType === 'patient'
+                      ? 'bg-[#007f6e] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  Patient Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAiLoginMode(false);
+                    setSignupType('admin');
+                    try {
+                      window.history.pushState(null, '', '/admin/signup');
+                    } catch (e) {}
+                  }}
+                  className={`flex-1 py-1.5 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer ${
+                    !isAiLoginMode && signupType === 'admin'
+                      ? 'bg-[#007f6e] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  Hospital Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAiLoginMode(true);
+                    setSignupType('patient');
+                    try {
+                      window.history.pushState(null, '', '/signup');
+                    } catch (e) {}
+                  }}
+                  className={`flex-1 py-1.5 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer ${
+                    isAiLoginMode
+                      ? 'bg-[#007f6e] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  AI Assistant
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Choose Password *</label>
-                  <input
-                    type="password"
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
-                    placeholder="••••••••"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    required
-                  />
-                </div>
+              {signupType === 'admin' && !isAiLoginMode ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Admin Full Name *</label>
+                      <input
+                        type="text"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="Daisy Miller"
+                        value={signupName}
+                        onChange={(e) => setSignupName(e.target.value)}
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Mobile Phone *</label>
-                  <input
-                    type="tel"
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
-                    placeholder="+92 300 1234567"
-                    value={signupPhone}
-                    onChange={(e) => setSignupPhone(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Hospital Name *</label>
+                      <input
+                        type="text"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="City General Hospital"
+                        value={signupHospitalName}
+                        onChange={(e) => setSignupHospitalName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Age *</label>
-                  <input
-                    type="number"
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
-                    placeholder="25"
-                    value={signupAge}
-                    onChange={(e) => setSignupAge(e.target.value)}
-                    required
-                  />
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">E-mail Address *</label>
+                      <input
+                        type="email"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="daisy@gmail.com"
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Gender *</label>
-                  <select
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
-                    value={signupGender}
-                    onChange={(e) => setSignupGender(e.target.value as any)}
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Phone Number *</label>
+                      <input
+                        type="tel"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="+92 300 1234567"
+                        value={signupPhone}
+                        onChange={(e) => setSignupPhone(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Blood Group</label>
-                  <input
-                    type="text"
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
-                    placeholder="O+"
-                    value={signupBloodGroup}
-                    onChange={(e) => setSignupBloodGroup(e.target.value)}
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Choose Password *</label>
+                      <div className="relative">
+                        <input
+                          type={showSignupPassword ? "text" : "password"}
+                          className="w-full pl-3.5 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                          placeholder="••••••••"
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSignupPassword(!showSignupPassword)}
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-emerald-500 focus:outline-none cursor-pointer"
+                          title={showSignupPassword ? "Hide password" : "Show password"}
+                        >
+                          {showSignupPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Date of Birth</label>
-                  <input
-                    type="date"
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold text-slate-600"
-                    value={signupDob}
-                    onChange={(e) => setSignupDob(e.target.value)}
-                  />
-                </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Confirm Password *</label>
+                      <div className="relative">
+                        <input
+                          type={showSignupConfirmPassword ? "text" : "password"}
+                          className="w-full pl-3.5 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                          placeholder="••••••••"
+                          value={signupConfirmPassword}
+                          onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)}
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-emerald-500 focus:outline-none cursor-pointer"
+                          title={showSignupConfirmPassword ? "Hide password" : "Show password"}
+                        >
+                          {showSignupConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Full Name *</label>
+                      <input
+                        type="text"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="Daisy Miller"
+                        value={signupName}
+                        onChange={(e) => setSignupName(e.target.value)}
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Home Address</label>
-                  <input
-                    type="text"
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
-                    placeholder="123 Health Ave, Complex"
-                    value={signupAddress}
-                    onChange={(e) => setSignupAddress(e.target.value)}
-                  />
-                </div>
-              </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">E-mail Address *</label>
+                      <input
+                        type="email"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="daisy@gmail.com"
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50/40 border border-emerald-100/60 rounded-xl cursor-pointer hover:bg-emerald-50/60 transition-all select-none" onClick={() => setAlsoRegisterAsPatient(!alsoRegisterAsPatient)}>
-                <input
-                  type="checkbox"
-                  id="alsoRegisterAsPatientCheckbox"
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 accent-[#007f6e] cursor-pointer"
-                  checked={alsoRegisterAsPatient}
-                  onChange={(e) => setAlsoRegisterAsPatient(e.target.checked)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <div className="text-left">
-                  <label htmlFor="alsoRegisterAsPatientCheckbox" className="text-xs font-black text-slate-800 cursor-pointer block">
-                    Also register as a Clinical Patient
-                  </label>
-                  <p className="text-[9px] text-slate-500 leading-normal font-semibold">
-                    If checked, your credentials will also be added to the Hospital Clinical Patients database. If unchecked, your account remains separate and private.
-                  </p>
-                </div>
-              </div>
+                  {/* Choose Hospital Selection */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Select Registered Hospital *</label>
+                    <select
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                      value={selectedHospitalId}
+                      onChange={(e) => {
+                        const hId = e.target.value;
+                        setSelectedHospitalId(hId);
+                        const found = hospitalsList.find(h => h.id === hId);
+                        setSelectedHospitalName(found ? found.hospitalName : '');
+                      }}
+                      required
+                    >
+                      <option value="">-- Choose Hospital to Register Under --</option>
+                      {hospitalsList.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.hospitalName} ({h.name})
+                        </option>
+                      ))}
+                    </select>
+                    {hospitalsList.length === 0 && (
+                      <p className="text-[9px] text-amber-600 font-semibold font-mono">
+                        Note: No registered hospital was found. Please register as a Hospital Admin first.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Choose Password *</label>
+                      <div className="relative">
+                        <input
+                          type={showSignupPassword ? "text" : "password"}
+                          className="w-full pl-3.5 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                          placeholder="••••••••"
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSignupPassword(!showSignupPassword)}
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-emerald-500 focus:outline-none cursor-pointer"
+                          title={showSignupPassword ? "Hide password" : "Show password"}
+                        >
+                          {showSignupPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Mobile Phone *</label>
+                      <input
+                        type="tel"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="+92 300 1234567"
+                        value={signupPhone}
+                        onChange={(e) => setSignupPhone(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Age *</label>
+                      <input
+                        type="number"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="25"
+                        value={signupAge}
+                        onChange={(e) => setSignupAge(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Gender *</label>
+                      <select
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        value={signupGender}
+                        onChange={(e) => setSignupGender(e.target.value as any)}
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Blood Group</label>
+                      <input
+                        type="text"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="O+"
+                        value={signupBloodGroup}
+                        onChange={(e) => setSignupBloodGroup(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Date of Birth</label>
+                      <input
+                        type="date"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold text-slate-600"
+                        value={signupDob}
+                        onChange={(e) => setSignupDob(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block font-mono">Home Address</label>
+                      <input
+                        type="text"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-emerald-500 text-xs bg-slate-50 font-bold"
+                        placeholder="123 Health Ave, Complex"
+                        value={signupAddress}
+                        onChange={(e) => setSignupAddress(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50/40 border border-emerald-100/60 rounded-xl cursor-pointer hover:bg-emerald-50/60 transition-all select-none" onClick={() => setAlsoRegisterAsPatient(!alsoRegisterAsPatient)}>
+                    <input
+                      type="checkbox"
+                      id="alsoRegisterAsPatientCheckbox"
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 accent-[#007f6e] cursor-pointer"
+                      checked={alsoRegisterAsPatient}
+                      onChange={(e) => setAlsoRegisterAsPatient(e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div className="text-left">
+                      <label htmlFor="alsoRegisterAsPatientCheckbox" className="text-xs font-black text-slate-800 cursor-pointer block">
+                        Also register as a Clinical Patient
+                      </label>
+                      <p className="text-[9px] text-slate-500 leading-normal font-semibold">
+                        If checked, your credentials will also be added to the Hospital Clinical Patients database. If unchecked, your account remains separate and private.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="flex flex-col gap-2 pt-3">
                 <button
                   type="submit"
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs shadow-md transition-all active:scale-98 cursor-pointer"
                 >
-                  {isAiLoginMode ? 'Create AI Assistant Account' : 'Create Patient Account & Start Consultation'}
+                  {isAiLoginMode ? 'Create AI Assistant Account' : (signupType === 'admin' ? 'Create Admin Account & Setup Hospital' : 'Create Patient Account & Start Consultation')}
                 </button>
 
                 <button

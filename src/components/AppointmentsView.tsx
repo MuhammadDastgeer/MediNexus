@@ -10,6 +10,7 @@ import {
   Edit2, 
   Trash2, 
   Eye, 
+  EyeOff,
   User, 
   Stethoscope, 
   Mail, 
@@ -128,6 +129,7 @@ export default function AppointmentsView({
   const [patientName, setPatientName] = useState('');
   const [patientEmail, setPatientEmail] = useState('');
   const [patientPassword, setPatientPassword] = useState('');
+  const [showPatientPassword, setShowPatientPassword] = useState(false);
   const [patientPhone, setPatientPhone] = useState('');
   const [patientWhatsapp, setPatientWhatsapp] = useState('');
   const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Male');
@@ -2042,13 +2044,23 @@ export default function AppointmentsView({
 
                             <div>
                               <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Password Credentials</label>
-                              <input
-                                type="password"
-                                value={patientPassword}
-                                onChange={(e) => setPatientPassword(e.target.value)}
-                                className="w-full text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
-                                placeholder="••••••••••••"
-                              />
+                              <div className="relative">
+                                <input
+                                  type={showPatientPassword ? "text" : "password"}
+                                  value={patientPassword}
+                                  onChange={(e) => setPatientPassword(e.target.value)}
+                                  className="w-full text-xs pl-3 pr-10 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e]"
+                                  placeholder="••••••••••••"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPatientPassword(!showPatientPassword)}
+                                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#007f6e] focus:outline-none cursor-pointer"
+                                  title={showPatientPassword ? "Hide password" : "Show password"}
+                                >
+                                  {showPatientPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                </button>
+                              </div>
                             </div>
 
                             <div>

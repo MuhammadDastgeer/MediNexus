@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, Search, Calendar, RefreshCw, 
   Clock, CheckSquare, ArrowLeft, Shield, Landmark, 
-  Trash2, Edit, Eye, X, Check, Mail, Phone, 
+  Trash2, Edit, Eye, EyeOff, X, Check, Mail, Phone, 
   MapPin, CreditCard, UserCheck, BarChart2, Camera, Download, Sparkles, CheckCircle
 } from 'lucide-react';
 import { Staff, Department, SubDepartment } from '../types';
@@ -40,6 +40,7 @@ export default function StaffView({
   const [viewingStaff, setViewingStaff] = useState<Staff | null>(null);
   const [detailActiveTab, setDetailActiveTab] = useState<'overview' | 'financials'>('overview');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -698,14 +699,24 @@ export default function StaffView({
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Password *</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter login password"
-                    className="w-full text-xs px-3.5 py-2.5 border border-slate-200 bg-slate-50/20 rounded-lg focus:outline-none focus:border-[#007f6e]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter login password"
+                      className="w-full text-xs pl-3.5 pr-10 py-2.5 border border-slate-200 bg-slate-50/20 rounded-lg focus:outline-none focus:border-[#007f6e]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#007f6e] focus:outline-none cursor-pointer"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Phone Number</label>

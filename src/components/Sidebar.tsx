@@ -35,8 +35,8 @@ interface SidebarProps {
   setActiveView: (view: ActiveView) => void;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  loggedInUser: { role: 'patient' | 'doctor' | 'staff'; data: any; isAiUser?: boolean } | null;
-  setLoggedInUser: (user: { role: 'patient' | 'doctor' | 'staff'; data: any; isAiUser?: boolean } | null) => void;
+  loggedInUser: { role: 'patient' | 'doctor' | 'staff' | 'admin'; data: any; isAiUser?: boolean } | null;
+  setLoggedInUser: (user: { role: 'patient' | 'doctor' | 'staff' | 'admin'; data: any; isAiUser?: boolean } | null) => void;
   onUpdateStaff: (staff: Omit<Staff, 'id'> & { id?: string }) => Promise<void> | void;
   onUpdateDoctor?: (id: string, fields: any) => Promise<void> | void;
   onUpdatePatient?: (patient: any) => Promise<void> | void;
@@ -78,6 +78,7 @@ export default function Sidebar({
     { id: 'staff' as ActiveView, label: 'Staff', icon: Users },
     { id: 'doctors' as ActiveView, label: 'Doctors', icon: UserCheck },
     { id: 'patients' as ActiveView, label: 'Patients', icon: User },
+    { id: 'signup-patient' as ActiveView, label: 'signup patient', icon: UserCheck },
     { id: 'departments' as ActiveView, label: 'Departments', icon: Building2 },
     { id: 'enquiries' as ActiveView, label: 'Enquiries', icon: HelpCircle },
     { id: 'medical-tourism' as ActiveView, label: 'Medical Tourism', icon: Globe },
@@ -129,7 +130,9 @@ export default function Sidebar({
             ? "Patient Console" 
             : loggedInUser.role === 'doctor' 
               ? "Doctor Console" 
-              : "Staff Console")) 
+              : loggedInUser.role === 'admin'
+                ? "Admin Console"
+                : "Staff Console")) 
     : "Admin Console";
   const displayInitial = displayName.slice(0, 2).toUpperCase();
 

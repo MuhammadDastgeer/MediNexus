@@ -24,10 +24,11 @@ import ReportsView from './components/ReportsView';
 import SupportView from './components/SupportView';
 import LandingPageView from './components/LandingPageView';
 import AIAssistantView from './components/AIAssistantView';
+import SignupPatientView from './components/SignupPatientView';
 
 export default function App() {
   const rosterSyncedInSession = useRef(false);
-  const [loggedInUser, setLoggedInUser] = useState<{ role: 'patient' | 'doctor' | 'staff'; data: any; isAiUser?: boolean } | null>(null);
+  const [loggedInUser, setLoggedInUser] = useState<{ role: 'patient' | 'doctor' | 'staff' | 'admin'; data: any; isAiUser?: boolean } | null>(null);
   const [activeView, setActiveViewState] = useState<ActiveView>('landing');
   const [initialAiMessage, setInitialAiMessage] = useState<any>(null);
 
@@ -38,10 +39,11 @@ export default function App() {
     setActiveView(view as any);
   };
 
+  const isAdmin = loggedInUser?.role === 'admin' && !loggedInUser?.isAiUser;
   const isStaff = loggedInUser?.role === 'staff' && !loggedInUser?.isAiUser;
   const isDoctor = loggedInUser?.role === 'doctor' && !loggedInUser?.isAiUser;
   const isPatient = loggedInUser?.role === 'patient' && !loggedInUser?.isAiUser;
-  const prefix = loggedInUser?.isAiUser ? 'ai' : (isStaff ? 'staff' : (isDoctor ? 'doctor' : (isPatient ? 'patient' : 'admin')));
+  const prefix = loggedInUser?.isAiUser ? 'ai' : (isAdmin ? 'admin' : (isStaff ? 'staff' : (isDoctor ? 'doctor' : (isPatient ? 'patient' : 'patient'))));
 
   const viewToPathMap: Record<ActiveView, string> = {
     'landing': '/',
@@ -55,6 +57,7 @@ export default function App() {
     'staff': `/${prefix}/staff`,
     'doctors': `/${prefix}/doctors`,
     'patients': `/${prefix}/patients`,
+    'signup-patient': `/${prefix}/signup-patient`,
     'departments': `/${prefix}/departments`,
     'enquiries': `/${prefix}/enquiries`,
     'medical-tourism': `/${prefix}/medical-tourism`,
@@ -104,11 +107,11 @@ export default function App() {
       return 'ai-assistant';
     }
 
-    if (cleanPath === 'login' || cleanPath === 'signup' || cleanPath === 'patient/login' || cleanPath === 'doctor/login' || cleanPath === 'login/staff') {
+    if (cleanPath === 'login' || cleanPath === 'signup' || cleanPath === 'patient/login' || cleanPath === 'doctor/login' || cleanPath === 'login/staff' || cleanPath === 'admin/login' || cleanPath === 'admin/signup') {
       return 'landing';
     }
     if (cleanPath === '' || cleanPath === 'home' || cleanPath === 'about' || cleanPath === 'contact' || cleanPath === 'doctor' || cleanPath === 'doctors' || cleanPath === 'blog' || cleanPath === 'blogs') {
-      return (loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor' || loggedInUser?.role === 'patient') ? 'dashboard' : 'landing';
+      return (loggedInUser?.role === 'staff' || loggedInUser?.role === 'doctor' || loggedInUser?.role === 'patient' || loggedInUser?.role === 'admin') ? 'dashboard' : 'landing';
     }
     
     // Sub-AI specifics checked first
@@ -372,10 +375,63 @@ export default function App() {
     }
   };
 
-  // Onmount loader
+  // Setup global fetch interceptor to append the tenant admin ID
+  useEffect(() => {
+    const originalFetch = window.fetch;
+
+    const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      let adminId = '';
+      if (loggedInUser?.role === 'admin') {
+        adminId = String(loggedInUser.data?.id || '');
+      } else if (loggedInUser?.data?.admin_id) {
+        adminId = String(loggedInUser.data.admin_id);
+      }
+
+      if (adminId) {
+        const headers = new Headers(init?.headers);
+        headers.set('x-admin-id', adminId);
+        return originalFetch(input, { ...init, headers });
+      }
+      return originalFetch(input, init);
+    };
+
+    try {
+      Object.defineProperty(window, 'fetch', {
+        value: customFetch,
+        configurable: true,
+        writable: true,
+        enumerable: true
+      });
+    } catch (err) {
+      try {
+        (window as any).fetch = customFetch;
+      } catch (assignErr) {
+        console.error('Failed to intercept window.fetch:', assignErr);
+      }
+    }
+
+    return () => {
+      try {
+        Object.defineProperty(window, 'fetch', {
+          value: originalFetch,
+          configurable: true,
+          writable: true,
+          enumerable: true
+        });
+      } catch (err) {
+        try {
+          (window as any).fetch = originalFetch;
+        } catch (assignErr) {
+          // ignore
+        }
+      }
+    };
+  }, [loggedInUser]);
+
+  // Onmount and user change loader
   useEffect(() => {
     handleRefreshAll();
-  }, []);
+  }, [loggedInUser]);
 
   // Automated daily doctor roster status checker and system verification
   useEffect(() => {
@@ -1913,6 +1969,12 @@ export default function App() {
             isReadOnly={isReadOnly}
             loggedInUser={loggedInUser}
             onNavigate={isReadOnly ? undefined : setActiveView}
+          />
+        );
+      case 'signup-patient':
+        return (
+          <SignupPatientView
+            onRefreshPatients={handleRefreshAll}
           />
         );
       case 'appointments':

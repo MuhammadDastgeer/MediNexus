@@ -18,13 +18,20 @@ dotenv.config();
 
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import db from './db.js';
+import db, { adminContext } from './db.js';
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+app.use((req, res, next) => {
+  const adminId = req.headers['x-admin-id'] || '';
+  adminContext.run({ adminId: String(adminId) }, () => {
+    next();
+  });
+});
 
 // Execute Schema Initialization
 db.exec(`
@@ -219,6 +226,15 @@ db.exec(`
     bedsAvailable INTEGER,
     bedsMaintenance INTEGER
   );
+
+  CREATE TABLE IF NOT EXISTS admins (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    email TEXT UNIQUE,
+    password TEXT,
+    hospitalName TEXT,
+    registeredAt TEXT
+  );
 `);
 
 // Safety column upgrades for existing SQLite tables
@@ -252,6 +268,7 @@ addColumnSafely('inventory', 'description', 'TEXT');
 
 addColumnSafely('purchases', 'invoiceNo', 'TEXT');
 addColumnSafely('purchases', 'remarks', 'TEXT');
+addColumnSafely('admins', 'phone', 'TEXT');
 
 addColumnSafely('transfers', 'priority', 'TEXT');
 addColumnSafely('transfers', 'notes', 'TEXT');
@@ -287,6 +304,11 @@ addColumnSafely('patients', 'bloodGroup', 'TEXT');
 addColumnSafely('patients', 'address', 'TEXT');
 addColumnSafely('patients', 'email', 'TEXT');
 addColumnSafely('patients', 'password', 'TEXT');
+addColumnSafely('patients', 'treatmentStatus', 'TEXT');
+addColumnSafely('patients', 'hospitalId', 'TEXT');
+addColumnSafely('patients', 'hospitalName', 'TEXT');
+addColumnSafely('ai_users', 'hospitalId', 'TEXT');
+addColumnSafely('ai_users', 'hospitalName', 'TEXT');
 
 addColumnSafely('staff', 'email', 'TEXT');
 addColumnSafely('staff', 'phone', 'TEXT');
@@ -302,6 +324,21 @@ addColumnSafely('staff', 'pfAccountNo', 'TEXT');
 addColumnSafely('staff', 'pfUan', 'TEXT');
 addColumnSafely('staff', 'password', 'TEXT');
 addColumnSafely('blogs', 'description', 'TEXT');
+
+// Ensure admin_id exists on all multi-tenant tables, and purge any legacy demo data (where admin_id is null)
+const multiTenantTables = [
+  'ai_users', 'patients', 'appointments', 'doctors', 'staff', 'bills',
+  'inventory', 'suppliers', 'purchases', 'transfers', 'enquiries', 'blogs',
+  'medical_tourism', 'finance', 'settings', 'departments', 'sub_departments', 'wards'
+];
+multiTenantTables.forEach(t => {
+  addColumnSafely(t, 'admin_id', 'TEXT');
+  try {
+    db.exec(`DELETE FROM ${t} WHERE admin_id IS NULL`);
+  } catch (err) {
+    // ignore
+  }
+});
 
 // Prepopulate tables if empty
 const prepopulate = () => {
@@ -462,7 +499,7 @@ const prepopulate = () => {
   }
 };
 
-prepopulate();
+// prepopulate();
 
 // Import separate API routers
 import patientsRouter from './routes/patients.js';
@@ -486,6 +523,84 @@ import dashboardRouter from './routes/dashboard.js';
 import aiAssistantRouter from './routes/ai-assistant.js';
 
 // API Route Mountings
+// Admin Authentication Endpoints
+app.post('/api/admin/signup', (req, res) => {
+  try {
+    const { name, email, password, hospitalName, phone } = req.body;
+    if (!name || !email || !password || !hospitalName) {
+      return res.status(400).json({ error: 'Please provide all required fields.' });
+    }
+    const emailNormalized = email.trim().toLowerCase();
+    
+    // Check if email already registered
+    const existing = db.prepare('SELECT id FROM admins WHERE LOWER(email) = ?').get(emailNormalized);
+    if (existing) {
+      return res.status(400).json({ error: 'This email is already registered.' });
+    }
+
+    const id = 'admin-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+    const registeredAt = new Date().toISOString();
+    const phoneVal = phone ? phone.trim() : '';
+    
+    db.prepare('INSERT INTO admins (id, name, email, password, hospitalName, registeredAt, phone) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, name.trim(), emailNormalized, password, hospitalName.trim(), registeredAt, phoneVal);
+
+    // Seed some initial default settings for this newly registered hospital admin
+    db.prepare('INSERT INTO settings (key, value, admin_id) VALUES (?, ?, ?)')
+      .run('hospitalName', hospitalName.trim(), id);
+
+    res.json({
+      success: true,
+      admin: {
+        id,
+        name: name.trim(),
+        email: emailNormalized,
+        hospitalName: hospitalName.trim(),
+        phone: phoneVal
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Please enter both email and password.' });
+    }
+    const emailNormalized = email.trim().toLowerCase();
+    const admin = db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(emailNormalized) as any;
+    
+    if (admin && admin.password === password) {
+      res.json({
+        success: true,
+        admin: {
+          id: admin.id,
+          name: admin.name,
+          email: admin.email,
+          hospitalName: admin.hospitalName
+        }
+      });
+    } else {
+      res.status(401).json({ error: 'Invalid admin credentials.' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET list of registered hospitals/admins
+app.get('/api/hospitals', (req, res) => {
+  try {
+    const hospitals = db.prepare('SELECT id, hospitalName, name FROM admins ORDER BY hospitalName ASC').all();
+    res.json(hospitals);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch hospitals' });
+  }
+});
+
 app.use('/api/patients', patientsRouter);
 app.use('/api/appointments', appointmentsRouter);
 app.use('/api/doctors', doctorsRouter);

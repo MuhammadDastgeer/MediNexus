@@ -16,6 +16,7 @@ import {
   Trash2, 
   Edit3, 
   Eye, 
+  EyeOff,
   ChevronLeft, 
   Mail, 
   Phone, 
@@ -99,6 +100,7 @@ export default function DoctorsView({
   
   // Custom Alerts / Messages
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Form Field State Variables (Image 3 - 6)
   const [formData, setFormData] = useState({
@@ -856,15 +858,25 @@ export default function DoctorsView({
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                     Password <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full text-xs px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white text-slate-800 border border-slate-200 rounded-lg transition-all focus:border-[#007f6e] focus:outline-none"
-                    id="doctor-input-password"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="••••••••"
+                      className="w-full text-xs pl-3.5 pr-10 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white text-slate-800 border border-slate-200 rounded-lg transition-all focus:border-[#007f6e] focus:outline-none"
+                      id="doctor-input-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#007f6e] focus:outline-none cursor-pointer"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Contact phone */}

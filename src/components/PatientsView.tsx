@@ -49,6 +49,7 @@ export default function PatientsView({
   const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
   const [detailActiveTab, setDetailActiveTab] = useState<'overview' | 'appointments' | 'medical-history' | 'billing' | 'treatment-plans'>('overview');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showPatientPassword, setShowPatientPassword] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Synchronize viewingPatient state with parent patients updates
@@ -105,6 +106,8 @@ export default function PatientsView({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [patientStatus, setPatientStatus] = useState<'New' | 'Follow-up'>('New');
+  const [treatmentStatus, setTreatmentStatus] = useState<'Active' | 'Discharged' | 'Pending'>('Active');
+  const [treatmentStatusFilter, setTreatmentStatusFilter] = useState<string>('All');
 
   // IPD Bed Allocation variables (Optional)
   const [selectedWardId, setSelectedWardId] = useState('');
@@ -207,6 +210,7 @@ export default function PatientsView({
     setEmail(patient.email || '');
     setPassword(patient.password || '');
     setPatientStatus(patient.status || 'New');
+    setTreatmentStatus(patient.treatmentStatus || 'Active');
 
     // Bed allocations
     setSelectedWardId(patient.wardId || '');
@@ -230,6 +234,7 @@ export default function PatientsView({
     setEmail('');
     setPassword('');
     setPatientStatus('New');
+    setTreatmentStatus('Active');
 
     setSelectedWardId('');
     setSelectedRoomName('');
@@ -292,6 +297,7 @@ export default function PatientsView({
       address,
       email,
       password,
+      treatmentStatus,
       wardId: selectedWardId || null,
       roomId: selectedRoomName || null,
       bedNumber: selectedBedNumber || null,
@@ -331,6 +337,12 @@ export default function PatientsView({
   const filteredPatients = patients.filter((p) => {
     if (isPatient && patientProfileName && p.name?.trim().toLowerCase() !== patientProfileName.trim().toLowerCase()) {
       return false;
+    }
+    if (treatmentStatusFilter !== 'All') {
+      const pStatus = p.treatmentStatus || 'Active';
+      if (pStatus !== treatmentStatusFilter) {
+        return false;
+      }
     }
     return (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
       (p.phone || '').includes(search) ||
@@ -1007,6 +1019,19 @@ export default function PatientsView({
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">TREATMENT STATUS</label>
+                  <select
+                    value={treatmentStatus}
+                    onChange={(e) => setTreatmentStatus(e.target.value as any)}
+                    className="w-full text-xs px-3.5 py-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-[#007f6e] h-10 font-medium"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Discharged">Discharged</option>
+                    <option value="Pending">Pending</option>
+                  </select>
+                </div>
+
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">ADDRESS</label>
                   <input
@@ -1042,14 +1067,24 @@ export default function PatientsView({
 
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Password *</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full text-xs px-3.5 py-2.5 border border-slate-200 bg-slate-50/20 rounded-lg focus:outline-none focus:border-[#007f6e]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPatientPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full text-xs pl-3.5 pr-10 py-2.5 border border-slate-200 bg-slate-50/20 rounded-lg focus:outline-none focus:border-[#007f6e]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPatientPassword(!showPatientPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#007f6e] focus:outline-none cursor-pointer"
+                      title={showPatientPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPatientPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1529,17 +1564,34 @@ export default function PatientsView({
             
             {/* Filter Search Header */}
             <div className="p-4 border-b border-slate-100 bg-[#fafbfc] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="relative w-full sm:w-85">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                  <Search size={14} />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search by full name, contact, email, or details..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-8 pr-4 py-2 text-xs bg-white border border-slate-205 rounded-xl focus:outline-none focus:border-[#007f6e]"
-                />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto flex-1 max-w-2xl">
+                <div className="relative flex-1">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                    <Search size={14} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search by full name, contact, email, or details..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-8 pr-4 py-2 text-xs bg-white border border-slate-205 rounded-xl focus:outline-none focus:border-[#007f6e] h-8.5"
+                  />
+                </div>
+                
+                {/* Status Dropdown Filter */}
+                <div className="flex items-center gap-1.5 bg-white border border-slate-205 rounded-xl px-2.5 py-1.5 h-8.5 shadow-2xs">
+                  <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider whitespace-nowrap pl-0.5">Treatment Status:</span>
+                  <select
+                    value={treatmentStatusFilter}
+                    onChange={(e) => setTreatmentStatusFilter(e.target.value)}
+                    className="text-xs bg-transparent border-none focus:outline-none text-slate-700 font-extrabold pr-1 cursor-pointer"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="Active">Active Only</option>
+                    <option value="Discharged">Discharged Only</option>
+                    <option value="Pending">Pending Only</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 self-end sm:self-auto text-xs font-bold text-slate-650">
@@ -1604,9 +1656,15 @@ export default function PatientsView({
                                 <div className="font-extrabold text-slate-800">{p.name}</div>
                                 <div className="text-[10px] text-slate-400 font-mono">ID: {p.id}</div>
                                 {p.bloodGroup && (
-                                  <span className="inline-block mt-0.5 px-2 py-0.2 bg-red-50 text-red-600 text-[9px] font-black rounded-md border border-red-50">
+                                  <span className="inline-block mt-0.5 px-2 py-0.2 bg-red-50 text-red-600 text-[9px] font-black rounded-md border border-red-50 mr-1.5">
                                     Blood {p.bloodGroup}
                                   </span>
+                                )}
+                                {p.hospitalName && (
+                                  <div className="mt-1 flex items-center gap-1 text-[9px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 max-w-fit">
+                                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                                    {p.hospitalName}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -1627,13 +1685,24 @@ export default function PatientsView({
                           </td>
 
                           <td className="px-6 py-4">
-                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                              p.status === 'New' 
-                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                            }`}>
-                              {p.status}
-                            </span>
+                            <div className="flex flex-col gap-1 w-fit">
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold border text-center ${
+                                p.status === 'New' 
+                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                                  : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                              }`}>
+                                {p.status}
+                              </span>
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold border text-center ${
+                                (p.treatmentStatus || 'Active') === 'Active' 
+                                  ? 'bg-teal-50 text-teal-700 border-teal-200' 
+                                  : (p.treatmentStatus || 'Active') === 'Discharged'
+                                    ? 'bg-slate-100 text-slate-600 border-slate-200'
+                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {p.treatmentStatus || 'Active'}
+                              </span>
+                            </div>
                           </td>
 
                           <td className="px-6 py-4">
