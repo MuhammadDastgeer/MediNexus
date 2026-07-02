@@ -32,13 +32,13 @@ router.delete('/signup-patients/:id', (req, res) => {
 router.put('/signup-patients/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { name, age, gender, phone, dob, bloodGroup, address, email, password } = req.body;
+    const { name, age, gender, phone, dob, bloodGroup, address, email, password, hospitalId, hospitalName } = req.body;
     db.prepare(`
       UPDATE ai_users 
-      SET name = ?, age = ?, gender = ?, phone = ?, dob = ?, bloodGroup = ?, address = ?, email = ?, password = ?
+      SET name = ?, age = ?, gender = ?, phone = ?, dob = ?, bloodGroup = ?, address = ?, email = ?, password = ?, hospitalId = ?, hospitalName = ?
       WHERE id = ?
     `).run(
-      name, Number(age || 0), gender, phone, dob || null, bloodGroup || null, address || null, email || null, password || null, id
+      name, Number(age || 0), gender, phone, dob || null, bloodGroup || null, address || null, email || null, password || null, hospitalId || null, hospitalName || null, id
     );
     res.json({ success: true });
   } catch (err: any) {

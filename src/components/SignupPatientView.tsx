@@ -31,6 +31,9 @@ export default function SignupPatientView({ onRefreshPatients }: SignupPatientVi
   const [formAddress, setFormAddress] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPassword, setFormPassword] = useState('');
+  const [formHospitalId, setFormHospitalId] = useState('');
+  const [formHospitalName, setFormHospitalName] = useState('');
+  const [hospitalsList, setHospitalsList] = useState<{ id: string; hospitalName: string; name: string }[]>([]);
 
   // Password Visibility toggles
   const [showEditPassword, setShowEditPassword] = useState(false);
@@ -93,8 +96,21 @@ export default function SignupPatientView({ onRefreshPatients }: SignupPatientVi
     }
   };
 
+  const fetchHospitals = async () => {
+    try {
+      const res = await fetch('/api/hospitals');
+      if (res.ok) {
+        const data = await res.json();
+        setHospitalsList(data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch hospitals list:', err);
+    }
+  };
+
   useEffect(() => {
     fetchSignupPatients();
+    fetchHospitals();
   }, []);
 
   const handleOpenEdit = (patient: any) => {
@@ -108,6 +124,8 @@ export default function SignupPatientView({ onRefreshPatients }: SignupPatientVi
     setFormAddress(patient.address || '');
     setFormEmail(patient.email || '');
     setFormPassword(patient.password || '');
+    setFormHospitalId(patient.hospitalId || '');
+    setFormHospitalName(patient.hospitalName || '');
     setShowEditPassword(false);
   };
 
@@ -133,7 +151,9 @@ export default function SignupPatientView({ onRefreshPatients }: SignupPatientVi
           bloodGroup: formBloodGroup || null,
           address: formAddress.trim() || null,
           email: formEmail.trim().toLowerCase(),
-          password: formPassword || 'password123'
+          password: formPassword || 'password123',
+          hospitalId: formHospitalId || null,
+          hospitalName: formHospitalName || null
         })
       });
 
@@ -673,6 +693,16 @@ export default function SignupPatientView({ onRefreshPatients }: SignupPatientVi
                   </div>
                 </div>
 
+                {viewingPatient.hospitalName && (
+                  <div className="sm:col-span-2 space-y-1">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Registered Under Hospital</span>
+                    <div className="flex items-center gap-1.5 text-xs text-indigo-700 font-bold">
+                      <svg className="w-4 h-4 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                      <span>{viewingPatient.hospitalName}</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="sm:col-span-2 space-y-1">
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Account Security Password</span>
                   <div className="flex items-center justify-between text-xs text-slate-500 font-bold font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">
@@ -849,6 +879,28 @@ export default function SignupPatientView({ onRefreshPatients }: SignupPatientVi
                       {showEditPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
+                </div>
+
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Registered Hospital *</label>
+                  <select
+                    className="w-full text-xs px-3.5 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 h-10 font-bold text-slate-700 bg-slate-50"
+                    value={formHospitalId}
+                    onChange={(e) => {
+                      const hId = e.target.value;
+                      setFormHospitalId(hId);
+                      const found = hospitalsList.find(h => h.id === hId);
+                      setFormHospitalName(found ? found.hospitalName : '');
+                    }}
+                    required
+                  >
+                    <option value="">-- Choose Hospital --</option>
+                    {hospitalsList.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.hospitalName} ({h.name})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">
